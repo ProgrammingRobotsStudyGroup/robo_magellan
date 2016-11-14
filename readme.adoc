@@ -1,0 +1,7 @@
+:imagesdir: ./images
+:toc: macro
+
+= PRSG RoboMagellan ROS node
+
+The current use of this repository is to simulate a ROS node for the purposes of developing automated build.
+link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG's project website for project details]
