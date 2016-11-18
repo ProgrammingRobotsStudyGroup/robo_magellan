@@ -1,5 +1,5 @@
 #include "ros/ros.h"
-#include "beginner_tutorials/AddTwoInts.h"
+#include "robo_magellan/AddTwoInts.h"
 #include <cstdlib>
 
 int main(int argc, char **argv)
@@ -12,8 +12,8 @@ int main(int argc, char **argv)
   }
 
   ros::NodeHandle n;
-  ros::ServiceClient client = n.serviceClient<beginner_tutorials::AddTwoInts>("add_two_ints");
-  beginner_tutorials::AddTwoInts srv;
+  ros::ServiceClient client = n.serviceClient<robo_magellan::AddTwoInts>("add_two_ints");
+  robo_magellan::AddTwoInts srv;
   srv.request.a = atoll(argv[1]);
   srv.request.b = atoll(argv[2]);
   if (client.call(srv))
