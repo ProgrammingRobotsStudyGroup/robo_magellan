@@ -1,0 +1,54 @@
+=== Assumptions
+
+* You have your UpBoard and RealSense camera
+* You have configured your UpBoard according to this document: https://01.org/developerjourney/recipe/intel-realsense-robotic-development-kit
+
+=== Create your catkin workspace if you haven't already
+[[app-listing]]
+[source,bash]
+----
+cd ~
+mkdir -p catkin_ws/src
+cd catkin_ws/src
+----
+=== Setup your git
+[[app-listing]]
+[source,bash]
+----
+git config --global user.email "you@example.com"
+git config --global user.name "Your github user id"
+----
+
+=== Clone the repository
+[[app-listing]]
+[source,bash]
+----
+cd ~/catkin_ws/src/
+git clone https://github.com/ProgrammingRobotsStudyGroup/robo_magellan.git
+----
+*To switch to the testing branch use: *
+[[app-listing]]
+[source,bash]
+----
+git checkout test
+----
+*To switch to a stable tag use: *
+[[app-listing]]
+[source,bash]
+----
+git checkout <tagname>
+----
+*To switch back to origin/master use: *
+[[app-listing]]
+[source,bash]
+----
+git checkout master
+----
+=== Build your code
+[[app-listing]]
+[source,bash]
+----
+cd ~/catkin_ws
+catkin_make
+----
+=== Setup automatic pull/build
