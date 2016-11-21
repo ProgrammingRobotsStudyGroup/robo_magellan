@@ -1,4 +1,4 @@
-<!--
+!--
 - Launch file to test realsense camera
 -
 -->
@@ -10,6 +10,11 @@
       args="0.0 0.0 0.0 0.0 0.0 0.0 map camera_link 100" />
 
     <node name="modelvisualisation" pkg="rviz" type="rviz" output="screen" 
-      args="-d $(rospack find realsense_camera)/rviz/realsenseRvizConfiguration1.rviz" />
+      args="-d $(find realsense_camera)/rviz/realsenseRvizConfiguration1.rviz" />
+
+    <node name="image_raw" pkg="image_view" type="image_view"
+      args="image:=/camera/color/image_raw"/>
+
 </launch>
+
 
