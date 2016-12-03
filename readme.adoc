@@ -10,7 +10,7 @@ link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG
 == This Repository is integrated with Jenkins!
 *Continuous Integration Etiquette:*
 
-* Email Janelle your email address to get added to Jenkins notifications if you commit code here.
+* Email/Slack chat Janelle your email address to get added to Jenkins notifications if you commit code here.
 
 * Check out the test suite. (still being developed).
 
