@@ -7,5 +7,19 @@
 The current use of this repository is to simulate a ROS node for the purposes of developing automated build.
 link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG's project website for project details]
 
+== This Repository is integrated with Jenkins!
+*Continuous Integration Etiquette:*
+
+* Email Janelle your email address to get added to Jenkins notifications if you commit code here.
+
+* Check out the test suite. (still being developed).
+
+* Build and run the tests locally before pushing to Github.
+
+* If you build and run the tests successfully locally, go ahead and push to Github.
+
+* If you push to Jenkins and get an email failure, Fix it immediately!
+
+
 == Link to Realsense + Up site
 https://01.org/developerjourney/recipe/intel-realsense-robotic-development-kit
