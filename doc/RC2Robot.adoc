@@ -39,7 +39,7 @@ Whether for fun, research or commercial endeavors, There's plenty to learn, so l
 
 The materials for this document are licensed under the Apache license. See the file LICENSE for details.
 
-Copyright 2017 F Douthit, J Dahling and P Rhymer
+Copyright 2017 F Douthit, J Dahling and P Rymer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
