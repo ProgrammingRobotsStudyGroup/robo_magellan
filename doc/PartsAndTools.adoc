@@ -1,0 +1,80 @@
+:imagesdir: ./images
+:toc: macro
+
+= RC2Robot - Parts List
+
+image::20170116_063229.jpg[]
+
+toc::[]
+
+== Abstract
+Robots operate in the physical, not the digital world. 
+It helps to know what you need to get started.
+There are many more sensors, effectors, etc. which can be added to this basic bot. Let us know what you come up with!
+
+== Electronics
+
+.Electronics
+[width="100%",options="header,footer"]
+|====================
+| Part | Description 
+
+| http://www.ebay.com/itm/US-Pixhawk-V2-4-8-32bit-Flight-Controller-Combo-with-Ublox-NEO-M8N-GPS-t-/272323665916[PixHawk] | Pixhawk V2.4.8 32bit Flight Controller Combo with Ublox NEO-M8N GPS 
+
+| http://www.ebay.com/itm/Single-TTL-3DR-Radio-Telemetry-Kit-915Mhz-Module-for-APM2-52-2-6-2-8-Pixhawk-/152219169204?hash=item2370f831b4:g:hPwAAOSwO~hXIHso[Radio Kit] | Single TTL 3DR Radio Telemetry Kit 915Mhz Module for APM2.52 2.6 2.8 Pixhawk 
+
+| http://www.ebay.com/itm/USA-PPM-Encoder-V2-0-for-Pixhawk-PPZ-MK-MWC-MegaPirate-APM-Flight-Controller-/232048565109[PPM Encoder] | PPM Encoder V2.0 for Pixhawk PPZ MK MWC MegaPirate APM Flight Controller
+
+| Laptop/PC |
+
+| Robot Executive Processor | Up, RPi3
+
+| Control Electronics Battery | Power Processor etc.
+
+| RC Car |  ?
+
+| | 
+
+| | 
+
+|====================
+
+
+
+image::20170116_063413.jpg[PixHawk 2.4.8]
+
+
+
+== Miscellaneous Parts
+
+.Miscellaneous Parts
+[width="100%",options="header,footer"]
+|====================
+| Part | Description 
+
+| https://smile.amazon.com/Plywood-Sheet-12-X12-X1-8/dp/B000KAH90O[1/8" plywood] |  
+
+|  |  
+
+|  |  
+
+|====================
+
+
+
+== Tools
+
+.Tools
+[width="100%",options="header,footer"]
+|====================
+| Tool | Description 
+
+| Saw |  
+
+| Drill |  
+
+|  |  
+
+|  |  
+
+|====================
