@@ -20,6 +20,35 @@ link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG
 
 * If you push to Jenkins and get an email failure, Fix it immediately!
 
+== Prepare your System
 
-== Link to Realsense + Up site
-https://01.org/developerjourney/recipe/intel-realsense-robotic-development-kit
+=== 1. Install Ubuntu and ROS to UP and Test
+
+* link:https://01.org/developerjourney/recipe/intel-realsense-robotic-development-kit[Follow Intel's steps].
+* You should be able to run RViz.
+
+=== 2. Install Chrony
+Chrony implements Network Time Protocol, (NTP), in order to keep your system clock accurate. It is designed to work with intermittent network connections. 
+----
+sudo apt-get install chrony
+----
+
+=== 3. Configure Zeroconf
+Add this line to your .bashrc file on the UP and your development machine. Reboot.
+----
+export ROS_HOSTNAME=`echo $HOSTNAME`.local
+----
+
+Reboot the machine and test configuration from both ends. 
+If you named your machine 'robot' as advised in Intel documents, you should be able to ping the robot's processor from your machine. Substitue robot for your machine name if ou elected to use a different name.
+----
+$ ping robot.local
+----
+
+To test your laptop/development machine, 
+----
+$ ssh robot@robot.local
+$ robot@robot.local's password: 
+robot@robot:~$ ping my_machine.local
+----
+
