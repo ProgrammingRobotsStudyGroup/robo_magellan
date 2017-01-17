@@ -10,7 +10,7 @@ link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG
 == This Repository is integrated with Jenkins!
 *Continuous Integration Etiquette:*
 
-* Email/Slack chat Janelle your email address to get added to Jenkins notifications if you commit code here.
+* mailto:ProgrammingRobotsStudyGroup@gmail.com?Subject=Request%20RoboMagellan%20Build%20Access"[Request access to to Jenkins notifications] if you commit code here.
 
 * Check out the test suite. (still being developed).
 
@@ -18,7 +18,7 @@ link:http://programmingrobotsstudygroup.github.io/2017RoboMagellan.html[See PRSG
 
 * If you build and run the tests successfully locally, go ahead and push to Github.
 
-* If you push to Jenkins and get an email failure, Fix it immediately!
+* If you push to Jenkins and get an email failure, please fix it immediately!
 
 == Prepare your System
 
