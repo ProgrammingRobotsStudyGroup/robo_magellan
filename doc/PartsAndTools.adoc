@@ -25,15 +25,13 @@ There are many more sensors, effectors, etc. which can be added to this basic bo
 
 | http://www.ebay.com/itm/USA-PPM-Encoder-V2-0-for-Pixhawk-PPZ-MK-MWC-MegaPirate-APM-Flight-Controller-/232048565109[PPM Encoder] | PPM Encoder V2.0 for Pixhawk PPZ MK MWC MegaPirate APM Flight Controller
 
-| Laptop/PC |
-
 | Robot Executive Processor | Up, RPi3
 
 | Control Electronics Battery | Power Processor etc.
 
 | RC Car |  ?
 
-| | 
+| Laptop/PC |
 
 | | 
 
@@ -67,14 +65,15 @@ image::20170116_063413.jpg[PixHawk 2.4.8]
 .Tools
 [width="100%",options="header,footer"]
 |====================
-| Tool | Description 
+| Tool | Used For
 
-| Saw |  
+| Square |  Measuring Plywood 
 
-| Drill |  
+| Marker |  Marking Plywood for Cutting 
 
-|  |  
-
-|  |  
-
+| Saw | Cutting Plywood 
+| Drill |  Holes in Plywood 
+| USB Hub | PixHawk Wiring 
+|  | 
 |====================
+
