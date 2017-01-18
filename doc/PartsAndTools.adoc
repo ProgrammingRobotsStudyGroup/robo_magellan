@@ -19,7 +19,7 @@ There are many more sensors, effectors, etc. which can be added to this basic bo
 |====================
 | Part | Description 
 
-| http://www.ebay.com/itm/US-Pixhawk-V2-4-8-32bit-Flight-Controller-Combo-with-Ublox-NEO-M8N-GPS-t-/272323665916[PixHawk] | Pixhawk V2.4.8 32bit Flight Controller Combo with Ublox NEO-M8N GPS 
+| http://www.ebay.com/itm/US-Pixhawk-V2-4-8-32bit-Flight-Controller-Combo-with-Ublox-NEO-M8N-GPS-t-/272323665916[PixHawk] | Pixhawk V2.4.8 32bit Flight Controller Combo with Ublox NEO-M8N GPS. Make sure the unit is 2.4.8 or better as 2.4.6 is end of life due to memory size.
 
 | http://www.ebay.com/itm/Single-TTL-3DR-Radio-Telemetry-Kit-915Mhz-Module-for-APM2-52-2-6-2-8-Pixhawk-/152219169204?hash=item2370f831b4:g:hPwAAOSwO~hXIHso[Radio Kit] | Single TTL 3DR Radio Telemetry Kit 915Mhz Module for APM2.52 2.6 2.8 Pixhawk 
 
@@ -29,9 +29,9 @@ There are many more sensors, effectors, etc. which can be added to this basic bo
 
 | Control Electronics Battery | Power Processor etc.
 
-| RC Car |  ?
+| RC Car | This document concerns itself with Traxxas X-Maxx and Traxxas Stampede. Modify as needed for these or other RC cars.
 
-| Laptop/PC |
+| Laptop/PC | Linux (Ubuntu) is the primary Linux distribution supported by ROS. Windows can be used for Mission Planner, but other ground stations are available for Linux. Windows 10 can be run in a virtual machine in Linux.
 
 | | 
 
