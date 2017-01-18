@@ -1,0 +1,56 @@
+:imagesdir: ./images
+:toc: macro
+
+= RC2Robot - Sensor Platform
+
+image::StampedePlusBody.jpg[]
+
+toc::[]
+
+== Abstract
+This objective is to make the sensor platform or base.
+
+image::StampedeWithoutBody.jpg[]
+
+
+
+== RC Prep
+Unbox and remove RC body.
+
+
+
+== Cut the Plywood for the Sensor Platform
+This approach presumes the body attachment pins (proper term?) are close to the same height. 
+
+First you will want to cut the thin plywood to size. For the Stampede I used 330mm x 380mm (~13" x ~15").
+Take advantage of existing square corners of the plywood.
+
+
+
+== Mounting the Sensor Platform
+X-Maxx uses <<Bracket Mounting>>.
+
+Stampede uses <<Cotter Pin Mounting>>.
+
+
+=== Bracket Mounting
+The X-Maxx uses a unique mounting system. link:https://github.com/mw46d/EntdeckerL/tree/master/3D_Printing[One solution]
+
+
+=== Cotter Pin Mounting
+The mounting holes use the body attachment pins to secure the Sensor Platform to the RC Vehicle.
+
+The body attachment pins so that they are parallel to the front edge of the vehicle.
+Match holes. Measure/use square to make the front holes parallel to front of the Ply.
+
+==== Marker Trick.
+Using a marker to coat the body attachment pins. 
+Be careful that the marker solvent doesn't harm your vehicle.
+
+
+
+Drill holes, test chassis fit, use cotter pins.
+* test chassis fit, use cotter pins
+
+== Test fit Sensor Platform.
+
