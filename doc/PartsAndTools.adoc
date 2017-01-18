@@ -3,7 +3,7 @@
 
 = RC2Robot - Parts List
 
-image::20170116_063229.jpg[]
+image::PixhawkUnwired.jpg[]
 
 toc::[]
 
@@ -39,7 +39,7 @@ There are many more sensors, effectors, etc. which can be added to this basic bo
 
 
 
-image::20170116_063413.jpg[PixHawk 2.4.8]
+image::PixhawkConnectorBlock.jpg[PixHawk 2.4.8]
 
 
 
