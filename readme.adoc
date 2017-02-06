@@ -52,3 +52,15 @@ $ robot@robot.local's password:
 robot@robot:~$ ping my_machine.local
 ----
 
+=== 4. Get the Code
+You will need ROS Kinetic installed on your machine. Start by fetching the repository.
+
+----
+cd catkin_ws/src
+git clone https://github.com/ProgrammingRobotsStudyGroup/robo_magellan.git
+----
+
+Then run the installation script:
+----
+./install_Victoria.sh
+----
