@@ -62,5 +62,5 @@ git clone https://github.com/ProgrammingRobotsStudyGroup/robo_magellan.git
 
 Then run the installation script:
 ----
-./install_Victoria.sh
+./victoria.sh
 ----
