@@ -2,6 +2,19 @@
 
 Chatty uses audio and lights to send messages to alert the operator of current and changing conditions in the robot.
 
+== Running Prototype
+Terminal window 1
+----
+roscore
+----
+Terminal window 2
+----
+rosrun robo_magellan chatty.py
+----
+Terminal window 3
+----
+rostopic pub /play std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds/196889_2526129-lq.ogg"
+----
 
 == Requirements
 
