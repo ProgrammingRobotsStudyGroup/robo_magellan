@@ -1,0 +1,62 @@
+= Chatty
+
+Chatty uses audio and lights to send messages to alert the operator of current and changing conditions in the robot.
+
+
+== Requirements
+
+* Chatty will consist of player and ROS node.
+* The ROS node passes commands to the daemon. The daemon does the heavy lifting - use command pattern.
+* Chatty will be able to be activated by shell script for integration with non-ROS code. e.g. emergency conditions, etc.
+
+
+== Task list
+
+1. Compare the various sound libraries in python. Put comparison in writing. Make a recommendation, e.g. pyaudio, pymedia, wxPython, snack, alsaaudio, etc. It would be nice to use a package from the base libraries. Some packages I’ve explored and rejected already:
+ * pyglet - too large
+ * winsound - only works on windows
+ * pygame - too much overhead from unused gaming elements
+
+2. Define set of audio notifications
+ * ROS is starting
+ * ROS is stopping
+ * Switching to pause mode
+ * Switching to manual mode
+ * Switching to autonomous mode
+ * Battery low voltage
+ * Linux shutting down now
+ * I see a cone!
+ * I touched a cone!
+ * Self diagnostic running
+ * Drive
+ * Navigation
+ * Power
+ * system OK
+ * system ERROR
+ 
+3. Find/make wav files for our use.
+4. Design software - Class and sequence diagrams are preferable. A flow chart is acceptable.
+5. ROS node. Node listens for some message pattern; upon detection, queues sound for play. Caller provides priority and other request data.
+Example:
+
+== References
+http://superuser.com/questions/276596/play-mp3-or-wav-file-via-linux-command-line 
+http://stackoverflow.com/questions/32118220/how-to-play-a-sound-when-my-bluetooth-device-is-detected
+
+=== DBus
+https://en.wikipedia.org/wiki/D-Bus
+http://superuser.com/questions/276596/play-mp3-or-wav-file-via-linux-command-line
+
+== Notes
+ * One option is to use a boards which can play sound files. 
+  ** Dedicated board requires only two pins to trigger. It actually    has more pins but only two are used.
+  ** It's highly reliable but adds extra hardware to each machine that wants it
+
+ * There is no audio out plug on UP, but there is another option.
+ * BT, USB, etc can work.
+ * This is the poor man/everyman version as this does not require specialty dedicated hardware
+
+ * Need something on the Linux that plays different `tracks'    based on external triggers
+ *  Linux desktops have some support for dbus and you can probably find a dbus-enabled audio player
+
+
