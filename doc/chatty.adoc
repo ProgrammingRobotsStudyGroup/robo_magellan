@@ -20,6 +20,25 @@ rostopic pub /play std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds
 * Chatty will be able to be activated by shell script for integration with non-ROS code. e.g. emergency conditions, etc.
 
 
+== Add a Bluetooth Speaker to the Pi/Up-board
+Scan for your speaker from the Pi/Up-board.
+
+ $ hcitool scan
+ Scanning...
+ 00:10:2A:D4:D3:D2       Soundgasm
+
+Pair with speaker
+
+ $ bt-device -c 00:10:2A:D4:D3:D2
+ Connecting to an audio service
+ Audio service is connected
+
+Make the device trusted.
+
+ $ bt-device --set 00:10:2A:D4:D3:D2 Trusted 1
+ Trusted: 0 -> 1
+
+
 == Task list
 
 1. Compare the various sound libraries in python. Put comparison in writing. Make a recommendation, e.g. pyaudio, pymedia, wxPython, snack, alsaaudio, etc. It would be nice to use a package from the base libraries. Some packages I’ve explored and rejected already:
