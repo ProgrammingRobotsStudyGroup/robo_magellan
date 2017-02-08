@@ -8,18 +8,14 @@
 #
 set -x #echo on
 
-# Fetch and mvoe to the right place the cone  finder
-mkdir -p ~/tmp
-cd ~/tmp
+# Fetch and mvoe to the right place the cone finder
+cd ~/catkin_ws/src
 git clone https://github.com/ProgrammingRobotsStudyGroup/TrafficConeFinderCode.git
-cd TrafficConeFinderCode 
-./installROSNode.sh
 
 # Fetch MAVROS
 # if MavROS exists, skip install
-
-# 
-rospack list|grep
+#
+#rospack list|grep
 
 # Build
 cd ~/catkin_ws
