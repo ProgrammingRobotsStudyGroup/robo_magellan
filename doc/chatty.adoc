@@ -5,13 +5,10 @@ Chatty uses audio and lights to send messages to alert the operator of current a
 == Running Prototype
 Terminal window 1
 ----
-roscore
+roslaunch robo_magellan chatty.launch
 ----
+
 Terminal window 2
-----
-rosrun robo_magellan chatty.py
-----
-Terminal window 3
 ----
 rostopic pub /play std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds/196889_2526129-lq.ogg"
 ----
