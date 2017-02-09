@@ -11,6 +11,7 @@
     <node name="rqt_topic" pkg="rqt_topic" type="rqt_topic" output="screen" />
     <node name="rqt_publisher" pkg="rqt_publisher" type="rqt_publisher" output="screen" />
     <node name="rqt_service_caller" pkg="rqt_service_caller" type="rqt_service_caller" output="screen" />
+    <node name="chatty_node" pkg="robo_magellan" type="chatty.py" />
   </group>
   
 </launch>
