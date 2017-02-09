@@ -1,0 +1,16 @@
+<launch>
+  <arg name="launch_diagnostics" default="false" doc="use false if ssh terminal; use true if GUI"/>
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="/dev/ttyS1:115200" /> 
+  </include>
+
+  <group if="$(arg launch_diagnostics)" >
+    <!-- for diagnostics -->
+    <node name="rqt_topic" pkg="rqt_topic" type="rqt_topic" output="screen" />
+    <node name="rqt_publisher" pkg="rqt_publisher" type="rqt_publisher" output="screen" />
+    <node name="rqt_service_caller" pkg="rqt_service_caller" type="rqt_service_caller" output="screen" />
+  </group>
+  
+</launch>
