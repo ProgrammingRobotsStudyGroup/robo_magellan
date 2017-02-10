@@ -12,6 +12,7 @@
     <node name="rqt_publisher" pkg="rqt_publisher" type="rqt_publisher" output="screen" />
     <node name="rqt_service_caller" pkg="rqt_service_caller" type="rqt_service_caller" output="screen" />
     <node name="chatty_node" pkg="robo_magellan" type="chatty.py" />
+    <node name="coney" pkg="cone_finder" type="detect_cones.py" args="-r" />
   </group>
   
 </launch>
