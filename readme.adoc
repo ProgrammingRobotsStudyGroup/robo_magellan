@@ -33,7 +33,22 @@ Chrony implements Network Time Protocol, (NTP), in order to keep your system clo
 sudo apt-get install chrony
 ----
 
-=== 3. Configure Zeroconf
+=== 3. Make a catkin workspace
+The script in a later step will expect to use an existing catkin workspace named "catkin_ws". If you haven't already created this please follow the steps link:http://wiki.ros.org/ROS/Tutorials/InstallingandConfiguringROSEnvironment[here]. These are summarized below for convenience:
+----
+$ mkdir -p ~/catkin_ws/src
+$ cd ~/catkin_ws/src
+$ catkin_init_workspace
+$ cd ~/catkin_ws/
+$ catkin_make
+----
+Finally add
+----
+source ~/catkin_ws/devel/setup.bash
+----
+to your ~/.bashrc file. 
+
+=== 4. Configure Zeroconf
 Add this line to your .bashrc file on the UP and your development machine. Reboot.
 ----
 export ROS_HOSTNAME=`echo $HOSTNAME`.local
@@ -52,7 +67,7 @@ $ robot@robot.local's password:
 robot@robot:~$ ping my_machine.local
 ----
 
-=== 4. Get the Code
+=== 5. Get the Code
 You will need ROS Kinetic installed on your machine. 
 
 Install link:https://github.com/mavlink/mavros/blob/master/mavros/README.md[MAVROS]. Just use apt-get.
@@ -73,5 +88,6 @@ If you already have the repository, make sure it's up to date
 
 Then run the installation/update script:
 ----
+roscd robo_magellan
 ./victoria.sh
 ----
