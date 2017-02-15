@@ -18,12 +18,12 @@
 # **
 # ===========
 
-cd $HOME/ROS_ws/src/launch
+cd $HOME/catkin_ws/src/launch
 
 # not sure the following are completely correct
 source /opt/ros/kinetic/setup.bash
-source ~/ROS_ws/devel/setup.bash
-export ROS_HOSTNAME=RoboMagellan.local
+source ~/catkin_ws/devel/setup.bash
+export ROS_HOSTNAME=robot.local
 
 echo "========== Starting startup script ==========" | tee startup.log
 date > startup.log 
@@ -31,10 +31,10 @@ printenv | grep ROS >> startup.log
 
 if [ "$1" == diagnostics ]; then
   echo "Launching with diagnostics"
-  export LAUNCH_FN="pr_launch1.launch launch_diagnostics:=true"
+  export LAUNCH_FN="robo_magellan pr_launch1.launch launch_diagnostics:=true"
 else 
   echo "Launching without diagnostics"
-  export LAUNCH_FN="pr_launch1.launch"
+  export LAUNCH_FN="robo_magellan pr_launch1.launch"
 fi
 
 # main ROS launch using launch file
