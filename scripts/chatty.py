@@ -37,15 +37,37 @@
 ## to the 'chatter' topic
 
 import rospy
+import rospkg
 from std_msgs.msg import String
 import os
 import commands
+import soundmap
 
-def callback(data):
-    rospy.loginfo(rospy.get_caller_id() + 'Play: %s', data.data)
+def callback_file(data):
+    rospy.loginfo(rospy.get_caller_id() + ' Play file: %s', data.data)
     os.system('paplay '+data.data)
     #x = commands.getoutput(cmd)
     #rospy.loginfo(rospy.get_caller_id() + 'Result: ', x)
+
+def callback_token(data):
+    rospy.loginfo(rospy.get_caller_id() + ' Play token: %s', data.data)
+    # Convert token to file name
+    try:
+        #   Get an instance of RosPack with the default search paths
+        rospack = rospkg.RosPack()
+        # get the file path for rospy_tutorials
+        basepath = rospack.get_path('robo_magellan')
+        # Find the enum by token, create path, play
+        fn = soundmap.SoundMapEnum.__getattr__(data.data).file_name
+        path = basepath + '/scripts/sounds/' + fn
+        print(path)
+        os.system('paplay '+path)
+        #obj = soundmap.SoundMapEnum._member_map_[data.data]
+        #rospy.loginfo(obj)
+        #rospy.loginfo(obj.file_name)
+        #os.system('paplay '+obj.file_name)
+    except:
+        rospy.loginfo('No enum named: '+data.data)
 
 
 def chatty():
@@ -57,7 +79,8 @@ def chatty():
     # run simultaneously.
     rospy.init_node('chatty', anonymous=True)
 
-    rospy.Subscriber('play', String, callback)
+    rospy.Subscriber('playfile', String, callback_file)
+    rospy.Subscriber('play', String, callback_token)
 
     rospy.spin()
 
