@@ -1,0 +1,36 @@
+# Associate strings with file names
+# The string is then associated with an enumeration in soundmap.py
+# See soundmap.py for example client code
+#
+AUTO: auto.wav
+ARMED: armed.wav
+AUTO: auto.wav
+AUTONOMOUS_MODE: autonomous-mode.wav
+BATTERY_LOW: battery-low.wav
+CHANGING_MODE: changing-mode.wav
+DISARMED: disarmed.wav
+GUIDED: guided.wav
+HOLD: hold.wav
+INITIALIZING: initializing.wav
+LEARNING: learning.wav
+LEARN: learn.wav
+LINUX_SHUTDOWN: linux-shutdown.wav
+LOITER: loiter.wav
+MANUAL_MODE: manual-mode.wav
+MANUAL: manual.wav
+PAUSE_MODE: pause-mode.wav
+RETURN_TO_LAUNCH: return-to-launch.wav
+ROS_IS_STARTING: ros-is-starting.wav
+ROS_IS_STOPPING: ros-is-stopping.wav
+SD_DRIVE: sd-drive.wav
+SD_NAVIGATION: sd-navigation.wav
+SD_POWER: sd-power.wav
+SEE_CONE: see-cone.wav
+SELF_DIAGNOSTIC: self-diagnostic.wav
+STABILIZE: stabilize.wav
+STEERING: steering.wav
+SYSTEM_ERROR: system-error.wav
+SYSTEM_OK: system-ok.wav
+TAZER: tazer.wav
+TOUCH_CONE: touch-cone.wav
+
