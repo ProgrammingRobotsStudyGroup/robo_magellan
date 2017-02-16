@@ -3,14 +3,23 @@
 Chatty uses audio and lights to send messages to alert the operator of current and changing conditions in the robot.
 
 == Running Prototype
-Terminal window 1
+
+=== Terminal window 1
+
 ----
 roslaunch robo_magellan chatty.launch
 ----
 
-Terminal window 2
+=== Terminal window 2
+
+Play a file
 ----
-rostopic pub /play std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds/196889_2526129-lq.ogg"
+rostopic pub /playfile std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds/tazer.wav"
+----
+
+Press ctrl-c. Now play a token.
+----
+rostopic pub /play std_msgs/String "TAZER"
 ----
 
 == Requirements
