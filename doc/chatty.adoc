@@ -12,15 +12,18 @@ roslaunch robo_magellan chatty.launch
 
 === Terminal window 2
 
-Play a file
+First, play a file.
+
 ----
 rostopic pub /playfile std_msgs/String "~/catkin_ws/src/robo_magellan/scripts/sounds/tazer.wav"
 ----
 
-Press ctrl-c. Now play a token.
+Now press ctrl-c to halt rostopic and return to a command prompt. Now play a token.
+
 ----
 rostopic pub /play std_msgs/String "TAZER"
 ----
+
 
 == Requirements
 
