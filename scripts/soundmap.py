@@ -3,20 +3,26 @@
 # This file map a file names to an enum
 # from pkg/scripts/soundmapfiles.yaml
 #
-from std_msgs.msg import String
-import enum
-import yaml
-import rospkg
-#
 # Chatty client example:
 #
 # import rospy
 # import soundmap
 # ...
-#   pub = rospy.Publisher('play', String, queue_size=10)
-#   pub.publish(soundmap.SoundMapEnum.DISARMED.name)
+#   # Play 1) a sound ref'd by token name or 2) file path.
+#
+#   # Play sound by token
+#   pubToken = rospy.Publisher('play', String, queue_size=10)
+#   pubToken.publish(soundmap.SoundMapEnum.DISARMED.name)
+#
+#   # Play sound by file path.
+#   pubFile  = rospy.Publisher('playfile', String, queue_size=10)
+#   pubFile.publish(soundfilepath)
 #
 
+from std_msgs.msg import String
+import enum
+import yaml
+import rospkg
 
 class AutoNumber(enum.Enum):
     def __new__(cls):
