@@ -11,7 +11,7 @@
   <include file="$(find realsense_camera)/launch/r200_nodelet_default.launch">
   </include>
 
-  <!-- node name="chatty" pkg="robo_magellan" type="chatty.py" / -->
+  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
   <group if="$(arg launch_diagnostics)" >
     <!-- for diagnostics -->
