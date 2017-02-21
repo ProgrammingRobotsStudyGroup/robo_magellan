@@ -67,7 +67,27 @@ $ robot@robot.local's password:
 robot@robot:~$ ping my_machine.local
 ----
 
-=== 5. Get the Code
+
+=== 5. Some Details
+Install Rpi.GPIO. Try this first:
+
+ sudo apt-get install python-rpi.gpio
+
+If that doesn't work
+
+ $ dpkg -L python-rpi.gpio
+ $ wget http://ubilinux.com/ubilinux/pool/main/r/rpi-gpio/python-rpi.gpio_0.6.2%2bubi2-1_amd64.deb
+ $ sudo dpkg -i python-rpi.gpio_0.6.2+ubi2-1_amd64.deb 
+ $ sudo groupadd gpio
+ $ sudo adduser robot gpio
+ $ pico /etc/udev/rules.d99-gpio.rules
+ SUBSYSTEM=="bcm2835-gpiomem", KERNEL=="gpiomem", GROUP="gpio", MODE="0660"
+ SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c 'chown root:gpio /sys/class/gpio/export /sys/class/gpio/une
+ SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", PROGRAM="/bin/sh -c 'chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge
+
+The file 99-gpio.rules can be found in the doc directory.
+
+=== 6. Get the Code
 You will need ROS Kinetic installed on your machine. 
 
 Install link:https://github.com/mavlink/mavros/blob/master/mavros/README.md[MAVROS]. Just use apt-get.
