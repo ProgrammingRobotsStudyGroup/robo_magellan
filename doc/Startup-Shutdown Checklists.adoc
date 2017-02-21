@@ -1,0 +1,33 @@
+= Startup - Shutdown Checklists for Victoria
+
+These are the recommended sequences for starting up and shutting down Victoria battery powered operation with the intent of driving. They will undoubtedly evolve as the project develops.
+
+== Startup
+
+- [ ] Verify charge levels on all batteries (motor, electronics, safety switch, BT speaker(?) ).
+- [ ] Connect both motor batteries.
+- [ ] Switch on the RC transmitter and verify the green 'ON' light. Only necessary if you plan to use the RC transmitter during this session.
+- [ ] Connect the electronics battery. This must happen within approximately 20 seconds of switching on the RC transmitter for binding. The UP and Pixhawk should now be powered.
+- [ ] If you're using a GCS, connect it to the Pixhawk over the telemetry link. Wait until the initial parameter retrieval is complete.
+- [ ] If you're using a terminal, connect your computer to Victoria-RG wifi AP and ssh into the UP. If trouble connecting be sure the USB wifi dongle is plugged into the UP.
+- [ ] Start ROS, typically by roslaunching an appropriate launch file if this is not done by a startup script.
+- [ ] Wait for a GPS lock.
+- [ ] If you plan to power the servos, switch on the ESC (button on the blue enclosure in the bottom of the chassis). You should hear the ESC fan spin up and the ESC light should be flashing green. 
+- [ ] Push the flashing red arming button, holding it until it turns solid red.
+- [ ] If nothing else prevents arming, arm the throttle. You can do this from the GCS, or from the RC transmitter. TODO: how to arm for auto mission?
+- [ ] Power up the safety switch transmitter. You will need to hold its button continuously to enable the servos.
+- [ ] Start mission. TODO: probably needs more detail.
+
+== Shutdown
+
+- [ ] Disarm the throttle. Push the red arming button until it's not solid red.
+- [ ] Turn off the ESC.
+- [ ] Disconnect the telemetry channel if in use.
+- [ ] Shutdown ROS processes if you have a terminal connected.
+- [ ] Safely power down the UP, either by pushing the 'safe shutdown' switch or by issuing `sudo shutdown -h now`. To avoid possible flash corruption, please do not simply remove power from the UP.
+- [ ] Disconnect the electronics battery and the 2 motor batteries.
+- [ ] Power down the safety switch transmitter.
+- [ ] Switch off the RC transmitter if it was on.
+
+
+
