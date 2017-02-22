@@ -50,14 +50,14 @@ class UAV_RcControl:
         #mavros.set_namespace("/mavros")
 
         # Publishers
-        pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
+        self.pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
         # Subscribers
         pass
 
     #
     # throttle: Desired PWM value
     #
-    def set_throttle(throttle):
+    def set_throttle(self, throttle):
         rospy.loginfo('mavros/rc/override, throttle')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
@@ -69,14 +69,14 @@ class UAV_RcControl:
             if ((sample_time - start) > exec_time):
                 flag=False
                 rospy.loginfo(msg)
-                pubOverride.publish(msg)
+                self.pubOverride.publish(msg)
                 r.sleep()
 
 
     #
     # servo: Desired PWM value
     #
-    def set_servo(servo):
+    def set_servo(self, servo):
         rospy.loginfo('mavros/rc/override, servo')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
@@ -88,7 +88,7 @@ class UAV_RcControl:
             if ((sample_time - start) > exec_time):
                 flag=False
                 rospy.loginfo(msg)
-                pubOverride.publish(msg)
+                self.pubOverride.publish(msg)
                 r.sleep()
 
 
@@ -96,7 +96,7 @@ class UAV_RcControl:
     # throttle: Desired PWM value
     # servo: Desired PWM value
     #
-    def set_throttle_servo(throttle,servo):
+    def set_throttle_servo(self, throttle,servo):
         rospy.loginfo('mavros/rc/override, throttle and servo')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
@@ -109,7 +109,7 @@ class UAV_RcControl:
             if ((sample_time - start) > exec_time):
                 flag=False
                 rospy.loginfo(msg)
-                pubOverride.publish(msg)
+                self.pubOverride.publish(msg)
                 r.sleep()
 
 
