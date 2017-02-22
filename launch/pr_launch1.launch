@@ -13,6 +13,8 @@
 
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
+  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+
   <group if="$(arg launch_diagnostics)" >
     <!-- for diagnostics -->
     <node name="rqt_topic" pkg="rqt_topic" type="rqt_topic" output="screen" />

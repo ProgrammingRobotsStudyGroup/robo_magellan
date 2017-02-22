@@ -1,4 +1,4 @@
-:imagesdir: ./images
+:imagesdir: ./doc/images
 :toc: macro
 
 = PRSG RoboMagellan ROS node
@@ -68,7 +68,9 @@ robot@robot:~$ ping my_machine.local
 ----
 
 
-=== 5. Some Details
+=== 5. Shutdown Switch
+This step describes how to set up a pushbutton switch to gracefully shut down the UP. This may help avoid flash corruption. 
+
 Install Rpi.GPIO. Try this first:
 
  sudo apt-get install python-rpi.gpio
@@ -86,6 +88,12 @@ If that doesn't work
  SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", PROGRAM="/bin/sh -c 'chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge
 
 The file 99-gpio.rules can be found in the doc directory.
+
+Add `python /home/robot/catkin_ws/src/robo_magellan/scripts/shutdownSwitch.py &` to the UP in /etc/rc.local just before the existing `exit 0` line.
+
+The shutdownSwitch.py script assumes a momentary, normally open switch is connected from UP board pin 18 to ground (pin 20). You may also need an external 10k pullup resistor from pin 18 to 3.3 V (pin 17). A fragment of the link:https://up-community.org/wiki/Pinout[UP pinout] is included here for clarity.
+
+image::switch-pins.PNG[width="400", height="300"]
 
 === 6. Get the Code
 You will need ROS Kinetic installed on your machine. 

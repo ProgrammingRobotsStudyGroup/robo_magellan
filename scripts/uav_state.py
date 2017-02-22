@@ -1,5 +1,19 @@
 #!/usr/bin/env python
 #
+# Copyright 2017 Robot Garden, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 # UAV State Model:
 # Encapsulates UAV state and abstracts communication
 # States:
@@ -19,20 +33,20 @@ import mavros_msgs.srv
 #
 import time
 from datetime import datetime
-import enum
 
-class AutoNumber(enum.Enum):
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
+from auto_number import AutoNumber
 
 
 class MODE(AutoNumber):
     MANUAL = ()
+    LEARNING = ()
+    STEERING = ()
+    HOLD = ()
+    AUTO = ()
     RTL = ()
-    
+    GUIDED = ()
+    INITIALISING = ()
+
 class ARM(AutoNumber):
     ARMED = ()
     DISARMED = ()
@@ -96,11 +110,13 @@ class UAV_State:
 
     def set_mode(self, new_mode):
         rospy.wait_for_service('/mavros/set_mode')
+        isModeChanged = False
         try:
             flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
             isModeChanged = flightModeService(custom_mode=new_mode) 
         except rospy.ServiceException, e:
             rospy.loginfo("Service set_mode call failed: %s. Mode %s could not be set. Check that GPS is enabled.",e,new_mode)
+        return isModeChanged
 
     ####
     def get_arm(self):
@@ -110,7 +126,9 @@ class UAV_State:
         rospy.wait_for_service('/mavros/cmd/arming')
         try:
             armService = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-            armService(new_arm)
+            resp = armService(new_arm)
+            rospy.loginfo(resp)
+            return resp
         except rospy.ServiceException, e:
             rospy.loginfo("Service arm call failed: %s. Attempted to set %s",e,new_arm)
 
