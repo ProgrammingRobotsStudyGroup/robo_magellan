@@ -36,7 +36,8 @@ import time
 import rospy
 
 from mavros_msgs.msg import OverrideRCIn
-from mavros_msgs.srv import CommandBool, WaypointPush, WaypointClear, WaypointSetCurrent
+from mavros_msgs.srv import CommandBool, WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
+#, WaypointGOTO
 
 #
 throttle_channel=2
@@ -57,6 +58,7 @@ class UAV_RcControl:
     # throttle: Desired PWM value
     #
     def set_throttle(throttle):
+        rospy.loginfo('mavros/rc/override, throttle')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
@@ -75,6 +77,7 @@ class UAV_RcControl:
     # servo: Desired PWM value
     #
     def set_servo(servo):
+        rospy.loginfo('mavros/rc/override, servo')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
@@ -94,6 +97,7 @@ class UAV_RcControl:
     # servo: Desired PWM value
     #
     def set_throttle_servo(throttle,servo):
+        rospy.loginfo('mavros/rc/override, throttle and servo')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
@@ -113,9 +117,25 @@ class UAV_RcControl:
     # Push waypoints
     #
     def push_waypoints(self, waypoints):
+        rospy.loginfo('/mavros/mission/push')
         try:
             service = rospy.ServiceProxy('mavros/mission/push', WaypointPush)
             resp = service(waypoints)
+            rospy.loginfo(resp)
+            return resp
+        except rospy.ServiceException, e:
+            rospy.loginfo('Service call failed: {0}'.format(e))
+            return None
+
+    #
+    # Pull waypoints
+    #
+    def pull_waypoints(self):
+        rospy.loginfo('/mavros/mission/pull')
+        try:
+            rospy.wait_for_service('/mavros/mission/pull')
+            service = rospy.ServiceProxy('mavros/mission/pull', WaypointPull)
+            resp = service()
             rospy.loginfo(resp)
             return resp
         except rospy.ServiceException, e:
@@ -127,6 +147,7 @@ class UAV_RcControl:
     # Clear waypoints
     #
     def clear_waypoints(self):
+        rospy.loginfo('/mavros/mission/clear')
         try:
             service = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
             resp = service()
@@ -138,14 +159,31 @@ class UAV_RcControl:
 
 
     #
-    # Set current
+    # Set current wp
     #
-#    def set_current_waypoints(self):
+    def set_current_waypoint(self, idx):
+        rospy.loginfo('/mavros/mission/set_current: '+str(idx))
+        try:
+            service = rospy.ServiceProxy('mavros/mission/set_current', WaypointSetCurrent)
+            resp = service(idx)
+            rospy.loginfo(resp)
+            return resp
+        except rospy.ServiceException, e:
+            rospy.loginfo('Service call failed: {0}'.format(e))
+            return None
+
+
+    #
+    # Goto wp
+    #
+#    def goto_waypoint(self, wp):
 #        try:
-#            service = rospy.ServiceProxy('mavros/mission/set_current', WaypointSetCurrent)
-#            resp = service()
+#            service = rospy.ServiceProxy('mavros/mission/goto', WaypointSetCurrent)
+#            resp = service(idx)
 #            rospy.loginfo(resp)
 #            return resp
 #        except rospy.ServiceException, e:
 #            rospy.loginfo('Service call failed: {0}'.format(e))
 #            return None
+
+

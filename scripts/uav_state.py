@@ -28,6 +28,8 @@ import mavros
 from mavros.utils import *
 from mavros import setpoint as SP
 import mavros_msgs.msg
+from mavros_msgs.msg import BatteryStatus
+from sensor_msgs.msg import BatteryState
 import mavros_msgs.srv
 
 #
@@ -68,6 +70,8 @@ class UAV_State:
         self.guided = "None"
         self.timestamp = float(datetime.utcnow().strftime('%S.%f'))
         self.connection_delay = 0.0
+        self.voltage = 0
+        self.current = 0
         mavros.set_namespace("/mavros")
 
         # Subscribers
@@ -77,23 +81,33 @@ class UAV_State:
             mavros_msgs.msg.PositionTarget, self.__setpoint_position_cb)
         self.state_sub = rospy.Subscriber(mavros.get_topic('state'),
             mavros_msgs.msg.State, self.__state_cb)
+        self.battery_sub = rospy.Subscriber("/mavros/battery", BatteryState, self.__battery_cb)
+
         pass
 
     def __local_position_cb(self, topic):
+#        rospy.loginfo('__local_position_cb')
         self.current_pose.x = topic.pose.position.x
         self.current_pose.y = topic.pose.position.y
         self.current_pose.z = topic.pose.position.z
 
     def __setpoint_position_cb(self, topic):
+#        rospy.loginfo('__setpoint_position_cb')
         self.setpoint_pose.x = topic.position.x
         self.setpoint_pose.y = topic.position.y
         self.setpoint_pose.z = topic.position.z
 
     def __state_cb(self, topic):
+#        rospy.loginfo('__state_cb')
         self.__calculate_delay()
         self.mode = topic.mode
         self.guided = topic.guided
         self.arm = topic.armed
+
+    def __battery_cb(self, data):
+#        rospy.loginfo('__battery_cb')
+        self.current = round(data.current,2)
+        self.voltage = round(data.voltage,2)
 
     def __calculate_delay(self):
         tmp = float(datetime.utcnow().strftime('%S.%f'))
@@ -109,6 +123,7 @@ class UAV_State:
         return self.mode
 
     def set_mode(self, new_mode):
+        rospy.loginfo('/mavros/set_mode: '+new_mode)
         rospy.wait_for_service('/mavros/set_mode')
         isModeChanged = False
         try:
@@ -123,6 +138,7 @@ class UAV_State:
         return self.arm
 
     def set_arm(self, new_arm):
+        rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
         rospy.wait_for_service('/mavros/cmd/arming')
         try:
             armService = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
@@ -145,3 +161,8 @@ class UAV_State:
     def get_delay(self):
         return self.connection_delay
 
+    def get_current(self):
+        return self.current
+
+    def get_voltage(self):
+        return self.voltage
