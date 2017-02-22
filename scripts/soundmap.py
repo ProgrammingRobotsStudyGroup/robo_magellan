@@ -20,16 +20,10 @@
 #
 
 from std_msgs.msg import String
-import enum
 import yaml
 import rospkg
 
-class AutoNumber(enum.Enum):
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
+from auto_number import AutoNumber
 
 
 class SoundMapEnum(AutoNumber):
