@@ -1,0 +1,16 @@
+<launch>
+
+  <!-- simple launch for cone_seeker tests -->
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="/dev/ttyS1:115200" />
+  </include>
+
+  <include file="$(find cone_finder)/launch/cone_seeker_video.launch" />
+
+  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
+
+  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+  
+</launch>
