@@ -35,11 +35,13 @@ import time
 # ROS
 import rospy
 
+# MAVROS
 from mavros_msgs.msg import OverrideRCIn
-from mavros_msgs.srv import CommandBool, WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
-#, WaypointGOTO
+from mavros_msgs.srv import CommandBool 
+from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent #, WaypointGOTO
+from mavros_msgs.srv import ParamGet, ParamSet, SetMode
 
-#
+# Globals
 throttle_channel=2
 steer_channel=0
 
@@ -48,10 +50,30 @@ exec_time=1 #exc time in secs
 class UAV_RcControl:
     def __init__(self):
         #mavros.set_namespace("/mavros")
+        apm_rc1_trim = None
+        apm_rc3_trim = None
+
+        # Proxies
+        rospy.wait_for_service('/mavros/param/get')
+        self.get_param = rospy.ServiceProxy('/mavros/param/get', ParamGet)
+
+        rospy.wait_for_service('/mavros/mission/push')
+        self.push_waypoints = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
+
+        rospy.wait_for_service('/mavros/mission/pull')
+        self.pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
+
+        rospy.wait_for_service('/mavros/mission/clear')
+        self.clear_waypoints = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
+
+        rospy.wait_for_service('/mavros/mission/set_current')
+        self.set_current_waypoint = rospy.ServiceProxy('mavros/mission/set_current', WaypointSetCurrent)
 
         # Publishers
         self.pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
         # Subscribers
+        # Errata
+        self.get_params()
         pass
 
     #
@@ -119,8 +141,7 @@ class UAV_RcControl:
     def push_waypoints(self, waypoints):
         rospy.loginfo('/mavros/mission/push')
         try:
-            service = rospy.ServiceProxy('mavros/mission/push', WaypointPush)
-            resp = service(waypoints)
+            resp = self.push_waypoints(waypoints)
             rospy.loginfo(resp)
             return resp
         except rospy.ServiceException, e:
@@ -133,9 +154,7 @@ class UAV_RcControl:
     def pull_waypoints(self):
         rospy.loginfo('/mavros/mission/pull')
         try:
-            rospy.wait_for_service('/mavros/mission/pull')
-            service = rospy.ServiceProxy('mavros/mission/pull', WaypointPull)
-            resp = service()
+            resp = self.pull_waypoints()
             rospy.loginfo(resp)
             return resp
         except rospy.ServiceException, e:
@@ -149,8 +168,7 @@ class UAV_RcControl:
     def clear_waypoints(self):
         rospy.loginfo('/mavros/mission/clear')
         try:
-            service = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
-            resp = service()
+            resp = self.clear_waypoints()
             rospy.loginfo(resp)
             return resp
         except rospy.ServiceException, e:
@@ -164,8 +182,7 @@ class UAV_RcControl:
     def set_current_waypoint(self, idx):
         rospy.loginfo('/mavros/mission/set_current: '+str(idx))
         try:
-            service = rospy.ServiceProxy('mavros/mission/set_current', WaypointSetCurrent)
-            resp = service(idx)
+            resp = self.set_current_waypoint(idx)
             rospy.loginfo(resp)
             return resp
         except rospy.ServiceException, e:
@@ -187,3 +204,33 @@ class UAV_RcControl:
 #            return None
 
 
+    #
+    # 
+    #
+    def get_params(self):
+        # RC1_TRIM
+        rospy.loginfo("*********************************************")
+        ret = None
+        try:
+            ret = self.get_param(param_id = 'RC1_TRIM')
+        except rospy.ServiceException as ex:
+            rospy.logerr(ex)
+
+        if ret != None and ret.success:
+            self.apm_rc1_trim = ret.value.integer
+        else:
+            rospy.logerr("get_param(RC1_TRIM) request failed. Check mavros logs")
+
+        # RC3_TRIM
+        ret = None
+        try:
+            ret = self.get_param(param_id = 'RC3_TRIM')
+        except rospy.ServiceException as ex:
+            rospy.logerr(ex)
+
+        if ret != None and ret.success:
+            self.apm_rc3_trim = ret.value.integer
+        else:
+            rospy.logerr("get_param(RC3_TRIM) request failed. Check mavros logs")
+        rospy.loginfo("   rc1_trim= %d  rc3_trim= %d" %
+            (self.apm_rc1_trim, self.apm_rc3_trim))
