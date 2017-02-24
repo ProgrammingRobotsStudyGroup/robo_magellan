@@ -9,6 +9,8 @@
 
   <include file="$(find cone_finder)/launch/cone_seeker_video.launch" />
 
+  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" />
+
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
