@@ -19,15 +19,15 @@
 #
 
 #
-# UAV_RcControl client example:
+# UAV_Control client example:
 #
 # import uav_state
 #
 #     __UAV_State = uav_state.UAV_State()
-#     __UAV_RcControl = uav_rc_control.UAV_RcControl()
+#     __UAV_Control = uav_control.UAV_Control()
 #     resp1 = __UAV_State.set_mode(uav_state.MODE.MANUAL)
 #     if "True" in str(resp1):
-#         __UAV_RcControl.set_throttle_servo(1200,1400) #throttle and servo desired PWM value
+#         __UAV_Control.set_throttle_servo(1200,1400) #throttle and servo desired PWM value
 #
 
 import time
@@ -47,7 +47,7 @@ steer_channel=0
 
 exec_time=1 #exc time in secs
 
-class UAV_RcControl:
+class UAV_Control:
     def __init__(self):
         #mavros.set_namespace("/mavros")
 

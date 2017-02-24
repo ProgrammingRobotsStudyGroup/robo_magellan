@@ -35,13 +35,13 @@ import soundmap
 from auto_number import AutoNumber
 from uav_state import MODE as MAVMODE
 import uav_state
-import uav_rc_control
+import uav_control
 
 #
 # Globals
 #
 __UAV_State = None
-__UAV_RcControl = None
+__UAV_Control = None
 
 class STATE(AutoNumber):
     Start = ()
@@ -85,12 +85,12 @@ def following_waypoint_transitions(txt):
     waypoints = None
 #    waypoints = mission_planner(homebase.latitude, homebase.longitude,
 #       target.latitude, target.longitude)
-    resp = __UAV_RcControl.pull_waypoints()
+    resp = __UAV_Control.pull_waypoints()
      # Write a simple mission
     rospy.loginfo('pull: '+str(resp))
- #   __UAV_RcControl.push_waypoints(waypoints)
+ #   __UAV_Control.push_waypoints(waypoints)
     rospy.loginfo('pulled: '+str(waypoints))
-    resp = __UAV_RcControl.pull_waypoints()
+    resp = __UAV_Control.pull_waypoints()
     rospy.loginfo('after push pull: '+str(resp))
 
     resp1 = __UAV_State.set_arm(True)
@@ -173,13 +173,13 @@ def driving_toward_cone_transitions(txt):
     ##### end test code
     idx = 0
     # [1] is neutral
-    steering_limits = [__UAV_RcControl.get_param_int('RC1_MIN'),
-         __UAV_RcControl.get_param_int('RC1_TRIM'), 
-         __UAV_RcControl.get_param_int('RC1_MAX')]
+    steering_limits = [__UAV_Control.get_param_int('RC1_MIN'),
+         __UAV_Control.get_param_int('RC1_TRIM'), 
+         __UAV_Control.get_param_int('RC1_MAX')]
 
-    throttle_limits = [__UAV_RcControl.get_param_int('RC1_MIN'),
-     __UAV_RcControl.get_param_int('RC1_TRIM'), 
-     __UAV_RcControl.get_param_int('RC1_MAX')]
+    throttle_limits = [__UAV_Control.get_param_int('RC1_MIN'),
+     __UAV_Control.get_param_int('RC1_TRIM'), 
+     __UAV_Control.get_param_int('RC1_MAX')]
 
     servo = steering_limits[1]
 
@@ -192,14 +192,14 @@ def driving_toward_cone_transitions(txt):
         print mult
         throttle = throttle_limits[1]        #### + (test_count*20*mult)
         servo = servo + 50
-        __UAV_RcControl.set_throttle_servo(throttle, servo)
+        __UAV_Control.set_throttle_servo(throttle, servo)
         if test_count < 1:
             flag = False
 
         test_count = test_count -1
         idx = idx+1
         rate.sleep()
-    __UAV_RcControl.set_throttle_servo(throttle_limits[1], steering_limits[1])
+    __UAV_Control.set_throttle_servo(throttle_limits[1], steering_limits[1])
 
     if passed_last_cone or course_timeout:
         newState = STATE.Failure.name
@@ -287,8 +287,8 @@ def executive():
     # Initialize UAV models 
     global __UAV_State
     __UAV_State = uav_state.UAV_State()
-    global __UAV_RcControl
-    __UAV_RcControl = uav_rc_control.UAV_RcControl()
+    global __UAV_Control
+    __UAV_Control = uav_control.UAV_Control()
 
     # Start state machine
     # TODO What is our cargo?
