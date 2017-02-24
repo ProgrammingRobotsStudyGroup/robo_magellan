@@ -50,8 +50,6 @@ exec_time=1 #exc time in secs
 class UAV_RcControl:
     def __init__(self):
         #mavros.set_namespace("/mavros")
-        apm_rc1_trim = None
-        apm_rc3_trim = None
 
         # Proxies
         rospy.wait_for_service('/mavros/param/get')
@@ -72,8 +70,7 @@ class UAV_RcControl:
         # Publishers
         self.pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
         # Subscribers
-        # Errata
-        self.get_params()
+
         pass
 
     #
@@ -111,7 +108,8 @@ class UAV_RcControl:
                 flag=False
                 rospy.loginfo(msg)
                 self.pubOverride.publish(msg)
-                r.sleep()
+                time.sleep(0.05)
+                #r.sleep()
 
 
     #
@@ -203,34 +201,12 @@ class UAV_RcControl:
 #            rospy.loginfo('Service call failed: {0}'.format(e))
 #            return None
 
-
-    #
-    # 
-    #
-    def get_params(self):
-        # RC1_TRIM
-        rospy.loginfo("*********************************************")
+    def get_param_int(self,name):
         ret = None
         try:
-            ret = self.get_param(param_id = 'RC1_TRIM')
+            ret = self.get_param(param_id = name)
+            return ret.value.integer
         except rospy.ServiceException as ex:
             rospy.logerr(ex)
+            return None
 
-        if ret != None and ret.success:
-            self.apm_rc1_trim = ret.value.integer
-        else:
-            rospy.logerr("get_param(RC1_TRIM) request failed. Check mavros logs")
-
-        # RC3_TRIM
-        ret = None
-        try:
-            ret = self.get_param(param_id = 'RC3_TRIM')
-        except rospy.ServiceException as ex:
-            rospy.logerr(ex)
-
-        if ret != None and ret.success:
-            self.apm_rc3_trim = ret.value.integer
-        else:
-            rospy.logerr("get_param(RC3_TRIM) request failed. Check mavros logs")
-        rospy.loginfo("   rc1_trim= %d  rc3_trim= %d" %
-            (self.apm_rc1_trim, self.apm_rc3_trim))

@@ -83,7 +83,15 @@ def following_waypoint_transitions(txt):
 
     # Push 1 waypoint - it's a test
     waypoints = None
-    #__UAV_RcControl.push_waypoints(waypoints)
+#    waypoints = mission_planner(homebase.latitude, homebase.longitude,
+#       target.latitude, target.longitude)
+    resp = __UAV_RcControl.pull_waypoints()
+     # Write a simple mission
+    rospy.loginfo('pull: '+str(resp))
+ #   __UAV_RcControl.push_waypoints(waypoints)
+    rospy.loginfo('pulled: '+str(waypoints))
+    resp = __UAV_RcControl.pull_waypoints()
+    rospy.loginfo('after push pull: '+str(resp))
 
     resp1 = __UAV_State.set_arm(True)
     #resp1 = __UAV_State.set_mode(MAVMODE.AUTO.name)
@@ -91,7 +99,7 @@ def following_waypoint_transitions(txt):
     
     flag = True
     rate = rospy.Rate(0.5) # some hz
-    test_count = 10 # test code
+    test_count = 5 # test code
 
     # WP Driving loop
     while not rospy.is_shutdown() and flag:
@@ -101,6 +109,7 @@ def following_waypoint_transitions(txt):
             flag = False
         test_count = test_count -1
         rate.sleep()
+    ###
     near_cone = True
     obstacle_seen = False
 
@@ -156,19 +165,41 @@ def driving_toward_cone_transitions(txt):
     passed_last_cone = False
     course_timeout = False
 
-    rate = rospy.Rate(0.5) # some hz
+    rate = rospy.Rate(10) # some hz
     flag = True
-    test_count = 6 # test code
+    ##### test code
+    test_count = test_total = 6 
+    mult = 1
+    ##### end test code
+    idx = 0
+    # [1] is neutral
+    steering_limits = [__UAV_RcControl.get_param_int('RC1_MIN'),
+         __UAV_RcControl.get_param_int('RC1_TRIM'), 
+         __UAV_RcControl.get_param_int('RC1_MAX')]
 
-    # WP Driving loop
+    throttle_limits = [__UAV_RcControl.get_param_int('RC1_MIN'),
+     __UAV_RcControl.get_param_int('RC1_TRIM'), 
+     __UAV_RcControl.get_param_int('RC1_MAX')]
+
+    servo = steering_limits[1]
+
+    # Cone Driving loop
     while not rospy.is_shutdown() and flag:
         rospy.loginfo('Driving to a CONE! Within '+str(test_count)+' meters')
         # TODO Are we near a cone?
+        if test_count<(test_total/2):
+            mult = -1
+        print mult
+        throttle = throttle_limits[1]        #### + (test_count*20*mult)
+        servo = servo + 50
+        __UAV_RcControl.set_throttle_servo(throttle, servo)
         if test_count < 1:
             flag = False
 
         test_count = test_count -1
+        idx = idx+1
         rate.sleep()
+    __UAV_RcControl.set_throttle_servo(throttle_limits[1], steering_limits[1])
 
     if passed_last_cone or course_timeout:
         newState = STATE.Failure.name
@@ -181,8 +212,6 @@ def driving_toward_cone_transitions(txt):
     return (newState, txt)
 
 
-
-
 #
 # Driving away from cone
 # transitions
@@ -191,12 +220,8 @@ def driving_toward_cone_transitions(txt):
 def driving_away_from_cone_transitions(txt):
     rospy.loginfo('Entered state: '+STATE.Driving_away_from_cone.name)
 
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
     # Set UAV mode
-    #resp1 = __UAV_State.set_mode(MAVMODE.MANUAL.name)
-    throttle = None
-    servo = None
-    #__UAV_RcControl.set_throttle_servo(throttle,servo)
+    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
 
     cleared_cone = True
     if cleared_cone:
@@ -254,16 +279,16 @@ def executive():
     #
     machine.set_start(STATE.Start.name)
 
-    # ROS
-    global __UAV_State
-    __UAV_State = uav_state.UAV_State()
-    global __UAV_RcControl
-    __UAV_RcControl = uav_rc_control.UAV_RcControl()
 
     pubSoundToken = rospy.Publisher('play', String, queue_size=10)
 
 	# Start our node
     rospy.init_node('executive', anonymous=True)
+    # Initialize UAV models 
+    global __UAV_State
+    __UAV_State = uav_state.UAV_State()
+    global __UAV_RcControl
+    __UAV_RcControl = uav_rc_control.UAV_RcControl()
 
     # Start state machine
     # TODO What is our cargo?
