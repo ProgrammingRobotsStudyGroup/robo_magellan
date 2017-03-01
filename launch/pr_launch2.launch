@@ -9,6 +9,10 @@
 
   <include file="$(find cone_finder)/launch/cone_seeker_video.launch" />
 
+  <!--  <include file="$(find cone_finder)/launch/cone_seeker.launch" />  -->
+
+  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
+
   <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" />
 
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
