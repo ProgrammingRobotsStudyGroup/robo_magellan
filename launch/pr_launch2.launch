@@ -7,9 +7,9 @@
     <arg name="fcu_url" value="/dev/ttyS1:115200" />
   </include>
 
-  <include file="$(find cone_finder)/launch/cone_seeker_video.launch" />
+  <include file="$(find robo_magellan)/launch/cone_seeker_video.launch" />
 
-  <!--  <include file="$(find cone_finder)/launch/cone_seeker.launch" />  -->
+  <!--  <include file="$(find robo_magellan)/launch/cone_seeker.launch" />  -->
 
   <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
 

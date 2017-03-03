@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find cone_finder)/launch/cone_finder.launch"/>
-  <node name="cone_seeker" pkg="cone_finder" type="seek_cone.py" args="-s 0.5"/>
+  <include file="$(find robo_magellan)/launch/cone_finder.launch"/>
+  <node name="cone_seeker" pkg="robo_magellan" type="seek_cone.py" args="-s 0.5"/>
 </launch>
 

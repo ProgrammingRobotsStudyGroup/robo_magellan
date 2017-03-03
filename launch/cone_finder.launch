@@ -4,6 +4,6 @@
     <arg name="depth_height" value="480"/>
     <arg name="rgb" default="color"/>
   </include>
-  <node name="cone_finder" pkg="cone_finder" type="detect_cones.py" args="-r" />
+  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-r" />
 </launch>
 
