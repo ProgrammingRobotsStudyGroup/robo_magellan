@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find cone_finder)/launch/cone_finder_video.launch"/>
+  <node name="cone_seeker" pkg="cone_finder" type="seek_cone.py" args="-s 0.5"/>
+</launch>
+

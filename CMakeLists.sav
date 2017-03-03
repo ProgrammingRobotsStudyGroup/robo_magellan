@@ -8,11 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  sensor_msgs
-  geometry_msgs
   message_generation
   genmsg
-  mavros_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -22,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-catkin_python_setup()
+# catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -53,7 +50,6 @@ add_message_files(
   DIRECTORY msg 
   FILES
   Num.msg
-   location_msgs.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -75,7 +71,6 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
-   geometry_msgs
 )
 
 ################################################
@@ -151,10 +146,10 @@ add_dependencies(add_two_ints_client robo_magellan_gencpp)
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-install(PROGRAMS
-  scripts/detect_cones.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# install(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS robo_magellan robo_magellan_node

@@ -1,0 +1,9 @@
+<launch>
+  <include file="$(find realsense_camera)/launch/r200_nodelet_rgbd.launch">
+    <arg name="depth_width" value="640"/>
+    <arg name="depth_height" value="480"/>
+    <arg name="rgb" default="color"/>
+  </include>
+  <node name="cone_finder" pkg="cone_finder" type="detect_cones.py" args="-r" />
+</launch>
+
