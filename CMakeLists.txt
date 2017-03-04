@@ -53,7 +53,9 @@ add_message_files(
   DIRECTORY msg 
   FILES
   Num.msg
-   location_msgs.msg
+  location_msgs.msg
+  to_exec.msg
+  to_state.msg
 )
 
 ## Generate services in the 'srv' folder
