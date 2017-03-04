@@ -31,6 +31,7 @@
 #
 
 import time
+import sys
 
 # ROS
 import rospy
@@ -39,7 +40,9 @@ import rospy
 from mavros_msgs.msg import OverrideRCIn
 from mavros_msgs.srv import CommandBool 
 from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent #, WaypointGOTO
+from mavros_msgs.srv import *
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode
+from mavros.mission import *
 
 # Globals
 throttle_channel=2
@@ -69,9 +72,52 @@ class UAV_Control:
 
         # Publishers
         self.pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
-        # Subscribers
 
+        # Subscribers
+        self.waypoints_sub = rospy.Subscriber("/mavros/mission/waypoints", WaypointList, self.__waypoints_cb)
         pass
+
+    def __waypoints_cb(self, topic):
+#        rospy.loginfo('__waypoints_cb')
+        self.wp = topic.waypoints
+#        pt = PrettyTable(('#', 'Curr', 'Auto',
+#                          'Frame', 'Command',
+#                          'P1', 'P2', 'P3', 'P4',
+#                          'X Lat', 'Y Long', 'Z Alt'))
+#            pt.add_row((
+#                seq,
+#                str_bool(w.is_current),
+#                str_bool(w.autocontinue),
+#                str_frame(w.frame),
+#                str_command(w.command),
+#                w.param1,
+#                w.param2,
+#                w.param3,
+#                w.param4,
+#                w.x_lat,
+#                w.y_long,
+#                w.z_alt
+#            ))
+#        print(pt, file=sys.stdout)
+#        sys.stdout.flush()
+#        done_evt.set()
+
+
+    def printWP(self):
+        for seq, w in enumerate(self.wp):
+            print (' seq: '+str(seq)+
+                   ' w.is_current: '+str(w.is_current)+
+                   ' w.autocontinue: '+str(w.autocontinue)+
+                   ' w.frame: '+str(w.frame)+
+                   ' w.command: '+str(w.command)+
+                   ' w.param1: '+str(w.param1)+
+                   ' w.param2: '+str(w.param2)+
+                   ' w.param3: '+str(w.param3)+
+                   ' w.param4: '+str(w.param4)+
+                   ' w.x_lat: '+str(w.x_lat)+
+                   ' w.y_long: '+str(w.y_long)+
+                   ' w.z_alt: '+str(w.z_alt)+
+                  '')
 
     #
     # throttle: Desired PWM value
@@ -117,7 +163,7 @@ class UAV_Control:
     # servo: Desired PWM value
     #
     def set_throttle_servo(self, throttle,servo):
-        rospy.loginfo('mavros/rc/override, throttle and servo')
+        #rospy.loginfo('mavros/rc/override, throttle and servo')
         r = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
@@ -148,12 +194,13 @@ class UAV_Control:
 
     #
     # Pull waypoints
+    # Request update waypoint list.
     #
     def pull_waypoints(self):
         rospy.loginfo('/mavros/mission/pull')
         try:
             resp = self.pull_waypoints()
-            rospy.loginfo(resp)
+            rospy.loginfo('success: '+resp.success+' wp_received: '+resp.wp_received)
             return resp
         except rospy.ServiceException, e:
             rospy.loginfo('Service call failed: {0}'.format(e))
@@ -192,9 +239,20 @@ class UAV_Control:
     # Goto wp
     #
 #    def goto_waypoint(self, wp):
+        wp = Waypoint(
+            frame = args.frame,
+            command = args.command,
+            param1 = args.param1,
+            param2 = args.param2,
+            param3 = args.param3,
+            param4 = args.param4,
+            x_lat = args.x_lat,
+            y_long = args.y_long,
+            z_alt = args.z_alt
+        )
 #        try:
-#            service = rospy.ServiceProxy('mavros/mission/goto', WaypointSetCurrent)
-#            resp = service(idx)
+#            service = rospy.ServiceProxy('mavros/mission/goto', WaypointGOTO)
+#            resp = service(waypoint=wp)
 #            rospy.loginfo(resp)
 #            return resp
 #        except rospy.ServiceException, e:
