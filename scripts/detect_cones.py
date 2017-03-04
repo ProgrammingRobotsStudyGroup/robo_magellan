@@ -18,8 +18,16 @@ class Args(object):
     area_threshold = 100
     debug = False
     fromMain = False
+    codec = 'XVID'
     image_dir = ''
     video_file = ''
+    capture_video = False
+    firstTime = True
+    rgbOut = None
+    depthOut = None
+    rgbOutFile = 'rgb.avi'
+    depthOutFile = 'depth.avi'
+    
 
 args = Args()
 pub = rospy.Publisher('cone_finder/locations', location_data, queue_size=10)
@@ -55,6 +63,28 @@ def check_opencv_version(major, lib=None):
 #    D = D * 8
 #    return D
 
+def initCapture(frame, outFile):
+    (h, w) = frame.shape[:2]
+    fourcc = cv2.VideoWriter_fourcc(*args.codec)
+    capOut = cv2.VideoWriter(outFile, fourcc, 15.0, (w, h), True)
+    if(capOut.isOpened() == False):
+        capOut = None
+        rospy.loginfo("Could not open %s file to write video" % outFile)    
+    
+    return capOut            
+
+def captureFrames(cvRGB, cvDepth):
+    if(args.firstTime):    
+        # Initialize capture devices
+        args.rgbOut = initCapture(cvRGB, args.rgbOutFile)
+        args.depthOut = initCapture(cvDepth, args.depthOutFile)
+        args.firstTime = False
+
+    if(args.rgbOut is not None and args.rgbOut.isOpened() and cvRGB is not None):
+        args.rgbOut.write(cvRGB)
+    if(args.depthOut is not None and args.depthOut.isOpened() and cvDepth is not None):
+        args.depthOut.write(cv2.cvtColor((cvDepth/256).astype('uint8'), cv2.COLOR_GRAY2BGR))
+
 #Returns depth range tuple (min, max, realDepth) - realDepth is a boolean
 def getHullDepth(hull, depthImg=None):
     if(depthImg is None):
@@ -62,6 +92,7 @@ def getHullDepth(hull, depthImg=None):
 
     h = depthImg.shape[:1]
     depthList = []
+    # Get bounding box of the hull
     for point in hull:
         depth = depthImg[point.x, point.y]
         # assuming we don't get good values below a threshold (100mm)
@@ -135,11 +166,11 @@ def process_orange_color(img):
 
     # Threshold on low range of HSV red
     low_redl = np.array([0, 135, 135])
-    low_redh = np.array([15, 255, 255])
+    low_redh = np.array([19, 255, 255])
     imgThreshLow = cv2.inRange(imgHSV, low_redl, low_redh)
 
     # threshold on high range of HSV red
-    high_redl = np.array([159, 135, 135])
+    high_redl = np.array([160, 135, 135])
     high_redh = np.array([179, 255, 255])
     imgThreshHigh = cv2.inRange(imgHSV, high_redl, high_redh)
 
@@ -148,18 +179,15 @@ def process_orange_color(img):
 
 def find_cones(img, depthImg=None):
     h, w = img.shape[:2]
+    
     image_centerX = w/2
     image_centerY = h  # y goes down from top
-    
-    #if(depthImg is not None):
-    #    B, G, R = cv2.split(img.copy())
-    #    A = (enhance_depth(depthImg)/256).astype('uint8')
-    #    imgNew = cv2.merge((B*A, G*A, R*A))
-    #    enhancedDepth = enhance_depth(depthImg)
         
+    captureFrames(img, depthImg)
     # Process orange color and convert to gray image
     imgThresh = process_orange_color(img)
-
+    #captureFrames(imgThresh, depthImg)
+            
     # clone/copy thresh image before smoothing
     imgThreshSmoothed = imgThresh.copy()
     # open image (erode, then dilate)
@@ -187,6 +215,8 @@ def find_cones(img, depthImg=None):
             #contour = cv2.approxPolyDP(cnt, 6.7, True)
             # Find convex hulls.
             hull = cv2.convexHull(contour, returnPoints=True)
+            # See how the hull looks as a triangle
+            # tri = cv2.minEnclosingTriangle(hull)
             # get the depth for the hull. Is it one value or multiple?
             depthRange = getHullDepth(hull)
             # We need to sort and store the contours by proximity of their centroids
@@ -288,6 +318,7 @@ class RosColorDepth:
         self.thread_lock = threading.Lock()
         self.ts = time.clock()
         self.lc = 0
+        
         colorCamInfo = message_filters.Subscriber("/camera/color/camera_info", CameraInfo)
         depthCamInfo = message_filters.Subscriber("/camera/depth/camera_info", CameraInfo)
         ts = message_filters.TimeSynchronizer([colorCamInfo, depthCamInfo], 10)
@@ -329,6 +360,8 @@ class RosColorDepth:
         try:
             self.lc = self.lc + 1
             count, imghull = find_cones(cvRGB, cvDepth)
+            #captureFrames(cvRGB, cvDepth)
+            
             if(args.publish_images):
                 msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
                 cv2.putText(imghull, msg_str, (0, 460), cv2.FONT_HERSHEY_SIMPLEX,
@@ -375,6 +408,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Find cones in video feed or images')
     parser.add_argument('--use_ros_topic', '-r', action='store_true', help='Use ROS topic')
     parser.add_argument('--image_dir', '-i', help='Find cones in images under specified directory')
+    parser.add_argument('--capture_video', '-c', action='store_true', help='Capture videos')
     parser.add_argument('--area_threshold', '-a', type=int, help='Area threshold to use for cones')
     parser.add_argument('--debug', '-d', action='store_true', help='Show debug messages')
     parser.add_argument('--publish_images', '-p', action='store_true', help='Publish marked images')
