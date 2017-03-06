@@ -56,11 +56,11 @@ def cmd_callback(data):
     if theState == __ExecComm.state:
         rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
         # Handle start, reset, pause, etc.
-        if (__ExecComm.cmd==MSG_TO_STATE.START.name):
+        if (__ExecComm.cmd == MSG_TO_STATE.START.name):
             state_start()
-        elif (__ExecComm.cmd==MSG_TO_STATE.RESET.name):
+        elif (__ExecComm.cmd == MSG_TO_STATE.RESET.name):
             state_reset()
-        elif (__ExecComm.cmd==MSG_TO_STATE.PAUSE.name):
+        elif (__ExecComm.cmd == MSG_TO_STATE.PAUSE.name):
             state_pause()
         else:
             rospy.logwarn('Invalid cmd: '+data.data)
@@ -137,10 +137,14 @@ def state_start():
     # Publish transition
     if obstacle_seen:
 #        newState = STATE.Avoiding_obstacle.name
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.obstacle_seen.name)
+        __ExecComm.send_message_to_exec(
+            MSG_TO_EXEC.DONE.name,
+            TRANSITION.obstacle_seen.name)
     elif near_cone:
 #        newState = STATE.Driving_toward_cone.name
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.near_cone.name)
+        __ExecComm.send_message_to_exec(
+            MSG_TO_EXEC.DONE.name,
+            TRANSITION.near_cone.name)
 
 
 #

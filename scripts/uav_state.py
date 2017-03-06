@@ -38,7 +38,7 @@ import mavros_msgs.msg
 import mavros_msgs.srv
 from sensor_msgs.msg import BatteryState
 
-from scripts.auto_number import AutoNumber
+from auto_number import AutoNumber
 
 
 class MODE(AutoNumber):

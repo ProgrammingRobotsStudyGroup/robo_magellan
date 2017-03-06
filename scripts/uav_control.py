@@ -218,7 +218,7 @@ class UAV_Control:
         rospy.loginfo('/mavros/mission/pull')
         try:
             resp = self.svc_pull_waypoints()
-            rospy.loginfo('success: '+resp.success+' wp_received: '+resp.wp_received)
+            rospy.loginfo('success: '+str(resp.success)+' wp_received: '+str(resp.wp_received))
             return resp
         except rospy.ServiceException, err:
             rospy.loginfo(
