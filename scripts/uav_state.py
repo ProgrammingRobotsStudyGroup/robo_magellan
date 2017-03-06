@@ -22,24 +22,23 @@
 # - MAV mode
 # - arm
 
+#
+from datetime import datetime
+
 # import ROS libraries
 import rospy
 import mavros
-from mavros.utils import *
+#from mavros.utils import *
 from mavros import setpoint as SP
 import mavros_msgs.msg
-from mavros_msgs.msg import BatteryStatus
-from sensor_msgs.msg import BatteryState
 import mavros_msgs.srv
+from sensor_msgs.msg import BatteryState
 
-#
-import time
-from datetime import datetime
-
-from auto_number import AutoNumber
+from scripts.auto_number import AutoNumber
 
 
 class MODE(AutoNumber):
+    """MAV MODE"""
     MANUAL = ()
     LEARNING = ()
     STEERING = ()
@@ -50,18 +49,20 @@ class MODE(AutoNumber):
     INITIALISING = ()
 
 class ARM(AutoNumber):
+    """MAV ARM STATE"""
     ARMED = ()
     DISARMED = ()
 
-#
 class _coord:
-	def __init__(self):
-		self.x = 0
-		self.y = 0
-		self.z = 0
+    """Pose coordinate"""
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.z = 0
 
 #
 class UAV_State:
+    """State of UAV"""
     def __init__(self):
         self.current_pose = _coord()
         self.setpoint_pose = _coord()
@@ -75,15 +76,16 @@ class UAV_State:
         mavros.set_namespace("/mavros")
 
         # Subscribers
-        self.local_position_sub = rospy.Subscriber(mavros.get_topic('local_position', 'pose'), 
+        self.local_position_sub = rospy.Subscriber(
+            mavros.get_topic('local_position', 'pose'),
             SP.PoseStamped, self.__local_position_cb)
-        self.setpoint_local_sub = rospy.Subscriber(mavros.get_topic('setpoint_raw', 'target_local'), 
+        self.setpoint_local_sub = rospy.Subscriber(
+            mavros.get_topic('setpoint_raw', 'target_local'),
             mavros_msgs.msg.PositionTarget, self.__setpoint_position_cb)
-        self.state_sub = rospy.Subscriber(mavros.get_topic('state'),
+        self.state_sub = rospy.Subscriber(
+            mavros.get_topic('state'),
             mavros_msgs.msg.State, self.__state_cb)
         self.battery_sub = rospy.Subscriber("/mavros/battery", BatteryState, self.__battery_cb)
-
-        pass
 
     def __local_position_cb(self, topic):
 #        rospy.loginfo('__local_position_cb')
@@ -106,63 +108,85 @@ class UAV_State:
 
     def __battery_cb(self, data):
 #        rospy.loginfo('__battery_cb')
-        self.current = round(data.current,2)
-        self.voltage = round(data.voltage,2)
+        self.current = round(data.current, 2)
+        self.voltage = round(data.voltage, 2)
 
     def __calculate_delay(self):
         tmp = float(datetime.utcnow().strftime('%S.%f'))
-        if tmp<self.timestamp:
+        if tmp < self.timestamp:
             # over a minute
             self.connection_delay = 60.0 - self.timestamp + tmp
         else:
             self.connection_delay = tmp - self.timestamp
         self.timestamp = tmp
 
-    ####
+
     def get_mode(self):
+        """Get pixhawk MAV state"""
         return self.mode
 
     def set_mode(self, new_mode):
+        """Set pixhawk MAV state"""
         rospy.loginfo('/mavros/set_mode: '+new_mode)
         rospy.wait_for_service('/mavros/set_mode')
-        isModeChanged = False
+        if self.mode == new_mode:
+            pass
         try:
-            flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
-            isModeChanged = flightModeService(custom_mode=new_mode) 
+            flight_mode_service = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
+            is_mode_changed = flight_mode_service(custom_mode=new_mode)
         except rospy.ServiceException, e:
-            rospy.loginfo("Service set_mode call failed: %s. Mode %s could not be set. Check that GPS is enabled.",e,new_mode)
-        return isModeChanged
+            rospy.loginfo(
+                "Service set_mode call failed: %s. Mode %s could not be set. "
+                "Check that GPS is enabled.",
+                e, new_mode)
+        return is_mode_changed
 
-    ####
+
     def get_arm(self):
+        """Get pixhawk arm state"""
         return self.arm
 
     def set_arm(self, new_arm):
+        """Arm pixhawk"""
         rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
         rospy.wait_for_service('/mavros/cmd/arming')
+        if self.arm == new_arm:
+            pass
         try:
-            armService = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-            resp = armService(new_arm)
+            arm_service = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
+            resp = arm_service(new_arm)
             rospy.loginfo(resp)
+            rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
             return resp
         except rospy.ServiceException, e:
-            rospy.loginfo("Service arm call failed: %s. Attempted to set %s",e,new_arm)
+            rospy.loginfo("Service arm call failed: %s. "
+                          "Attempted to set %s",
+                          e, new_arm)
 
-    ####
+
     def get_current_pose(self):
+        """Get setpoint pose"""
         return self.current_pose
 
     def get_setpoint_pose(self):
+        """Get setpoint pose"""
         return self.setpoint_pose
 
+
     def get_guided(self):
+        """Get guided"""
         return self.guided
 
+
     def get_delay(self):
+        """Get delay"""
         return self.connection_delay
 
+
     def get_current(self):
+        """Get battery current"""
         return self.current
 
     def get_voltage(self):
+        """Get battery voltage"""
         return self.voltage
