@@ -29,57 +29,67 @@
 #     if "True" in str(resp1):
 #         __UAV_Control.set_throttle_servo(1200,1400) #throttle and servo desired PWM value
 #
+"""This module encapsulates UAV RC Control and abstracts communication."""
 
 import time
-import sys
 
 # ROS
 import rospy
 
 # MAVROS
 from mavros_msgs.msg import OverrideRCIn
-from mavros_msgs.srv import CommandBool 
-from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent #, WaypointGOTO
-from mavros_msgs.srv import *
-from mavros_msgs.srv import ParamGet, ParamSet, SetMode
-from mavros.mission import *
+#from mavros_msgs.srv import CommandBool
+from mavros_msgs.msg import WaypointList
+
+from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
+#from mavros_msgs.srv import *
+from mavros_msgs.srv import ParamGet
+#from mavros_msgs.srv import ParamSet, SetMode
+#TODO Missing import from mavros_msgs.srv import WaypointGOTO
+#from mavros.mission import *
 
 # Globals
-throttle_channel=2
-steer_channel=0
+THROTTLE_CHANNEL = 2
+STEER_CHANNEL = 0
 
-exec_time=1 #exc time in secs
+EXEC_TIME = 1 #exc time in secs
 
 class UAV_Control:
+    """UAV WP and Manual Control"""
     def __init__(self):
         #mavros.set_namespace("/mavros")
+        self.waypoint_list = None
 
         # Proxies
         rospy.wait_for_service('/mavros/param/get')
-        self.get_param = rospy.ServiceProxy('/mavros/param/get', ParamGet)
+        self.svc_get_param = rospy.ServiceProxy('/mavros/param/get', ParamGet)
 
         rospy.wait_for_service('/mavros/mission/push')
-        self.push_waypoints = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
+        self.svc_push_waypoints = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
 
         rospy.wait_for_service('/mavros/mission/pull')
-        self.pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
+        self.svc_pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
 
         rospy.wait_for_service('/mavros/mission/clear')
-        self.clear_waypoints = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
+        self.svc_clear_waypoints = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
 
         rospy.wait_for_service('/mavros/mission/set_current')
-        self.set_current_waypoint = rospy.ServiceProxy('mavros/mission/set_current', WaypointSetCurrent)
+        self.svc_set_current_waypoint = rospy.ServiceProxy(
+            'mavros/mission/set_current',
+            WaypointSetCurrent)
 
         # Publishers
-        self.pubOverride = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
+        self.pub_rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
 
         # Subscribers
-        self.waypoints_sub = rospy.Subscriber("/mavros/mission/waypoints", WaypointList, self.__waypoints_cb)
-        pass
+        self.waypoints_sub = rospy.Subscriber(
+            "/mavros/mission/waypoints",
+            WaypointList,
+            self.__waypoints_cb)
 
     def __waypoints_cb(self, topic):
 #        rospy.loginfo('__waypoints_cb')
-        self.wp = topic.waypoints
+        self.waypoint_list = topic.waypoints
 #        pt = PrettyTable(('#', 'Curr', 'Auto',
 #                          'Frame', 'Command',
 #                          'P1', 'P2', 'P3', 'P4',
@@ -103,57 +113,60 @@ class UAV_Control:
 #        done_evt.set()
 
 
-    def printWP(self):
-        for seq, w in enumerate(self.wp):
+    def print_waypoints(self):
+        """Prints Pixhawk waypoints to stdout"""
+        for seq, waypoint in enumerate(self.waypoint_list):
             print (' seq: '+str(seq)+
-                   ' w.is_current: '+str(w.is_current)+
-                   ' w.autocontinue: '+str(w.autocontinue)+
-                   ' w.frame: '+str(w.frame)+
-                   ' w.command: '+str(w.command)+
-                   ' w.param1: '+str(w.param1)+
-                   ' w.param2: '+str(w.param2)+
-                   ' w.param3: '+str(w.param3)+
-                   ' w.param4: '+str(w.param4)+
-                   ' w.x_lat: '+str(w.x_lat)+
-                   ' w.y_long: '+str(w.y_long)+
-                   ' w.z_alt: '+str(w.z_alt)+
-                  '')
+                   ' waypoint.is_current: '+str(waypoint.is_current)+
+                   ' waypoint.autocontinue: '+str(waypoint.autocontinue)+
+                   ' waypoint.frame: '+str(waypoint.frame)+
+                   ' waypoint.command: '+str(waypoint.command)+
+                   ' waypoint.param1: '+str(waypoint.param1)+
+                   ' waypoint.param2: '+str(waypoint.param2)+
+                   ' waypoint.param3: '+str(waypoint.param3)+
+                   ' waypoint.param4: '+str(waypoint.param4)+
+                   ' waypoint.x_lat: '+str(waypoint.x_lat)+
+                   ' waypoint.y_long: '+str(waypoint.y_long)+
+                   ' waypoint.z_alt: '+str(waypoint.z_alt)+
+                   '')
 
     #
     # throttle: Desired PWM value
     #
     def set_throttle(self, throttle):
+        """Set throttle"""
         rospy.loginfo('mavros/rc/override, throttle')
-        r = rospy.Rate(10) #10hz
+        rate = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
-        flag=True #time flag
-        msg.channels[steer_channel]=servo        # Desired PWM value
+        flag = True    # time flag
+        msg.channels[THROTTLE_CHANNEL] = throttle        # Desired PWM value
         while not rospy.is_shutdown() and flag:
-            sample_time=time.time()
-            if ((sample_time - start) > exec_time):
-                flag=False
+            sample_time = time.time()
+            if (sample_time - start) > EXEC_TIME:
+                flag = False
                 rospy.loginfo(msg)
-                self.pubOverride.publish(msg)
-                r.sleep()
+                self.pub_rc_override.publish(msg)
+                rate.sleep()
 
 
     #
     # servo: Desired PWM value
     #
     def set_servo(self, servo):
+        """Set servo"""
         rospy.loginfo('mavros/rc/override, servo')
-        r = rospy.Rate(10) #10hz
+        #rate = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
-        flag=True #time flag
-        msg.channels[steer_channel]=servo        # Desired PWM value
+        flag = True #time flag
+        msg.channels[STEER_CHANNEL] = servo        # Desired PWM value
         while not rospy.is_shutdown() and flag:
-            sample_time=time.time()
-            if ((sample_time - start) > exec_time):
-                flag=False
+            sample_time = time.time()
+            if (sample_time - start) > EXEC_TIME:
+                flag = False
                 rospy.loginfo(msg)
-                self.pubOverride.publish(msg)
+                self.pub_rc_override.publish(msg)
                 time.sleep(0.05)
                 #r.sleep()
 
@@ -162,34 +175,38 @@ class UAV_Control:
     # throttle: Desired PWM value
     # servo: Desired PWM value
     #
-    def set_throttle_servo(self, throttle,servo):
+    def set_throttle_servo(self, throttle, servo):
+        """Set throttle AND servo"""
         #rospy.loginfo('mavros/rc/override, throttle and servo')
-        r = rospy.Rate(10) #10hz
+        rate = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
         start = time.time()
-        flag=True #time flag
-        msg.channels[throttle_channel]=throttle  # Desired PWM value
-        msg.channels[steer_channel]=servo        # Desired PWM value
+        flag = True #time flag
+        msg.channels[THROTTLE_CHANNEL] = throttle  # Desired PWM value
+        msg.channels[STEER_CHANNEL] = servo        # Desired PWM value
         while not rospy.is_shutdown() and flag:
-            sample_time=time.time()
-            if ((sample_time - start) > exec_time):
-                flag=False
+            sample_time = time.time()
+            if (sample_time - start) > EXEC_TIME:
+                flag = False
                 rospy.loginfo(msg)
-                self.pubOverride.publish(msg)
-                r.sleep()
+                self.pub_rc_override.publish(msg)
+                rate.sleep()
 
 
     #
     # Push waypoints
     #
     def push_waypoints(self, waypoints):
+        """Push waypoints to Pixhawk"""
         rospy.loginfo('/mavros/mission/push')
         try:
-            resp = self.push_waypoints(waypoints)
+            resp = self.svc_push_waypoints(waypoints)
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, e:
-            rospy.loginfo('Service call failed: {0}'.format(e))
+        except rospy.ServiceException, err:
+            rospy.loginfo(
+                "Service push_waypoints call failed: %s.",
+                err)
             return None
 
     #
@@ -197,13 +214,16 @@ class UAV_Control:
     # Request update waypoint list.
     #
     def pull_waypoints(self):
+        """Request update waypoint list"""
         rospy.loginfo('/mavros/mission/pull')
         try:
-            resp = self.pull_waypoints()
+            resp = self.svc_pull_waypoints()
             rospy.loginfo('success: '+resp.success+' wp_received: '+resp.wp_received)
             return resp
-        except rospy.ServiceException, e:
-            rospy.loginfo('Service call failed: {0}'.format(e))
+        except rospy.ServiceException, err:
+            rospy.loginfo(
+                "Service pull_waypoints call failed: %s.",
+                err)
             return None
 
 
@@ -211,45 +231,53 @@ class UAV_Control:
     # Clear waypoints
     #
     def clear_waypoints(self):
+        """Clear waypoints"""
         rospy.loginfo('/mavros/mission/clear')
         try:
-            resp = self.clear_waypoints()
+            resp = self.svc_clear_waypoints()
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, e:
-            rospy.loginfo('Service call failed: {0}'.format(e))
+        except rospy.ServiceException, err:
+            rospy.loginfo(
+                "Service clear_waypoints call failed: %s.",
+                err)
             return None
 
 
     #
-    # Set current wp
+    # Set current waypoint
     #
     def set_current_waypoint(self, idx):
+        """Set current wp"""
         rospy.loginfo('/mavros/mission/set_current: '+str(idx))
         try:
-            resp = self.set_current_waypoint(idx)
+            resp = self.svc_set_current_waypoint(idx)
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, e:
-            rospy.loginfo('Service call failed: {0}'.format(e))
+        except rospy.ServiceException, err:
+            rospy.loginfo(
+                "Service set_current_waypoint call failed: %s. Index %d could not be set. "
+                "Check that GPS is enabled.",
+                err, idx)
             return None
 
 
     #
     # Goto wp
     #
-#    def goto_waypoint(self, wp):
-        wp = Waypoint(
-            frame = args.frame,
-            command = args.command,
-            param1 = args.param1,
-            param2 = args.param2,
-            param3 = args.param3,
-            param4 = args.param4,
-            x_lat = args.x_lat,
-            y_long = args.y_long,
-            z_alt = args.z_alt
-        )
+#    def goto_waypoint(self, args):
+#        """Go to WP"""
+#        wp = Waypoint(
+#            frame=args.frame,
+#            command=args.command,
+#            param1=args.param1,
+#            param2=args.param2,
+#            param3=args.param3,
+#            param4=args.param4,
+#            x_lat=args.x_lat,
+#            y_long=args.y_long,
+#            z_alt=args.z_alt
+#        )
 #        try:
 #            service = rospy.ServiceProxy('mavros/mission/goto', WaypointGOTO)
 #            resp = service(waypoint=wp)
@@ -259,10 +287,11 @@ class UAV_Control:
 #            rospy.loginfo('Service call failed: {0}'.format(e))
 #            return None
 
-    def get_param_int(self,name):
+    def get_param_int(self, name):
+        """Get parameter value from UAV"""
         ret = None
         try:
-            ret = self.get_param(param_id = name)
+            ret = self.svc_get_param(param_id=name)
             return ret.value.integer
         except rospy.ServiceException as ex:
             rospy.logerr(ex)

@@ -39,7 +39,12 @@ from state_and_transition import TRANSITION
 
 # Globals
 
-
+'''
+TODO
+1) Rework code to use msg formats, state_start
+2) Find common approach to  state_start, state_reset, state_pause
+3)
+'''
 #
 # Exec command listener callback
 #
@@ -104,7 +109,7 @@ def state_start():
     # Update waypoint topic
     resp = __UAV_Control.pull_waypoints()
     rospy.loginfo('# WPs: '+str(resp.wp_received))
-#    print __UAV_Control.wp
+#    print __UAV_Control.waypoint_list
 
 #    resp1 = __UAV_State.set_mode(MAVMODE.AUTO.name)
     resp1 = __UAV_State.set_mode(MAVMODE.LEARNING.name)
@@ -141,7 +146,7 @@ def state_start():
 #
 #
 #
-def follow_waypoint():
+def state_node():
     stateName = STATE.Following_waypoint.name
 	# Start our node
     rospy.loginfo('State node starting: '+stateName)
@@ -165,7 +170,7 @@ def follow_waypoint():
 
 if __name__ == '__main__':
     try:
-        follow_waypoint()
+        state_node()
     except rospy.ROSInterruptException:
         pass
 
