@@ -100,11 +100,6 @@ def state_start():
     resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
     resp1 = __UAV_State.set_arm(True)
 
-    # Update waypoint topic
-    resp = __UAV_Control.pull_waypoints()
-    rospy.loginfo('# WPs: '+str(resp.wp_received))
-#    print __UAV_Control.wp
-
 #    resp1 = __UAV_State.set_mode(MAVMODE.AUTO.name)
     resp1 = __UAV_State.set_mode(MAVMODE.LEARNING.name)
     
@@ -140,10 +135,11 @@ def state_start():
 #
 #
 #
-def driving_away():
-	# Start our node
-    rospy.loginfo('driving_away state')
-    rospy.init_node('driving_away', anonymous=True)
+def state_node():
+    stateName = STATE.Driving_away_from_cone.name
+    # Start our node
+    rospy.loginfo('State node starting: '+stateName)
+    rospy.init_node(stateName, anonymous=False)
 
     # Initialize UAV models 
     global __UAV_State
@@ -163,7 +159,7 @@ def driving_away():
 
 if __name__ == '__main__':
     try:
-        driving_away()
+        state_node()
     except rospy.ROSInterruptException:
         pass
 
