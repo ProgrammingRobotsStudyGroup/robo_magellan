@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 # UAV State Model:
 # Encapsulates UAV state and abstracts communication
 # States:
@@ -21,6 +22,9 @@
 # - local_position
 # - MAV mode
 # - arm
+
+
+"""This module encapsulates UAV state and abstracts communication."""
 
 #
 from datetime import datetime
@@ -56,9 +60,9 @@ class ARM(AutoNumber):
 class _coord:
     """Pose coordinate"""
     def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.z = 0
+        self.xpos = 0
+        self.ypos = 0
+        self.zpos = 0
 
 #
 class UAV_State:
@@ -89,15 +93,15 @@ class UAV_State:
 
     def __local_position_cb(self, topic):
 #        rospy.loginfo('__local_position_cb')
-        self.current_pose.x = topic.pose.position.x
-        self.current_pose.y = topic.pose.position.y
-        self.current_pose.z = topic.pose.position.z
+        self.current_pose.xpos = topic.pose.position.x
+        self.current_pose.ypos = topic.pose.position.y
+        self.current_pose.zpos = topic.pose.position.z
 
     def __setpoint_position_cb(self, topic):
 #        rospy.loginfo('__setpoint_position_cb')
-        self.setpoint_pose.x = topic.position.x
-        self.setpoint_pose.y = topic.position.y
-        self.setpoint_pose.z = topic.position.z
+        self.setpoint_pose.xpos = topic.position.x
+        self.setpoint_pose.ypos = topic.position.y
+        self.setpoint_pose.zpos = topic.position.z
 
     def __state_cb(self, topic):
 #        rospy.loginfo('__state_cb')
@@ -134,11 +138,11 @@ class UAV_State:
         try:
             flight_mode_service = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
             is_mode_changed = flight_mode_service(custom_mode=new_mode)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException, err:
             rospy.loginfo(
                 "Service set_mode call failed: %s. Mode %s could not be set. "
                 "Check that GPS is enabled.",
-                e, new_mode)
+                err, new_mode)
         return is_mode_changed
 
 
@@ -158,10 +162,10 @@ class UAV_State:
             rospy.loginfo(resp)
             rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
             return resp
-        except rospy.ServiceException, e:
+        except rospy.ServiceException, err:
             rospy.loginfo("Service arm call failed: %s. "
                           "Attempted to set %s",
-                          e, new_arm)
+                          err, new_arm)
 
 
     def get_current_pose(self):
