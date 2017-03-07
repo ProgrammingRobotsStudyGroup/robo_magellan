@@ -114,7 +114,7 @@ def following_waypoint_transitions(txt):
     elif __ExecComm.transition == TRANSITION.near_cone.name:
         newState = STATE.Driving_toward_cone.name
     else:
-        rospy.logwarn('Unknown transition: '+__ExecComm.transition)
+        rospy.logwarn('Unknown transition: '+str(__ExecComm.transition))
         newState = STATE.Failurecone.name
 
     return (newState, txt)
