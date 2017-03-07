@@ -31,11 +31,13 @@
 #
 """This module encapsulates UAV RC Control and abstracts communication."""
 
+import threading
 import time
 
 # ROS
 import rospy
 
+from std_msgs.msg import Int16
 # MAVROS
 from mavros_msgs.msg import OverrideRCIn
 #from mavros_msgs.srv import CommandBool
@@ -57,6 +59,7 @@ EXEC_TIME = 1 #exc time in secs
 class UAV_Control:
     """UAV WP and Manual Control"""
     def __init__(self):
+        self.lock = threading.Lock()
         #mavros.set_namespace("/mavros")
         self.waypoint_list = None
 
@@ -79,38 +82,36 @@ class UAV_Control:
             WaypointSetCurrent)
 
         # Publishers
-        self.pub_rc_override = rospy.Publisher('mavros/rc/override', OverrideRCIn, queue_size=10)
+        self.pub_rc_override = rospy.Publisher(
+            'mavros/rc/override', OverrideRCIn, queue_size=10)
 
         # Subscribers
-        self.waypoints_sub = rospy.Subscriber(
+        self.sub_waypoints = rospy.Subscriber(
             "/mavros/mission/waypoints",
-            WaypointList,
-            self.__waypoints_cb)
+            WaypointList, self.__waypoints_cb)
+
+        self.sub_current = rospy.Subscriber(
+            "/mavros/mission/current", Int16,
+            self.__current_cb, queue_size = 1)
+
 
     def __waypoints_cb(self, topic):
-#        rospy.loginfo('__waypoints_cb')
-        self.waypoint_list = topic.waypoints
-#        pt = PrettyTable(('#', 'Curr', 'Auto',
-#                          'Frame', 'Command',
-#                          'P1', 'P2', 'P3', 'P4',
-#                          'X Lat', 'Y Long', 'Z Alt'))
-#            pt.add_row((
-#                seq,
-#                str_bool(w.is_current),
-#                str_bool(w.autocontinue),
-#                str_frame(w.frame),
-#                str_command(w.command),
-#                w.param1,
-#                w.param2,
-#                w.param3,
-#                w.param4,
-#                w.x_lat,
-#                w.y_long,
-#                w.z_alt
-#            ))
-#        print(pt, file=sys.stdout)
-#        sys.stdout.flush()
-#        done_evt.set()
+        self.lock.acquire()
+        try:
+            self.waypoint_list = topic.waypoints
+        finally:
+            self.lock.release()
+
+
+    def __current_cb(self, topic):
+        rospy.loginfo('****************************************************')
+        rospy.loginfo('__current_cb: '+topic.data)
+        rospy.loginfo('****************************************************')
+        self.lock.acquire()
+        try:
+            self.waypoint_list = topic.waypoints
+        finally:
+            self.lock.release()
 
 
     def print_waypoints(self):
