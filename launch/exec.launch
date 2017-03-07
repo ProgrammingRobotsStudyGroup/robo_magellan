@@ -1,0 +1,26 @@
+<launch>
+
+  <!-- simple launch for cone_seeker tests -->
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="/dev/ttyS1:115200" />
+  </include>
+
+  <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
+
+  <!-- State Nodes -->
+  <!-- node name="state_follow_waypoint" pkg="robo_magellan" type="state_follow_waypoint.py" / -->
+  <!-- node name="state_driving_to_cone" pkg="robo_magellan" type="state_driving_to_cone.py" / -->
+
+  <!--  <include file="$(find robo_magellan)/launch/cone_seeker.launch" />  -->
+
+  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
+
+  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" />
+
+  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
+
+  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+  
+</launch>
