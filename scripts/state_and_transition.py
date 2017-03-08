@@ -41,6 +41,7 @@ class TRANSITION(AutoNumber):
     touched_last_cone = ()
     passed_last_cone = ()
     course_timeout = ()
+    cleared_cone = ()
 
 
 
