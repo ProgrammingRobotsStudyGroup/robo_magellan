@@ -115,7 +115,7 @@ def following_waypoint_transitions(txt):
         newState = STATE.Driving_toward_cone.name
     else:
         rospy.logwarn('Unknown transition: '+str(__ExecComm.transition))
-        newState = STATE.Failurecone.name
+        newState = STATE.Failure.name
 
     return (newState, txt)
 
@@ -238,24 +238,18 @@ def driving_away_from_cone_transitions(txt):
             flag = False
         if test_count < 1:
             flag = False
-            __ExecComm.send_message_to_state(STATE.Following_waypoint.name,MSG_TO_STATE.RESET.name)
+            __ExecComm.send_message_to_state(stateName, MSG_TO_STATE.RESET.name)
             rospy.loginfo('Timed out')
         test_count = test_count -1
         rate.sleep()
     ###
-    #__ExecComm.send_message_to_state(STATE.Following_waypoint.name,MSG_TO_STATE.RESET.name)
+    #__ExecComm.send_message_to_state(stateName, MSG_TO_STATE.RESET.name)
     near_cone = True
     obstacle_seen = False
 
     # Unnecessary, but a bit of code.
-    __ExecComm.send_message_to_state(STATE.Following_waypoint.name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
     #
-    if obstacle_seen:
-        newState = STATE.Avoiding_obstacle.name
-    elif near_cone:
-        newState = STATE.Driving_toward_cone.name
-    return (newState, txt)
-
     cleared_cone = True
     if cleared_cone:
         newState = STATE.Following_waypoint.name
@@ -272,7 +266,8 @@ def driving_away_from_cone_transitions(txt):
 # - End
 #
 def success_transitions(txt):
-    rospy.loginfo('Entered state: '+STATE.Success.name)
+    stateName = STATE.Success.name
+    rospy.loginfo('Entered state: ' + stateName)
 
     # Set UAV to hold
     resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
@@ -291,7 +286,8 @@ def success_transitions(txt):
 # - End
 #
 def failure_transitions(txt):
-    rospy.loginfo('Entered state: '+STATE.Failure.name)
+    stateName = STATE.Failure.name
+    rospy.loginfo('Entered state: ' + stateName)
 
     # Set UAV to hold
     resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
@@ -312,11 +308,20 @@ def __state_resp_cb(data):
     #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
     if __ExecComm.cmd==MSG_TO_EXEC.DONE.name: 
         state_complete = True
+    elif __ExecComm.cmd==MSG_TO_EXEC.START_EXEC.name: 
+        # Start state machine
+        # TODO What is our cargo?
+        machine.run("RUN")
+        #machine.run("TEST")
+        #machine.run("Series of waypoints?")
     pass
+
+
 
 def executive():
 
     # State machine setup
+    global machine
     machine = StateMachine()
     # 
     machine.add_state(STATE.Start.name, start_transitions)
@@ -346,12 +351,9 @@ def executive():
     global __ExecComm
     __ExecComm = exec_comm.ExecComm(STATE.Following_waypoint.name, exec_msg_cb=__state_resp_cb)
 
-    # Start state machine
-    # TODO What is our cargo?
-    machine.run("RUN")
-    #machine.run("TEST")
-    #machine.run("Series of waypoints?")
-    pass
+    rate = rospy.Rate(2) # 1 hz
+    while not rospy.is_shutdown():
+        rate.sleep()
 
 if __name__ == '__main__':
     try:

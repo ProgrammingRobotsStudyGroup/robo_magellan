@@ -31,6 +31,7 @@ class MSG_TO_STATE(AutoNumber):
     PAUSE = ()
 
 class MSG_TO_EXEC(AutoNumber):
+    START_EXEC = ()
     DONE = ()
 
 class TOPICS(AutoNumber):
