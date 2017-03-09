@@ -90,6 +90,17 @@ def state_pause():
 
 
 
+def iscurrent():
+    __UAV_Control.pull_waypoints()
+    print __UAV_Control.waypoint_list
+#    iscur = -1
+#    for seq, waypoint in enumerate( __UAV_Control.waypoint_list):
+#        if waypoint.is_current:
+#            iscur = seq
+#            print (''+str(seq))
+#            break
+#    if iscur == -1:
+#        print('no current')
 
 #
 #
@@ -99,33 +110,36 @@ def state_start():
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
-    resp1 = __UAV_State.set_arm(False)
-
-    # Update waypoint topic
-    __UAV_Control.set_current_waypoint(1)
-    resp = __UAV_Control.pull_waypoints()
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_arm(False)
+    print "HERE 1"
     ## TEST
-    wpl = __UAV_Control.waypoint_list
-    print wpl
+    #__UAV_Control.pull_waypoints()
+    #wpl = __UAV_Control.waypoint_list
+    #print wpl
     #wpl.pop()
     #print wpl
     #__UAV_Control.clear_waypoints()
     #__UAV_Control.push_waypoints(wpl)
 #    print __UAV_Control.waypoint_list
     # TODO Test push
-#    __UAV_Control.set_current_waypoint(0)
+    # Pick wp to start index
+    #iscurrent()
+    __UAV_Control.set_current_waypoint(0)
+    print "HERE 2"
 
-    resp1 = __UAV_State.set_mode(MAVMODE.AUTO.name)
-    resp1 = __UAV_State.set_arm(True)
+    __UAV_State.set_mode(MAVMODE.AUTO.name)
+    __UAV_State.set_arm(True)
 
     flag = True
     rate = rospy.Rate(0.5) # some hz
     test_count = 2 # test code
+    #iscurrent()
 
     # WP Driving loop
     while not rospy.is_shutdown() and flag:
         rospy.loginfo('Driving to waypoint. Status: '+str(test_count))
+        #iscurrent()
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
             flag = False
         if test_count < 1:
@@ -157,6 +171,7 @@ def state_start():
 #
 #
 def state_node():
+    global state_name
     state_name = STATE.Following_waypoint.name
 	# Start our node
     rospy.loginfo('State node starting: '+state_name)
