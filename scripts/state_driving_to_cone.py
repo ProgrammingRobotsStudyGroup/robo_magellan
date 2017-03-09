@@ -15,23 +15,17 @@
 # limitations under the License.
 #
 
-# Node using cone_finder/location messages and
-# Publishes /mavros_msgs/OverrideRCIn messages
+"""read cone_finder location messages and publish OverrideRCIn messages"""
 #
-msg = """
-cone_seeker: reading cone_finder location messages and 
-             publishing OverrideRCIn messages
-"""
+# Node publishes /mavros_msgs/OverrideRCIn messages
+# using cone_finder/location messages
+#
 
 # ROS
 import rospy
-from std_msgs.msg import String
+#from std_msgs.msg import String
 #from ._WaypointPull import *
-import inspect
 #
-from statemachine import StateMachine
-
-from auto_number import AutoNumber
 from uav_state import MODE as MAVMODE
 import uav_state
 import uav_control
@@ -42,7 +36,7 @@ from exec_comm import MSG_TO_EXEC
 from state_and_transition import STATE
 from state_and_transition import TRANSITION
 
-import sys, argparse, rospy, math
+import sys, argparse, math
 from mavros_msgs.msg import OverrideRCIn
 from cone_finder.msg import location_msgs as Locations
 
@@ -66,7 +60,7 @@ hard_limits = [1000, 1500, 2000]  # microseconds for servo signal
 steering_limits = [1135, 1435, 1735]  # middle is neutral
 # throttle_limits = [1200, 1500, 1800]  # middle is neutral
 throttle_limits = [1650, 1650, 1800]  # fwd range only; for testing; middle is NOT neutral
- 
+
 
 #
 #
@@ -148,15 +142,15 @@ def state_start():
     passed_last_cone = False
     course_timeout = False
 
-    # Get radio calibration 
+    # Get radio calibration
     # [1] is neutral
     steering_limits = [__UAV_Control.get_param_int('RC1_MIN'),
-         __UAV_Control.get_param_int('RC1_TRIM'), 
-         __UAV_Control.get_param_int('RC1_MAX')]
+                       __UAV_Control.get_param_int('RC1_TRIM'),
+                       __UAV_Control.get_param_int('RC1_MAX')]
 
     throttle_limits = [__UAV_Control.get_param_int('RC3_MIN'),
-     __UAV_Control.get_param_int('RC3_TRIM'), 
-     __UAV_Control.get_param_int('RC3_MAX')]
+                       __UAV_Control.get_param_int('RC3_TRIM'),
+                       __UAV_Control.get_param_int('RC3_MAX')]
 
     flag = True
     rate = rospy.Rate(1) # some hz
@@ -198,17 +192,17 @@ def state_start():
 
     # Publish transition
     if passed_last_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.passed_last_cone.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_last_cone.name)
     elif course_timeout:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.course_timeout.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.course_timeout.name)
     elif touched_last_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.touched_last_cone.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_last_cone.name)
     elif passed_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.passed_cone.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_cone.name)
     elif segment_timeout:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.segment_timeout.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.segment_timeout.name)
     elif touched_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name,TRANSITION.touched_cone.name)
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_cone.name)
 
 
 
@@ -236,35 +230,35 @@ def seek_cone(loc):
 
     steering = steering_limits[1]
     # Steer if not in front
-    if(cone_loc.x < -20 or cone_loc.x > 20):
+    if (cone_loc.x < -20) or (cone_loc.x > 20):
         # Sin(theta)
         z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
         #steering = steering + args.steering_factor*500*cone_loc.x/z
         steering = steering + args.steering_factor*2*cone_loc.x
-        
+
     # Slowest approach to cone
     throttle = throttle_limits[1] + 20
     # Use real depth when available for throttle
-    if(cone_loc.z > 0):
+    if cone_loc.z > 0:
         # Real depth is in mm and maximum would probably be less than 6m
-        if(cone_loc.z > 300):
+        if cone_loc.z > 300:
             throttle = throttle + args.throttle_factor*(cone_loc.z - 300)/20
     else:
         y = cone_loc.y - 40
-        if(y > 0):
+        if y > 0:
             throttle = throttle + args.throttle_factor*(y)
 
     #-- test with fixed throttle to start
     throttle = 1675
 
-    # Everything must be bounded    
-    if(steering > steering_limits[2]):
+    # Everything must be bounded
+    if steering > steering_limits[2]:
         steering = steering_limits[2]
-    if(steering < steering_limits[0]):
+    if steering < steering_limits[0]:
         steering = steering_limits[0]
-    if(throttle > throttle_limits[2]):
+    if throttle > throttle_limits[2]:
         throttle = throttle_limits[2]
-    if(throttle < throttle_limits[0]):
+    if throttle < throttle_limits[0]:
         throttle = throttle_limits[0]
 
     __UAV_Control.set_throttle_servo(throttle, steering)
@@ -282,7 +276,7 @@ def state_node():
     rospy.loginfo('State node starting: '+state_name)
     rospy.init_node(state_name, anonymous=False)
 
-    # Initialize UAV models 
+    # Initialize UAV models
     global __UAV_State
     __UAV_State = uav_state.UAV_State()
     global __UAV_Control
@@ -299,10 +293,10 @@ def state_node():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Drive to cone found')
-    parser.add_argument('--throttle_factor', '-t', default=1.0, type=float, 
-                         help='Throttle step size factor')    
+    parser.add_argument('--throttle_factor', '-t', default=1.0, type=float,
+                        help='Throttle step size factor')
     parser.add_argument('--steering_factor', '-s', default=1.0, type=float,
-                         help='Steering step size factor')
+                        help='Steering step size factor')
     parser.parse_args(rospy.myargv(sys.argv[1:]), args)
     try:
         state_node()
