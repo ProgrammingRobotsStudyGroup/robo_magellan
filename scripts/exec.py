@@ -87,23 +87,29 @@ def following_waypoint_transitions(txt):
     __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.START.name)
 
     flag = True
-    rate = rospy.Rate(1) # some hz
-    test_count = 20 # test code
+    rate = rospy.Rate(.5) # some hz
+
+    # Calculate time out
+    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
+    segment_extra_sec = rospy.get_param("/SEGMENT_EXTRA_SEC")
+    count = segment_duration_sec + segment_extra_sec
+    timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec + segment_extra_sec)
 
     while not rospy.is_shutdown() and flag:
         # TODO if timeout kill state? Do we do this here as a failsafe or state only?
-        rospy.loginfo('In '+stateName+' state. Countdown: '+str(test_count))
+        rospy.loginfo('In '+stateName+' state. Countdown: '+str(count))
 
+        if rospy.Time.now() > timeout:
+            flag = False
+            __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
+            rospy.loginfo('Timed out')
+            break
         # TODO Are we near a cone?
 
 #        rospy.loginfo('state_complete: '+str(state_complete))
         if state_complete is True:
             flag = False
-        if test_count < 1:
-            flag = False
-            __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-            rospy.loginfo('Timed out')
-        test_count = test_count -1
+        count = count -1
         rate.sleep()
 
     # Possibly unnecessary
@@ -116,6 +122,8 @@ def following_waypoint_transitions(txt):
     else:
         rospy.logwarn('Unknown transition: '+str(__ExecComm.transition))
         newState = STATE.Failure.name
+    # TODO: Force stop
+    newState = STATE.Failure.name
 
     return (newState, txt)
 
@@ -270,9 +278,9 @@ def success_transitions(txt):
     rospy.loginfo('Entered state: ' + stateName)
 
     # Set UAV to hold
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
     # Disarm
-    resp1 = __UAV_State.set_arm(False)
+    __UAV_State.set_arm(False)
 
     newState = STATE.End.name
     return (newState, txt)
@@ -290,9 +298,9 @@ def failure_transitions(txt):
     rospy.loginfo('Entered state: ' + stateName)
 
     # Set UAV to hold
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
     # Disarm
-    resp1 = __UAV_State.set_arm(False)
+    __UAV_State.set_arm(False)
 
     newState = STATE.End.name
     return (newState, txt)

@@ -112,6 +112,7 @@ def state_start():
     # Set UAV mode to hold while we get this state started
     __UAV_State.set_mode(MAVMODE.HOLD.name)
     __UAV_State.set_arm(False)
+    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
     print "HERE 1"
     ## TEST
     #__UAV_Control.pull_waypoints()
@@ -133,22 +134,24 @@ def state_start():
 
     flag = True
     rate = rospy.Rate(0.5) # some hz
-    test_count = 2 # test code
+    count = segment_duration_sec
     #iscurrent()
 
     # WP Driving loop
-    while not rospy.is_shutdown() and flag:
-        rospy.loginfo('Driving to waypoint. Status: '+str(test_count))
+    timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
+
+    while (not rospy.is_shutdown()) and flag:
+        rospy.loginfo('Driving to waypoint. Status: '+str(count))
         #iscurrent()
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
             flag = False
-        if test_count < 1:
-            flag = False
+        if rospy.Time.now() > timeout:
+            break
         # TODO Are we near a cone?
-        test_count = test_count -1
+        count -= 1
         rate.sleep()
 
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
     #
     # Transition
     #
