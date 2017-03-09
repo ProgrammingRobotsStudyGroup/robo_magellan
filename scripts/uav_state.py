@@ -79,6 +79,15 @@ class UAV_State:
         self.current = 0
         mavros.set_namespace("/mavros")
 
+        # Service Proxies
+        rospy.wait_for_service('/mavros/cmd/arming')
+        self.svc_arming = rospy.ServiceProxy(
+            '/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
+
+        rospy.wait_for_service('/mavros/set_mode')
+        self.svc_set_mode = rospy.ServiceProxy(
+            '/mavros/set_mode', mavros_msgs.srv.SetMode)
+
         # Subscribers
         self.local_position_sub = rospy.Subscriber(
             mavros.get_topic('local_position', 'pose'),
@@ -132,12 +141,10 @@ class UAV_State:
     def set_mode(self, new_mode):
         """Set pixhawk MAV state"""
         rospy.loginfo('/mavros/set_mode: '+new_mode)
-        rospy.wait_for_service('/mavros/set_mode')
         if self.mode == new_mode:
             pass
         try:
-            flight_mode_service = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
-            is_mode_changed = flight_mode_service(custom_mode=new_mode)
+            is_mode_changed = self.svc_set_mode(custom_mode=new_mode)
         except rospy.ServiceException, err:
             rospy.loginfo(
                 "Service set_mode call failed: %s. Mode %s could not be set. "
@@ -153,19 +160,18 @@ class UAV_State:
     def set_arm(self, new_arm):
         """Arm pixhawk"""
         rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
-        rospy.wait_for_service('/mavros/cmd/arming')
         if self.arm == new_arm:
-            pass
+            return
         try:
-            arm_service = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-            resp = arm_service(new_arm)
+            resp = self.svc_arming(new_arm)
+            self.arm = new_arm
             rospy.loginfo(resp)
-            rospy.loginfo('/mavros/cmd/arming: '+str(new_arm))
             return resp
         except rospy.ServiceException, err:
             rospy.loginfo("Service arm call failed: %s. "
                           "Attempted to set %s",
                           err, new_arm)
+            pass
 
 
     def get_current_pose(self):
