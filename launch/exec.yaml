@@ -18,4 +18,5 @@
 # The string is then associated with an enumeration in soundmap.py
 # See soundmap.py for example client code
 #
-SEGMENT_DURATION: 120
+SEGMENT_DURATION_SEC: 120
+SEGMENT_EXTRA_SEC: 10
