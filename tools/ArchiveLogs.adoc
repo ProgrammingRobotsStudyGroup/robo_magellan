@@ -1,0 +1,14 @@
+= Archive
+
+== Description
+* You want to archive your latest run logs from ~/.ros/log/
+* Does NOT pick up files from ~/.ros/log/
+
+== Run
+
+To run from command line. You will be prompted for the password.
+[source,bash]
+----
+~$ roscd robo_magellan
+~/catkin_ws/src/robo_magellan$ ./tools/xfer_log.sh
+----
