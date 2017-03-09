@@ -10,11 +10,12 @@
   <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
 
   <!-- Executive and state nodes -->
+  <rosparam command="load" file="$(find robo_magellan)/launch/exec.yaml" />
   <node name="exec" pkg="robo_magellan" type="exec.py" />
   <node name="state_follow_waypoint" pkg="robo_magellan" type="state_follow_waypoint.py" />
-  <node name="state_driving_to_cone" pkg="robo_magellan" type="state_driving_to_cone.py" />
-  <node name="state_driving_away" pkg="robo_magellan" type="state_driving_away.py" />
-  <node name="state_avoiding_obstacle" pkg="robo_magellan" type="state_avoiding_obstacle.py" />
+  <!-- node name="state_driving_to_cone" pkg="robo_magellan" type="state_driving_to_cone.py" / -->
+  <!-- node name="state_driving_away" pkg="robo_magellan" type="state_driving_away.py" / -->
+  <!-- node name="state_avoiding_obstacle" pkg="robo_magellan" type="state_avoiding_obstacle.py" / -->
 
   <!--  <include file="$(find robo_magellan)/launch/cone_seeker.launch" />  -->
 
