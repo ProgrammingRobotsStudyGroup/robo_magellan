@@ -53,6 +53,7 @@ add_message_files(
   DIRECTORY msg 
   FILES
   Num.msg
+  pose_data.msg
   location_msgs.msg
   to_exec.msg
   to_state.msg
@@ -155,6 +156,7 @@ add_dependencies(add_two_ints_client robo_magellan_gencpp)
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
   scripts/detect_cones.py
+  scripts/seek_cone.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

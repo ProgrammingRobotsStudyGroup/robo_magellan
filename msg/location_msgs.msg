@@ -4,5 +4,5 @@ Header header
 
 # We will use Point instead of Pose2D. 
 # x and y will be from Image and z from real distance
-geometry_msgs/Point[] poses
+pose_data[] poses
 

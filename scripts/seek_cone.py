@@ -20,18 +20,75 @@ throttle_limits = [1650, 1650, 1800]  # fwd range only; for testing; middle is N
  
 # We will get angle between +pi/2 to -pi/2 for steering
 # We will get 480 pixels range for throttle but should limit this
-class Args(object):
+class Args():
     # Typically less than 1 unless the range isn't responsive
     throttle_factor = 1.0
     steering_factor = 1.0
+    conf_decay_factor = 0.90
+    prev_pos_confs = []
 
 args = Args()
 
-def seek_cone(loc):
-    # Sort the poses by y distance to get the nearest cone
-    poses = sorted(loc.poses, key=lambda loc: loc.y)
-    cone_loc = poses[0]
+def update_prev_poses():
+#    if(len(args.prev_pos_confs) == 0):
+#      return
 
+    new_pos_confs = []
+    for (prev_pose, confidence) in args.prev_pos_confs:
+        confidence *= args.conf_decay_factor
+        new_pos_confs.append((prev_pose, confidence))
+
+    new_pos_confs = sorted(new_pos_confs, key=lambda pose: pose[1], reverse=True)
+    args.prev_pos_confs = new_pos_confs[0:16]
+    
+def getConfFromOldFrames(pose):
+    matching_poses = ()
+    x1 = pose.x - pose.w/2
+    x2 = pose.x + pose.w/2
+    confs = []
+    for (prev_pose, prev_conf) in args.prev_pos_confs:
+      old_x1 = prev_pose.x - prev_pose.w/2
+      old_x2 = prev_pose.x + prev_pose.w/2
+      # Find overlap
+      if(old_x2 < x1 or old_x1 > x2):
+        continue
+      # We assume we cannot get closer very fast. Also if we are moving away
+      # from cone, we don't use the confidence
+      if(prev_pose.y > pose.y + pose.h or pose.y > prev_pose.y):
+        continue
+      # We only use real depth if it is available
+      if(prev_pose.z > 0 and pose.z > 0):
+          if(prev_pose.z > pose.z + pose.d or prev_pose.z + prev_pose.d < pose.z):
+            continue
+      # We have overlap so we must get the confidence
+      # Best is to scale the confidence by overlap area but for now, let's use
+      # just the confidence
+      confs.append(prev_conf)
+      
+    if(len(confs)):
+      return sum(confs)/len(confs)
+      
+    return 0.0 
+      
+def seek_cone(loc):
+    # Compute confidence for each hull by area and h distance
+    maxArea = max(pose.area for pose in loc.poses)
+    new_pos_confs = []
+    update_prev_poses()
+    for pose in loc.poses:
+      # Need to figure out appropriate weightage for area and distance
+      # Scale distance as farther objects will use less pixels
+      pd = 1 + (pose.x/80.0)**2 + (pose.y/120.0)**2
+      # Find this cone among cones from previous frames and use the confidence
+      confidence = 1/pd + pose.area/(4.0*maxArea) + getConfFromOldFrames(pose)
+      new_pos_confs.append((pose, confidence))
+    
+    # Sort the new list by confidence and descending
+    new_pos_confs = sorted(new_pos_confs, key=lambda pose: pose[1], reverse=True)
+    args.prev_pos_confs.extend(new_pos_confs)
+    (cone_loc, confidence) = new_pos_confs[0]
+
+    rospy.loginfo('Confidence (%d, %d) = %f' % (cone_loc.x, cone_loc.y, confidence))
     steering = steering_limits[1]
     # Steer if not in front
     if(cone_loc.x < -20 or cone_loc.x > 20):

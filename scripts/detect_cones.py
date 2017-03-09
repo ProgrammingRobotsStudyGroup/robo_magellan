@@ -9,6 +9,7 @@ import rospy, message_filters, threading
 # Needed for publishing the messages
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from geometry_msgs.msg import Point
+from cone_finder.msg import pose_data
 from cone_finder.msg import location_msgs as location_data
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -223,11 +224,8 @@ def find_cones(img, depthImg=None):
             listOfHullsAndArea.append((hull, cv2.contourArea(hull), depthRange))
 
     listOfCones = []
-    listOfAreas = []
-    listOfObstructions = []
-    pose = Point()
+    pose = pose_data()
     poses = []
-    loc = location_data()
 
     # Sort the list by decreasing area
     listOfHullsAndArea = sorted(listOfHullsAndArea, key=lambda pair: pair[1], reverse=True)
@@ -237,20 +235,17 @@ def find_cones(img, depthImg=None):
             listOfCones.append(hull)
             x, y, w, h = cv2.boundingRect(hull)
             pose.x = x + w/2 - image_centerX
+            pose.w = w
             # Height is being measured top of screen to down so we need to invert y
             pose.y = (image_centerY - (y+h))
+            pose.h = h
             # Divide depth by 256 since x isn't really in real units
             pose.z = depthRange[0]   # But this is the hypotenuse
+            pose.d = depthRange[1] - depthRange[0]
+            pose.area = area
             poses.append(pose)
 
-    loc.poses = poses
-    loc.header.stamp = rospy.Time.now()
-    imghull = img.copy()
-    cv2.drawContours(imghull, listOfCones, -1, (0, 255, 0), 3)
-    if(len(listOfCones)):
-        pub.publish(loc)
-
-    return len(listOfCones), imghull
+    return (poses, listOfCones)
 
 def find_in_images(loc='../images'):
     # get the files
@@ -260,9 +255,12 @@ def find_in_images(loc='../images'):
     for file in files:
         if args.debug:
             rospy.logdebug('Processing file %s' % file)
-        count, imghull = find_cones(cv2.imread(file, -1))
+        img = cv2.imread(file, -1)
+        poses, listOfCones = find_cones(img)
+        cv2.drawContours(img, listOfCones, -1, (0, 255, 0), 3)
+        
         if args.debug:
-            cv2.imshow('output', imghull)
+            cv2.imshow('output', img)
             msg_str = 'Found %d Cones' % count
             rospy.logdebug(msg_str)
         rate.sleep()
@@ -290,7 +288,9 @@ def find_in_video(fileName):
         #TODO: Should we continue or break on bad frame?
         # Display the resulting frame
         if(ret):
-            count, imghull = find_cones(frame)
+            poses, listOfCones = find_cones(frame)
+            imghull = frame.copy()
+            cv2.drawContours(imghull, listOfCones, -1, (0, 255, 0), 3)
             if args.debug:
                 msg_str = 'FS = %.3f' % ((time.clock() - startLoop)/loopCount)
                 cv2.putText(imghull, msg_str)
@@ -359,8 +359,16 @@ class RosColorDepth:
 
         try:
             self.lc = self.lc + 1
-            count, imghull = find_cones(cvRGB, cvDepth)
-            #captureFrames(cvRGB, cvDepth)
+            poses, listOfCones = find_cones(cvRGB, cvDepth)
+            imghull = cvRGB.copy()
+            if(len(poses)):
+                loc = location_data()
+                loc.poses = poses
+                loc.header.stamp = rospy.Time.now()
+                pub.publish(loc)                
+                # Frame first 3 cones - they are sorted by area
+                cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
+                #captureFrames(cvRGB, cvDepth)
             
             if(args.publish_images):
                 msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
