@@ -51,12 +51,57 @@ pubSoundToken = None
 state_complete = False
 
 
+def mod_state(the_state):
+    """Modify state"""
+    # To run normally, we default to start state
+    # Exit (SUCCESS) if parameter START_STATE != 'Start'
+    start_state = rospy.get_param("/START_STATE")
+    if start_state != 'Start':
+        the_state = STATE.Success.name
+    return the_state
+
+
+
+
+#
+# Wait for the state node to complete
+#
+def wait_on_state_node(state_name):
+    """Wait for the state node to complete"""
+    rate = rospy.Rate(1) # 2 hz
+
+    # Calculate time out
+    segment_sec = rospy.get_param("/SEGMENT_DURATION_SEC") + rospy.get_param("/SEGMENT_EXTRA_SEC")
+    timeout = rospy.Time.now() + rospy.Duration(segment_sec)
+    old_timeout_secs = 0
+
+    while not rospy.is_shutdown():
+        timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
+        if timeout_secs <> old_timeout_secs:
+            rospy.loginfo(
+                'In %s state. Timeout in: %d',
+                state_name,
+                timeout_secs)
+        old_timeout_secs = timeout_secs
+
+        # If timeout, reset state as a fail safe
+        if rospy.Time.now() > timeout:
+            __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+            rospy.loginfo('State timed out: %s', state_name)
+            break
+
+        if state_complete is True:
+            rospy.loginfo('State complete: %s', state_name)
+            break
+        rate.sleep()
+
+
 #
 #  Start
 #
 def start_transitions(txt):
-    stateName = STATE.Start.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Start.name
+    rospy.loginfo('Entered state: ' + state_name)
 
     # Set us to hold upon start
     resp1 = __UAV_State.set_arm(False)
@@ -74,58 +119,27 @@ def start_transitions(txt):
 # - near_cone => Driving_toward_cone
 #
 def following_waypoint_transitions(txt):
-    stateName = STATE.Following_waypoint.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Following_waypoint.name
+    rospy.loginfo('Entered state: ' + state_name)
 
-    global state_complete
-    state_complete = False
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
 
-    # Set UAV mode to hold while we get this state started
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
-
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.START.name)
-
-    flag = True
-    rate = rospy.Rate(.5) # some hz
-
-    # Calculate time out
-    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
-    segment_extra_sec = rospy.get_param("/SEGMENT_EXTRA_SEC")
-    count = segment_duration_sec + segment_extra_sec
-    timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec + segment_extra_sec)
-
-    while not rospy.is_shutdown() and flag:
-        # TODO if timeout kill state? Do we do this here as a failsafe or state only?
-        rospy.loginfo('In '+stateName+' state. Countdown: '+str(count))
-
-        if rospy.Time.now() > timeout:
-            flag = False
-            __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-            rospy.loginfo('Timed out')
-            break
-        # TODO Are we near a cone?
-
-#        rospy.loginfo('state_complete: '+str(state_complete))
-        if state_complete is True:
-            flag = False
-        count = count -1
-        rate.sleep()
+    wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.obstacle_seen.name:
         newState = STATE.Avoiding_obstacle.name
     elif __ExecComm.transition == TRANSITION.near_cone.name:
         newState = STATE.Driving_toward_cone.name
     else:
-        rospy.logwarn('Unknown transition: '+str(__ExecComm.transition))
+        rospy.logwarn('Unknown transition:'+__ExecComm.transition)
         newState = STATE.Failure.name
-    # TODO: Force stop
-    newState = STATE.Failure.name
-
-    return (newState, txt)
+        rospy.logwarn('Default to:'+newState)
+    return (mod_state(newState), txt)
 
 
 
@@ -136,12 +150,24 @@ def following_waypoint_transitions(txt):
 # - obstacle_cleared => Following_waypoint
 #
 def avoiding_obstacle_transitions(txt):
-    rospy.loginfo('Entered state: '+STATE.Avoiding_obstacle.name)
+    state_name = STATE.Avoiding_obstacle.name
+    rospy.loginfo('Entered state: ' + state_name)
 
-    obstacle_cleared = True
-    if obstacle_cleared:
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
+
+    wait_on_state_node(state_name)
+
+    # Possibly unnecessary
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+
+    if __ExecComm.transition == TRANSITION.obstacle_cleared.name:
         newState = STATE.Following_waypoint.name
-    return (newState, txt)
+    else:
+        rospy.logwarn('Unknown transition:'+__ExecComm.transition)
+        newState = STATE.Failure.name
+        rospy.logwarn('Default to:'+newState)
+    return (mod_state(newState), txt)
 
 
 
@@ -157,41 +183,22 @@ def avoiding_obstacle_transitions(txt):
 # - course_timeout => Failure
 #
 def driving_toward_cone_transitions(txt):
-    stateName = STATE.Driving_toward_cone.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Driving_toward_cone.name
+    rospy.loginfo('Entered state: ' + state_name)
 
     global state_complete
     state_complete = False
 
     # Set UAV mode to hold while we get this state started
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
 
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
 
-    flag = True
-    rate = rospy.Rate(1) # some hz
-    test_count = 30 # test code
-
-    while not rospy.is_shutdown() and flag:
-        # TODO if timeout kill state? Do we do this here as a failsafe or state only?
-        rospy.loginfo('Driving to a CONE! Within '+str(test_count)+' meters')
-
-        # TODO Are we near a cone?
-
-#        rospy.loginfo('state_complete: '+str(state_complete))
-        if state_complete is True:
-            flag = False
-        if test_count < 1:
-            flag = False
-            __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-            rospy.loginfo('Timed out')
-            __ExecComm.transition = TRANSITION.segment_timeout.name
-        test_count = test_count -1
-        rate.sleep()
+    wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.passed_last_cone.name:
@@ -210,7 +217,7 @@ def driving_toward_cone_transitions(txt):
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
         newState = STATE.Failure.name
         rospy.logwarn('Default to:'+newState)
-    return (newState, txt)
+    return (mod_state(newState), txt)
 
 
 
@@ -221,47 +228,26 @@ def driving_toward_cone_transitions(txt):
 # - cleared_cone => Following_waypoint
 #
 def driving_away_from_cone_transitions(txt):
-    stateName = STATE.Driving_away_from_cone.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Driving_away_from_cone.name
+    rospy.loginfo('Entered state: ' + state_name)
 
-    global state_complete
-    # Set UAV mode
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
 
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
 
-    flag = True
-    rate = rospy.Rate(1) # some hz
-    test_count = 20 # test code
+    wait_on_state_node(state_name)
 
-    while not rospy.is_shutdown() and flag:
-        # TODO if timeout kill state? Do we do this here as a failsafe or state only?
-        rospy.loginfo('In '+stateName+' state. Countdown: '+str(test_count))
+    # Possibly unnecessary
+    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
 
-        # TODO Are we near a cone?
-
-        #rospy.loginfo('state_complete: '+str(state_complete))
-        if state_complete is True:
-            flag = False
-        if test_count < 1:
-            flag = False
-            __ExecComm.send_message_to_state(stateName, MSG_TO_STATE.RESET.name)
-            rospy.loginfo('Timed out')
-        test_count = test_count -1
-        rate.sleep()
-    ###
-    #__ExecComm.send_message_to_state(stateName, MSG_TO_STATE.RESET.name)
-    near_cone = True
-    obstacle_seen = False
-
-    # Unnecessary, but a bit of code.
-    __ExecComm.send_message_to_state(stateName,MSG_TO_STATE.RESET.name)
-    #
-    cleared_cone = True
-    if cleared_cone:
+    # Select next state based upon transition
+    if __ExecComm.transition == TRANSITION.cleared_cone.name:
         newState = STATE.Following_waypoint.name
-    return (newState, txt)
+    else:
+        rospy.logwarn('Unknown transition:'+__ExecComm.transition)
+        newState = STATE.Failure.name
+        rospy.logwarn('Default to:'+newState)
+    return (mod_state(newState), txt)
 
 
 
@@ -274,8 +260,8 @@ def driving_away_from_cone_transitions(txt):
 # - End
 #
 def success_transitions(txt):
-    stateName = STATE.Success.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Success.name
+    rospy.loginfo('Entered state: ' + state_name)
 
     # Set UAV to hold
     __UAV_State.set_mode(MAVMODE.HOLD.name)
@@ -294,8 +280,8 @@ def success_transitions(txt):
 # - End
 #
 def failure_transitions(txt):
-    stateName = STATE.Failure.name
-    rospy.loginfo('Entered state: ' + stateName)
+    state_name = STATE.Failure.name
+    rospy.loginfo('Entered state: ' + state_name)
 
     # Set UAV to hold
     __UAV_State.set_mode(MAVMODE.HOLD.name)
@@ -317,11 +303,13 @@ def __state_resp_cb(data):
     if __ExecComm.cmd==MSG_TO_EXEC.DONE.name: 
         state_complete = True
     elif __ExecComm.cmd==MSG_TO_EXEC.START_EXEC.name: 
+        # Set state to start with
+        start_state = rospy.get_param("/START_STATE")
+        machine.set_start(start_state)
+        # TODO What is our cargo? "TEST"? A series of waypoints?
+        cargo = "RUN"
         # Start state machine
-        # TODO What is our cargo?
-        machine.run("RUN")
-        #machine.run("TEST")
-        #machine.run("Series of waypoints?")
+        machine.run(cargo)
     pass
 
 

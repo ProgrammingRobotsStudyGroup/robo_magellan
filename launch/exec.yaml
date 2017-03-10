@@ -14,9 +14,29 @@
 #
 
 #
-# Associate strings with file names
-# The string is then associated with an enumeration in soundmap.py
-# See soundmap.py for example client code
+# Settings for exec node, loaded by exec.launch
 #
+
+### Number of seconds to attempt this segment (state)
 SEGMENT_DURATION_SEC: 120
+### Number of seconds added to above for exec to wait for state to complete
 SEGMENT_EXTRA_SEC: 10
+
+#
+# START_STATE
+# Set to specify state machine behavior.
+# Set Start for competition state machine behavior
+# If not 'Start' execute JUST this state, transition to SUCCESS then end
+#
+# States:
+#  Start
+#  Following_waypoint
+#  Avoiding_obstacle
+#  Driving_toward_cone
+#  Driving_away_from_cone
+#  Success
+#  Failure
+#  End
+START_STATE: Start
+
+
