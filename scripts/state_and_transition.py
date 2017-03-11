@@ -15,12 +15,13 @@
 # limitations under the License.
 #
 
-# States and Transitions 
+# States and Transitions
 
 from auto_number import AutoNumber
 
 
 class STATE(AutoNumber):
+    """Legal States"""
     Start = ()
     Following_waypoint = ()
     Avoiding_obstacle = ()
@@ -32,6 +33,7 @@ class STATE(AutoNumber):
 
 
 class TRANSITION(AutoNumber):
+    """Legal Transitions"""
     obstacle_seen = ()
     near_cone = ()
     obstacle_cleared = ()

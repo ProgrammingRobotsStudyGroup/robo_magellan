@@ -19,6 +19,8 @@
 # Exec uses a state machine to control macro behavior
 #
 
+"""Exec uses a state machine to control macro behavior"""
+
 # ROS
 import rospy
 from std_msgs.msg import String
@@ -122,13 +124,13 @@ def following_waypoint_transitions(txt):
     state_name = STATE.Following_waypoint.name
     rospy.loginfo('Entered state: ' + state_name)
 
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
 
     wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.obstacle_seen.name:
@@ -153,13 +155,13 @@ def avoiding_obstacle_transitions(txt):
     state_name = STATE.Avoiding_obstacle.name
     rospy.loginfo('Entered state: ' + state_name)
 
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
 
     wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
 
     if __ExecComm.transition == TRANSITION.obstacle_cleared.name:
         newState = STATE.Following_waypoint.name
@@ -192,13 +194,13 @@ def driving_toward_cone_transitions(txt):
     # Set UAV mode to hold while we get this state started
     __UAV_State.set_mode(MAVMODE.HOLD.name)
 
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
 
     wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.passed_last_cone.name:
@@ -232,13 +234,13 @@ def driving_away_from_cone_transitions(txt):
     rospy.loginfo('Entered state: ' + state_name)
 
 
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.START.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
 
     wait_on_state_node(state_name)
 
     # Possibly unnecessary
-    __ExecComm.send_message_to_state(state_name,MSG_TO_STATE.RESET.name)
+    __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.cleared_cone.name:
@@ -300,9 +302,9 @@ def __state_resp_cb(data):
     __ExecComm.parse_msg_to_exec(data.data)
     global state_complete
     #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
-    if __ExecComm.cmd==MSG_TO_EXEC.DONE.name: 
+    if __ExecComm.cmd == MSG_TO_EXEC.DONE.name: 
         state_complete = True
-    elif __ExecComm.cmd==MSG_TO_EXEC.START_EXEC.name: 
+    elif __ExecComm.cmd == MSG_TO_EXEC.START_EXEC.name: 
         # Set state to start with
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
@@ -319,12 +321,16 @@ def executive():
     # State machine setup
     global machine
     machine = StateMachine()
-    # 
+
     machine.add_state(STATE.Start.name, start_transitions)
-    machine.add_state(STATE.Following_waypoint.name, following_waypoint_transitions)
-    machine.add_state(STATE.Avoiding_obstacle.name, avoiding_obstacle_transitions)
-    machine.add_state(STATE.Driving_toward_cone.name, driving_toward_cone_transitions)
-    machine.add_state(STATE.Driving_away_from_cone.name, driving_away_from_cone_transitions)
+    machine.add_state(STATE.Following_waypoint.name, 
+                      following_waypoint_transitions)
+    machine.add_state(STATE.Avoiding_obstacle.name, 
+                      avoiding_obstacle_transitions)
+    machine.add_state(STATE.Driving_toward_cone.name, 
+                      driving_toward_cone_transitions)
+    machine.add_state(STATE.Driving_away_from_cone.name, 
+                      driving_away_from_cone_transitions)
     machine.add_state(STATE.Success.name, success_transitions)
     machine.add_state(STATE.Failure.name, failure_transitions)
     machine.add_state(STATE.End.name, None, end_state=1)
@@ -337,7 +343,7 @@ def executive():
 
 	# Start our node
     rospy.init_node('executive', anonymous=True)
-    # Initialize UAV models 
+    # Initialize UAV models
     global __UAV_State
     __UAV_State = uav_state.UAV_State()
     global __UAV_Control
@@ -345,7 +351,9 @@ def executive():
 
     # Exec/state comm
     global __ExecComm
-    __ExecComm = exec_comm.ExecComm(STATE.Following_waypoint.name, exec_msg_cb=__state_resp_cb)
+    __ExecComm = exec_comm.ExecComm(
+        STATE.Following_waypoint.name,
+        exec_msg_cb=__state_resp_cb)
 
     rate = rospy.Rate(2) # 1 hz
     while not rospy.is_shutdown():
