@@ -37,16 +37,15 @@ from state_and_transition import TRANSITION
 
 # Globals
 
-'''
-TODO
-1) Rework code to use msg formats, state_start
-2) Find common approach to: state_start, state_reset, state_pause
-3) .
-'''
+#TODO: Rework code to use to_ezec and to_state message formats
+#TODO: state_start. state_reset, state_pause
+
+
 #
 # Exec command listener callback
 #
 def cmd_callback(data):
+    """Exec command listener callback"""
     # Parses the message
     # State is returned. If message state is our state, cmd is updated.
     theState = __ExecComm.parse_msg_to_state(data.data)
@@ -91,6 +90,7 @@ def state_pause():
 
 
 def iscurrent():
+    """Prints list of WPs"""
     __UAV_Control.pull_waypoints()
     print __UAV_Control.waypoint_list
 #    iscur = -1

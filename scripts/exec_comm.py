@@ -55,9 +55,9 @@ class ExecComm():
         self.transition = None
 
         # Publishers
-        self.pubStateResponse = rospy.Publisher(
+        self.pub_state_response = rospy.Publisher(
             TOPICS.exec_command.name, String, queue_size=10)
-        self.pubStateCmd = rospy.Publisher(
+        self.pub_state_cmd = rospy.Publisher(
             TOPICS.state_command.name, String, queue_size=10)
 
         # Subscribers
@@ -73,7 +73,7 @@ class ExecComm():
     #
     #
     def send_message_to_exec(self, msg, transition):
-        self.pubStateResponse.publish(self.state+","+msg+","+transition)
+        self.pub_state_response.publish(self.state+","+msg+","+transition)
 
 
 
@@ -82,7 +82,7 @@ class ExecComm():
     #
     #
     def send_message_to_state(self, state, cmd):
-        self.pubStateCmd.publish(state+","+cmd)
+        self.pub_state_cmd.publish(state+","+cmd)
 
 
 
@@ -120,8 +120,4 @@ class ExecComm():
         self.state = msg_token_list[0]
         self.cmd = msg_token_list[1]
         self.transition = msg_token_list[2]
-        pass
-
-
-
 

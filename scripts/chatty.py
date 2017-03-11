@@ -24,8 +24,6 @@
 ## Sound node. Listens to /play and /playfile topics. Plays wav files.
 #
 
-import os
-import commands
 import subprocess as subp
 
 import rospkg
