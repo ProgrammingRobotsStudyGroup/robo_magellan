@@ -17,16 +17,21 @@
 #
 # Revision $Id$
 
-## Simple talker demo that listens to std_msgs/Strings published 
-## to the 'chatter' topic
 
-import rospy
-import rospkg
-from std_msgs.msg import String
+""" Sound node. Listens to /play and /playfile topics. Plays wav files. """
+
+#
+## Sound node. Listens to /play and /playfile topics. Plays wav files.
+#
+
 import os
 import commands
-import soundmap
 import subprocess as subp
+
+import rospkg
+import rospy
+from std_msgs.msg import String
+import soundmap
 
 basepath = None
 
@@ -52,8 +57,8 @@ def callback_token(data):
     # Convert token to file name
     try:
         # Find the enum by token, create path, play
-        fn = soundmap.SoundMapEnum.__getattr__(data.data).file_name
-        path = basepath + '/scripts/sounds/' + fn
+        file_nm = soundmap.SoundMapEnum.__getattr__(data.data).file_name
+        path = basepath + '/scripts/sounds/' + file_nm
         rospy.loginfo('Path: '+path)
         cline = 'paplay '+path
         exec_cmd(cline)
@@ -73,7 +78,7 @@ def chatty():
     # Get an instance of RosPack with the default search paths
     rospack = rospkg.RosPack()
     # Get file path of this package
-    global basepath 
+    global basepath
     basepath = rospack.get_path('robo_magellan')
 
     rospy.Subscriber('playfile', String, callback_file)

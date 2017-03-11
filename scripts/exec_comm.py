@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+"""Encapsulates communication between state node and exec"""
 #
 # Encapsulates communication between state node and exec
 # TODO Define our own messages
@@ -26,15 +27,18 @@ import rospy
 from std_msgs.msg import String
 
 class MSG_TO_STATE(AutoNumber):
+    """The permitted messages"""
     START = ()
     RESET = ()
     PAUSE = ()
 
 class MSG_TO_EXEC(AutoNumber):
+    """The permitted messages"""
     START_EXEC = ()
     DONE = ()
 
 class TOPICS(AutoNumber):
+    """exec and state topic names"""
     state_command = ()
     exec_command = ()
 
@@ -45,14 +49,16 @@ class ExecComm():
     #
     #
     #
-    def __init__(self, state, state_msg_cb = None, exec_msg_cb = None):
+    def __init__(self, state, state_msg_cb=None, exec_msg_cb=None):
         self.cmd = None
         self.state = state
         self.transition = None
 
         # Publishers
-        self.pubStateResponse = rospy.Publisher(TOPICS.exec_command.name, String, queue_size=10)
-        self.pubStateCmd = rospy.Publisher(TOPICS.state_command.name, String, queue_size=10)
+        self.pubStateResponse = rospy.Publisher(
+            TOPICS.exec_command.name, String, queue_size=10)
+        self.pubStateCmd = rospy.Publisher(
+            TOPICS.state_command.name, String, queue_size=10)
 
         # Subscribers
         if state_msg_cb != None:
@@ -84,35 +90,36 @@ class ExecComm():
     #
     #
     #
-    def parse_msg_to_state(self,theStr):
-        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_to_state: %s', theStr)
+    def parse_msg_to_state(self, msg):
+        """Parse a message sent to a state"""
+        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_to_state: %s', msg)
         # Handle start, reset, pause, etc.
-        list = theStr.split(",")
-        theState = list[0]
-        cmd = list[1]
-        #rospy.loginfo('theState: '+theState+'  cmd: '+cmd)
-        if theState == self.state:
+        msg_token_list = msg.split(",")
+        the_state = msg_token_list[0]
+        cmd = msg_token_list[1]
+        #rospy.loginfo('the_state: '+the_state+'  cmd: '+cmd)
+        if the_state == self.state:
             # TODO Command should be in MSG_TO_STATE
             self.cmd = cmd
-        return theState
-        pass
+        return the_state
 
 
 
 
     #
     # Parses a state's message to exec
-    # theStr contains:
-    #  msg from state 
+    # msg contains:
+    #  msg from state
     #  msg text
     #  next transition
     #
-    def parse_msg_to_exec(self,theStr):
-        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_from_state: %s', theStr)
-        list = theStr.split(",")
-        self.state = list[0]
-        self.cmd = list[1]
-        self.transition = list[2]
+    def parse_msg_to_exec(self, msg):
+        """Parse a message sent to a exec"""
+        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_from_state: %s', msg)
+        msg_token_list = msg.split(",")
+        self.state = msg_token_list[0]
+        self.cmd = msg_token_list[1]
+        self.transition = msg_token_list[2]
         pass
 
 
