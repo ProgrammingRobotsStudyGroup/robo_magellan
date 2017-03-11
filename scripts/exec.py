@@ -25,15 +25,10 @@
 import rospy
 from std_msgs.msg import String
 
-#
-from statemachine import StateMachine
-
 ## Our Code
 
-# Enum maps to sound name
-import soundmap
+from statemachine import StateMachine
 
-from auto_number import AutoNumber
 from uav_state import MODE as MAVMODE
 import uav_state
 import uav_control
@@ -49,7 +44,7 @@ from state_and_transition import TRANSITION
 __UAV_State = None
 __UAV_Control = None
 
-pubSoundToken = None
+pub_sound_token = None
 state_complete = False
 
 
@@ -108,7 +103,7 @@ def start_transitions(txt):
     # Set us to hold upon start
     resp1 = __UAV_State.set_arm(False)
     resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
-    # Set next state 
+    # Set next state
     return (STATE.Following_waypoint.name, txt)
 
 
@@ -121,6 +116,7 @@ def start_transitions(txt):
 # - near_cone => Driving_toward_cone
 #
 def following_waypoint_transitions(txt):
+    """Follow waypoint State node & transitions"""
     state_name = STATE.Following_waypoint.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -134,14 +130,14 @@ def following_waypoint_transitions(txt):
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.obstacle_seen.name:
-        newState = STATE.Avoiding_obstacle.name
+        new_state = STATE.Avoiding_obstacle.name
     elif __ExecComm.transition == TRANSITION.near_cone.name:
-        newState = STATE.Driving_toward_cone.name
+        new_state = STATE.Driving_toward_cone.name
     else:
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
-        newState = STATE.Failure.name
-        rospy.logwarn('Default to:'+newState)
-    return (mod_state(newState), txt)
+        new_state = STATE.Failure.name
+        rospy.logwarn('Default to:'+new_state)
+    return (mod_state(new_state), txt)
 
 
 
@@ -152,6 +148,7 @@ def following_waypoint_transitions(txt):
 # - obstacle_cleared => Following_waypoint
 #
 def avoiding_obstacle_transitions(txt):
+    """Avoid obstacle State node & transitions"""
     state_name = STATE.Avoiding_obstacle.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -164,12 +161,12 @@ def avoiding_obstacle_transitions(txt):
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
 
     if __ExecComm.transition == TRANSITION.obstacle_cleared.name:
-        newState = STATE.Following_waypoint.name
+        new_state = STATE.Following_waypoint.name
     else:
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
-        newState = STATE.Failure.name
-        rospy.logwarn('Default to:'+newState)
-    return (mod_state(newState), txt)
+        new_state = STATE.Failure.name
+        rospy.logwarn('Default to:'+new_state)
+    return (mod_state(new_state), txt)
 
 
 
@@ -185,6 +182,7 @@ def avoiding_obstacle_transitions(txt):
 # - course_timeout => Failure
 #
 def driving_toward_cone_transitions(txt):
+    """Driving toward cone State node & transitions"""
     state_name = STATE.Driving_toward_cone.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -204,22 +202,22 @@ def driving_toward_cone_transitions(txt):
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.passed_last_cone.name:
-        newState = STATE.Failure.name
+        new_state = STATE.Failure.name
     elif __ExecComm.transition == TRANSITION.course_timeout.name:
-        newState = STATE.Failure.name
+        new_state = STATE.Failure.name
     elif __ExecComm.transition == TRANSITION.touched_last_cone.name:
-        newState = STATE.Success.name
+        new_state = STATE.Success.name
     elif __ExecComm.transition == TRANSITION.passed_cone.name:
-        newState = STATE.Following_waypoint.name
+        new_state = STATE.Following_waypoint.name
     elif __ExecComm.transition == TRANSITION.segment_timeout.name:
-        newState = STATE.Following_waypoint.name
+        new_state = STATE.Following_waypoint.name
     elif __ExecComm.transition == TRANSITION.touched_cone.name:
-        newState = STATE.Driving_away_from_cone.name
+        new_state = STATE.Driving_away_from_cone.name
     else:
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
-        newState = STATE.Failure.name
-        rospy.logwarn('Default to:'+newState)
-    return (mod_state(newState), txt)
+        new_state = STATE.Failure.name
+        rospy.logwarn('Default to:'+new_state)
+    return (mod_state(new_state), txt)
 
 
 
@@ -230,6 +228,7 @@ def driving_toward_cone_transitions(txt):
 # - cleared_cone => Following_waypoint
 #
 def driving_away_from_cone_transitions(txt):
+    """Driving away from cone State node & transitions"""
     state_name = STATE.Driving_away_from_cone.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -244,12 +243,12 @@ def driving_away_from_cone_transitions(txt):
 
     # Select next state based upon transition
     if __ExecComm.transition == TRANSITION.cleared_cone.name:
-        newState = STATE.Following_waypoint.name
+        new_state = STATE.Following_waypoint.name
     else:
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
-        newState = STATE.Failure.name
-        rospy.logwarn('Default to:'+newState)
-    return (mod_state(newState), txt)
+        new_state = STATE.Failure.name
+        rospy.logwarn('Default to:'+new_state)
+    return (mod_state(new_state), txt)
 
 
 
@@ -262,6 +261,7 @@ def driving_away_from_cone_transitions(txt):
 # - End
 #
 def success_transitions(txt):
+    """Success State node & transitions"""
     state_name = STATE.Success.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -270,8 +270,8 @@ def success_transitions(txt):
     # Disarm
     __UAV_State.set_arm(False)
 
-    newState = STATE.End.name
-    return (newState, txt)
+    new_state = STATE.End.name
+    return (new_state, txt)
 
 
 
@@ -282,6 +282,7 @@ def success_transitions(txt):
 # - End
 #
 def failure_transitions(txt):
+    """Failure State node & transitions"""
     state_name = STATE.Failure.name
     rospy.loginfo('Entered state: ' + state_name)
 
@@ -290,21 +291,22 @@ def failure_transitions(txt):
     # Disarm
     __UAV_State.set_arm(False)
 
-    newState = STATE.End.name
-    return (newState, txt)
+    new_state = STATE.End.name
+    return (new_state, txt)
 
 
 #
 #
 #
 def __state_resp_cb(data):
+    """Handle messages from state nodes"""
     #rospy.loginfo('__state_resp_cb: '+data.data)
     __ExecComm.parse_msg_to_exec(data.data)
     global state_complete
     #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
-    if __ExecComm.cmd == MSG_TO_EXEC.DONE.name: 
+    if __ExecComm.cmd == MSG_TO_EXEC.DONE.name:
         state_complete = True
-    elif __ExecComm.cmd == MSG_TO_EXEC.START_EXEC.name: 
+    elif __ExecComm.cmd == MSG_TO_EXEC.START_EXEC.name:
         # Set state to start with
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
@@ -312,24 +314,26 @@ def __state_resp_cb(data):
         cargo = "RUN"
         # Start state machine
         machine.run(cargo)
-    pass
 
 
 
+
+#
+# State machine setup
+#
 def executive():
-
-    # State machine setup
+    """"State machine setup"""
     global machine
     machine = StateMachine()
 
     machine.add_state(STATE.Start.name, start_transitions)
-    machine.add_state(STATE.Following_waypoint.name, 
+    machine.add_state(STATE.Following_waypoint.name,
                       following_waypoint_transitions)
-    machine.add_state(STATE.Avoiding_obstacle.name, 
+    machine.add_state(STATE.Avoiding_obstacle.name,
                       avoiding_obstacle_transitions)
-    machine.add_state(STATE.Driving_toward_cone.name, 
+    machine.add_state(STATE.Driving_toward_cone.name,
                       driving_toward_cone_transitions)
-    machine.add_state(STATE.Driving_away_from_cone.name, 
+    machine.add_state(STATE.Driving_away_from_cone.name,
                       driving_away_from_cone_transitions)
     machine.add_state(STATE.Success.name, success_transitions)
     machine.add_state(STATE.Failure.name, failure_transitions)
@@ -338,8 +342,8 @@ def executive():
     machine.set_start(STATE.Start.name)
 
 
-    global pubSoundToken
-    pubSoundToken = rospy.Publisher('play', String, queue_size=10)
+    global pub_sound_token
+    pub_sound_token = rospy.Publisher('play', String, queue_size=10)
 
 	# Start our node
     rospy.init_node('executive', anonymous=True)

@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Follow_waypoint(s) until 1) transition occurs 2) exec interrupts
+
+"""Avoiding obstacle state node"""
+
+#
 #
 #
 
@@ -22,11 +25,7 @@
 import rospy
 from std_msgs.msg import String
 #from ._WaypointPull import *
-import inspect
 #
-from statemachine import StateMachine
-
-from auto_number import AutoNumber
 from uav_state import MODE as MAVMODE
 import uav_state
 import uav_control
@@ -37,10 +36,6 @@ from exec_comm import MSG_TO_EXEC
 from state_and_transition import STATE
 from state_and_transition import TRANSITION
 
-# Globals
-
-state_state = None
-pubStateResponse = None
 
 #
 #
@@ -49,11 +44,12 @@ pubStateResponse = None
 # Exec command listener callback
 #
 def cmd_callback(data):
+    """Exec command listener callback"""
     # Parses the message
     # State is returned. If message state is our state, cmd is updated.
-    theState = __ExecComm.parse_msg_to_state(data.data)
+    the_state = __ExecComm.parse_msg_to_state(data.data)
 
-    if theState == __ExecComm.state:
+    if the_state == __ExecComm.state:
         rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
         # Handle start, reset, pause, etc.
         if __ExecComm.cmd == MSG_TO_STATE.START.name:
@@ -97,56 +93,61 @@ def state_pause():
 #
 #
 def state_start():
+    """Start the state"""
     rospy.loginfo('state_start')
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
-    resp1 = __UAV_State.set_arm(True)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_arm(True)
 
-#    resp1 = __UAV_State.set_mode(MAVMODE.AUTO.name)
-    resp1 = __UAV_State.set_mode(MAVMODE.LEARNING.name)
-    
-    flag = True
+#    __UAV_State.set_mode(MAVMODE.AUTO.name)
+    __UAV_State.set_mode(MAVMODE.LEARNING.name)
+
     rate = rospy.Rate(0.5) # some hz
-    test_count = 5 # test code
 
-    # Driving away loop
-    while not rospy.is_shutdown() and flag:
-        rospy.loginfo('Driving_away_from_cone. Status: '+str(test_count))
+    # Avoiding obstacles loop
+    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
+    timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
+    old_timeout_secs = 0
+
+    while not rospy.is_shutdown():
+        timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
+        if timeout_secs <> old_timeout_secs:
+            rospy.loginfo(
+                'In %s state NODE. Timeout in: %d',
+                state_name,
+                timeout_secs)
+        old_timeout_secs = timeout_secs
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
-            flag = False
-        # TODO Are we near a cone?
-        if test_count < 1:
-            flag = False
-        test_count = test_count -1
+            break
+        if rospy.Time.now() > timeout:
+            segment_timeout = True
+            break
         rate.sleep()
 
-    # TODO publish transition.
-    #near_cone = True
-    #obstacle_seen = False
-    pubStateResponse.publish('Done')
+    # Put in safe mode
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_arm(False)
 
-    #
-    #if obstacle_seen:
-    #    newState = STATE.Avoiding_obstacle.name
-    #elif near_cone:
-    #    newState = STATE.Driving_toward_cone.name
+    # Publish transition
+    obstacle_cleared = True # TODO: Hard coded 
+    if obstacle_cleared:
+        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.obstacle_cleared.name)
 
 
 
 
 #
+# Start our node
 #
-#
-def state_node():
-    global state_name
-    state_name = STATE.Avoiding_obstacle.name
-    # Start our node
-    rospy.loginfo('State node starting: '+state_name)
+def state_node(state_name):
+    """Start node"""
+
+    rospy.loginfo('State node starting: %s', state_name)
     rospy.init_node(state_name, anonymous=False)
 
-    # Initialize UAV models 
+    # Initialize UAV models
     global __UAV_State
     __UAV_State = uav_state.UAV_State()
     global __UAV_Control
@@ -163,7 +164,7 @@ def state_node():
 
 if __name__ == '__main__':
     try:
-        state_node()
+        state_node(STATE.Avoiding_obstacle.name)
     except rospy.ROSInterruptException:
         pass
 

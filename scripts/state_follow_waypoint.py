@@ -48,9 +48,9 @@ def cmd_callback(data):
     """Exec command listener callback"""
     # Parses the message
     # State is returned. If message state is our state, cmd is updated.
-    theState = __ExecComm.parse_msg_to_state(data.data)
+    the_state = __ExecComm.parse_msg_to_state(data.data)
 
-    if theState == __ExecComm.state:
+    if the_state == __ExecComm.state:
         rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
         # Handle start, reset, pause, etc.
         if __ExecComm.cmd == MSG_TO_STATE.START.name:
@@ -106,13 +106,14 @@ def iscurrent():
 #
 #
 def state_start():
+    state_name = STATE.Following_waypoint.name
+    """Start the state"""
     rospy.loginfo('state_start')
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
     __UAV_State.set_mode(MAVMODE.HOLD.name)
     __UAV_State.set_arm(False)
-    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
     print "HERE 1"
     ## TEST
     #__UAV_Control.pull_waypoints()
@@ -132,23 +133,31 @@ def state_start():
     __UAV_State.set_mode(MAVMODE.AUTO.name)
     __UAV_State.set_arm(True)
 
-    flag = True
     rate = rospy.Rate(0.5) # some hz
-    count = segment_duration_sec
     #iscurrent()
 
     # WP Driving loop
+    segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
+    old_timeout_secs = 0
 
-    while (not rospy.is_shutdown()) and flag:
-        rospy.loginfo('Driving to waypoint. Status: '+str(count))
+    while not rospy.is_shutdown():
+        timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
+        if timeout_secs <> old_timeout_secs:
+            rospy.loginfo(
+                'In %s state NODE. Timeout in: %d',
+                state_name,
+                timeout_secs)
+        old_timeout_secs = timeout_secs
         #iscurrent()
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
-            flag = False
+            # TODO What if any transition?
+            break
         if rospy.Time.now() > timeout:
+            # TODO What's the transition?
+            rospy.loginfo('State timed out: %s', state_name)
             break
         # TODO Are we near a cone?
-        count -= 1
         rate.sleep()
 
     __UAV_State.set_mode(MAVMODE.HOLD.name)
@@ -171,13 +180,12 @@ def state_start():
 
 
 #
+# Start our node
 #
-#
-def state_node():
-    global state_name
-    state_name = STATE.Following_waypoint.name
-	# Start our node
-    rospy.loginfo('State node starting: '+state_name)
+def state_node(state_name):
+    """Start node"""
+
+    rospy.loginfo('State node starting: %s', state_name)
     rospy.init_node(state_name, anonymous=False)
 
     # Initialize UAV models
@@ -197,7 +205,7 @@ def state_node():
 
 if __name__ == '__main__':
     try:
-        state_node()
+        state_node(STATE.Following_waypoint.name)
     except rospy.ROSInterruptException:
         pass
 
