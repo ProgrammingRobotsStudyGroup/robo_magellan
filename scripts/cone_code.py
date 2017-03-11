@@ -5,8 +5,8 @@ import numpy as np
 import cv2, time, rospy
 
 # Needed for publishing the messages
-from cone_finder.msg import pose_data
-from cone_finder.msg import location_msgs as location_data
+from robo_magellan.msg import pose_data
+from robo_magellan.msg import location_msgs as location_data
  
 def is_cv2():
     # if we are using OpenCV 2, then our cv2.__version__ will start
@@ -197,7 +197,7 @@ class ConeFinder:
         poses = []
 
         # Sort the list by decreasing area
-        listOfHullsAndArea.sort(key=lambda h, a, d: a, reverse=True)
+        listOfHullsAndArea.sort(key=lambda (h, a, d): a, reverse=True)
         for (hull, area, (dMin, dMax)) in listOfHullsAndArea:
             # print 'convexHull',len(temp)
             if (len(hull) >= 3 and self._convexHullIsPointingUp(hull)):
@@ -232,7 +232,7 @@ class ConeSeeker:
             frame += 1
             new_pos_confs.append((prev_pose, confidence, frame))
 
-        new_pos_confs.sort(key=lambda p, c, f: f, reverse=True)
+        new_pos_confs.sort(key=lambda (p, c, f): f, reverse=True)
         # Keep only top 16 items
         self.prev_pos_confs = new_pos_confs[0:16]
         
@@ -270,7 +270,7 @@ class ConeSeeker:
           new_pos_confs.append((pose, confidence, 0))
         
         # Sort the new list by confidence and descending
-        new_pos_confs.sort(key=lambda p, c, f: c, reverse=True)
+        new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
         self.prev_pos_confs.extend(new_pos_confs)
         return new_pos_confs[0]
 
