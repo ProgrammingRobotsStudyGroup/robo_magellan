@@ -62,7 +62,7 @@ class ConeFinder:
 
         # If we have most of the points with depth, we will assume the rest were error
         if(len(depthList) > len(hull)/2):
-            depthList = sorted(depthList)
+            depthList.sort()
             return (depthList[0], depthList[-1])
 
         return (0, 0)
@@ -197,7 +197,7 @@ class ConeFinder:
         poses = []
 
         # Sort the list by decreasing area
-        listOfHullsAndArea = sorted(listOfHullsAndArea, key=lambda pair: pair[1], reverse=True)
+        listOfHullsAndArea.sort(key=lambda h, a, d: a, reverse=True)
         for (hull, area, (dMin, dMax)) in listOfHullsAndArea:
             # print 'convexHull',len(temp)
             if (len(hull) >= 3 and self._convexHullIsPointingUp(hull)):
@@ -232,7 +232,7 @@ class ConeSeeker:
             frame += 1
             new_pos_confs.append((prev_pose, confidence, frame))
 
-        new_pos_confs = sorted(new_pos_confs, key=lambda pose: pose[1], reverse=True)
+        new_pos_confs.sort(key=lambda p, c, f: f, reverse=True)
         # Keep only top 16 items
         self.prev_pos_confs = new_pos_confs[0:16]
         
@@ -270,7 +270,7 @@ class ConeSeeker:
           new_pos_confs.append((pose, confidence, 0))
         
         # Sort the new list by confidence and descending
-        new_pos_confs = sorted(new_pos_confs, key=lambda pose: pose[1], reverse=True)
+        new_pos_confs.sort(key=lambda p, c, f: c, reverse=True)
         self.prev_pos_confs.extend(new_pos_confs)
         return new_pos_confs[0]
 

@@ -53,7 +53,8 @@ def drive_to_cone(loc):
             tadj = args.throttle_factor*(cone_loc.y - 40)
 
     #-- test with fixed throttle to start
-    throttle = throttle + tadj
+    throttle = 1675
+    #throttle = throttle + tadj
 
     # Everything must be bounded    
     if(steering > steering_limits[2]):
