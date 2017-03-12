@@ -124,7 +124,8 @@ def state_pause():
 #
 def state_start():
     """Start the state"""
-    rospy.loginfo('state_start')
+    state_name = STATE.Driving_toward_cone.name
+    rospy.loginfo('state_start %s', state_name)
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started

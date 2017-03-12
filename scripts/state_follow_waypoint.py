@@ -106,9 +106,9 @@ def iscurrent():
 #
 #
 def state_start():
-    state_name = STATE.Following_waypoint.name
     """Start the state"""
-    rospy.loginfo('state_start')
+    state_name = STATE.Following_waypoint.name
+    rospy.loginfo('state_start %s', state_name)
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
