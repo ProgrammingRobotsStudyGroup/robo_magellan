@@ -220,7 +220,7 @@ class ConeFinder:
 class ConeSeeker:
     # Typically less than 1 unless the range isn't responsive
     conf_decay_factor = 0.80
-    prev_pos_confs = []
+    nItems = 64
 
     def __init__(self):
         self.prev_pos_confs = []
@@ -230,11 +230,14 @@ class ConeSeeker:
         for (prev_pose, confidence, frame) in self.prev_pos_confs:
             confidence *= self.conf_decay_factor
             frame += 1
-            new_pos_confs.append((prev_pose, confidence, frame))
+            if(confidence > 0.03):
+                new_pos_confs.append((prev_pose, confidence, frame))
 
         new_pos_confs.sort(key=lambda (p, c, f): f, reverse=True)
-        # Keep only top 16 items
-        self.prev_pos_confs = new_pos_confs[0:16]
+        #print(new_pos_confs[0:2])
+            
+        # Keep only top nItems items
+        self.prev_pos_confs = new_pos_confs[0:self.nItems]
         
     def _getConfFromOldFrames(self, pose):
         x1 = pose.x - pose.w/2
@@ -242,8 +245,11 @@ class ConeSeeker:
         y1 = pose.y
         y2 = pose.y + pose.h
         conf = 0.0
+        # We need to remove entries that match
+        rem_pos_confs = []
         for (prev_pose, prev_conf, frame) in self.prev_pos_confs:
             if(frame == 0):
+                rem_pos_confs.append((prev_pose, prev_conf, frame))
                 continue
             old_x1 = prev_pose.x - prev_pose.w/2
             old_x2 = prev_pose.x + prev_pose.w/2
@@ -253,25 +259,37 @@ class ConeSeeker:
             dy = min(y2, old_y2) - max(y1, old_y1)
             if (dx>=0) and (dy>=0):
                 conf += prev_conf * (dx*dy*1.0)/(prev_pose.w*prev_pose.h)
-              
+            else:
+                rem_pos_confs.append((prev_pose, prev_conf, frame))
+        self.prev_pos_confs = rem_pos_confs
         return conf 
           
     def seek_cone(self, loc):
         # Compute confidence for each hull by area and h distance
-        maxArea = max(pose.area for pose in loc.poses)
-        new_pos_confs = []
-        self._update_prev_poses()
-        for pose in loc.poses:
-          # Need to figure out appropriate weightage for area and distance
-          # Scale distance as farther objects will use less pixels
-          pd = 1 + (pose.x/80.0)**2 + (pose.y/120.0)**2
-          # Find this cone among cones from previous frames and use the confidence
-          confidence = 1/pd + pose.area/(4.0*maxArea) + self._getConfFromOldFrames(pose)
-          new_pos_confs.append((pose, confidence, 0))
+        if(len(loc.poses)):
+            maxArea = max(pose.area for pose in loc.poses)
+            new_pos_confs = []
+            for pose in loc.poses:
+              # Need to figure out appropriate weightage for area and distance
+              # Scale distance as farther objects will use less pixels
+              pd = 1 + (pose.x/80.0)**2 + (pose.y/120.0)**2
+              # Find this cone among cones from previous frames and use the confidence
+              confidence = 2/pd + pose.area/(8.0*maxArea) + self._getConfFromOldFrames(pose)
+              new_pos_confs.append((pose, confidence, 0))
+            
+            # Sort the new list by confidence and descending
+            new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
+            if len(self.prev_pos_confs):
+                self.prev_pos_confs.extend(new_pos_confs)
+                self._update_prev_poses()
+            else:
+                self.prev_pos_confs = new_pos_confs
+
+        # A cone from previous frames might have better confidence
+        if len(self.prev_pos_confs):
+            return self.prev_pos_confs[0]
         
-        # Sort the new list by confidence and descending
-        new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
-        self.prev_pos_confs.extend(new_pos_confs)
-        return new_pos_confs[0]
+        #This would only happen if the list is empty
+        return ((0,0,0,0,0,0,0.0), 0.0, 0)
 
 
