@@ -153,7 +153,7 @@ def state_start():
                        __UAV_Control.get_param_int('RC3_TRIM'),
                        __UAV_Control.get_param_int('RC3_MAX')]
 
-    rate = rospy.Rate(1) # some hz
+    rate = rospy.Rate(2) # 2 hz
     global touched
     touched = False
     touchSubscriber = rospy.Subscriber('/touch', Locations, touched_cb)
@@ -181,9 +181,13 @@ def state_start():
             break
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
+            rospy.loginfo('State aborted: %s with command %s', 
+                          state_name, __ExecComm.cmd)
             break
         if rospy.Time.now() > timeout:
             segment_timeout = True
+            # TODO What's the transition?
+            rospy.loginfo('State timed out: %s', state_name)
             break
         rate.sleep()
 

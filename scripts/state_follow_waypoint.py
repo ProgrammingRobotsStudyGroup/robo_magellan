@@ -133,7 +133,7 @@ def state_start():
     __UAV_State.set_mode(MAVMODE.AUTO.name)
     __UAV_State.set_arm(True)
 
-    rate = rospy.Rate(0.5) # some hz
+    rate = rospy.Rate(2) # 2 hz
     #iscurrent()
 
     # WP Driving loop
@@ -152,8 +152,11 @@ def state_start():
         #iscurrent()
         if __ExecComm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
+            rospy.loginfo('State aborted: %s with command %s', 
+                          state_name, __ExecComm.cmd)
             break
         if rospy.Time.now() > timeout:
+            segment_timeout = True
             # TODO What's the transition?
             rospy.loginfo('State timed out: %s', state_name)
             break
