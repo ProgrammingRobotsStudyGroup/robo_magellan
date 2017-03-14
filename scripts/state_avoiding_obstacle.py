@@ -23,7 +23,6 @@
 
 # ROS
 import rospy
-from std_msgs.msg import String
 
 from uav_state import MODE as MAVMODE
 
@@ -69,7 +68,7 @@ def state_start():
         old_timeout_secs = timeout_secs
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
-            rospy.loginfo('State aborted: %s with command %s', 
+            rospy.loginfo('State aborted: %s with command %s',
                           this_node.state_name, this_node.exec_comm.cmd)
             break
         if rospy.Time.now() > timeout:
@@ -84,9 +83,10 @@ def state_start():
     this_node.uav_state.set_arm(False)
 
     # Publish transition
-    obstacle_cleared = True # TODO: Hard coded 
+    obstacle_cleared = True # TODO: Hard coded
     if obstacle_cleared:
-        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.obstacle_cleared.name)
+        this_node.exec_comm.send_message_to_exec(
+            MSG_TO_EXEC.DONE.name, TRANSITION.obstacle_cleared.name)
 
 
 

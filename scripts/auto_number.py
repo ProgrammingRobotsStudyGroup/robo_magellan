@@ -15,10 +15,11 @@
 # limitations under the License.
 #
 # Used to auto number enum
-
+"""Used to auto number enum"""
 import enum
 
 class AutoNumber(enum.Enum):
+    """AutoNumber class"""
     def __new__(cls):
         value = len(cls.__members__) + 1
         obj = object.__new__(cls)

@@ -33,9 +33,10 @@
 #   pubFile.publish(soundfilepath)
 #
 
-from std_msgs.msg import String
-import yaml
 import rospkg
+from std_msgs.msg import String
+
+import yaml
 
 from auto_number import AutoNumber
 
@@ -77,9 +78,9 @@ class SoundMapEnum(AutoNumber):
 
     @classmethod
     def tostring(cls, val):
-      for k,v in vars(cls).iteritems():
-          if v==val:
-              return k
+        for k, v in vars(cls).iteritems():
+            if v == val:
+                return k
 
     @classmethod
     def fromstring(cls, str):
@@ -99,14 +100,14 @@ class SoundMapEnum(AutoNumber):
 rospack = rospkg.RosPack()
   # Get the file path for rospy_tutorials
 path = rospack.get_path('robo_magellan') + "/scripts/soundmapfiles.yaml"
-print(path)
+print path
 stream = open(path, "r")
 sound_name_file_assoc = yaml.load_all(stream)
   # Associate enumerated key (token) with value (file name)
 for doc in sound_name_file_assoc:
     if doc is None:
         break
-    for k,v in doc.items():
+    for k, v in doc.items():
         try:
             # Find the enum corresponding to the key
             SoundMapEnum.__getattr__(k).file_name = v

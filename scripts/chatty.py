@@ -34,6 +34,7 @@ import soundmap
 basepath = None
 
 def exec_cmd(command):
+    """Execute sound play command"""
     # Sound sometimes doesn't play. Add padding
     shh_cmd = 'paplay ' + basepath + '/scripts/sounds/' + 'silence-1sec.wav'
     process = subp.Popen(shh_cmd, shell=True)
@@ -46,11 +47,13 @@ def exec_cmd(command):
     process = subp.Popen(shh_cmd, shell=True)
 
 def callback_file(data):
+    """Listener callback to play sound by path."""
     rospy.loginfo(rospy.get_caller_id() + ' Play file: %s', data.data)
     cmd = 'paplay '+data.data
     exec_cmd(cmd)
 
 def callback_token(data):
+    """Listener callback to play sound by token."""
     rospy.loginfo(rospy.get_caller_id() + ' Play token: %s', data.data)
     # Convert token to file name
     try:
@@ -65,7 +68,7 @@ def callback_token(data):
 
 
 def chatty():
-
+    """Start the chatty node"""
     # In ROS, nodes are uniquely named. If two nodes with the same
     # name are launched, the previous one is kicked off. The
     # anonymous=True flag means that rospy will choose a unique

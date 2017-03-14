@@ -51,6 +51,7 @@ class TOPICS(AutoNumber):
 
 
 class ExecComm():
+    """Communication between exec and states"""
     #
     #
     #
@@ -78,6 +79,7 @@ class ExecComm():
     #
     #
     def send_message_to_exec(self, msg, transition):
+        """Send message to exec"""
         self.pub_state_response.publish(self.state+","+msg+","+transition)
 
 
@@ -87,6 +89,7 @@ class ExecComm():
     #
     #
     def send_message_to_state(self, state, cmd):
+        """Send message to state"""
         self.pub_state_cmd.publish(state+","+cmd)
 
 
@@ -129,6 +132,7 @@ class ExecComm():
 
 
 class StateNode():
+    """State node common code"""
     #
     #
     #
@@ -152,9 +156,12 @@ class StateNode():
         # Parses the message
         # State is returned. If message state is our state, cmd is updated.
         the_state = self.exec_comm.parse_msg_to_state(data.data)
-    
+
         if the_state == self.exec_comm.state:
-            rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
+            rospy.loginfo(
+                '%s cmd_callback: %s',
+                rospy.get_caller_id(), 
+                data.data)
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
                 self.start()
@@ -163,7 +170,8 @@ class StateNode():
             elif self.exec_comm.cmd == MSG_TO_STATE.PAUSE.name:
                 self.pause()
             else:
-                rospy.logwarn('Invalid cmd: '+data.data)
+                rospy.logwarn(
+                    'Invalid cmd: %s', data.data)
 
 
     #

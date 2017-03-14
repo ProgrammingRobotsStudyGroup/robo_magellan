@@ -57,6 +57,7 @@ def iscurrent():
 
 
 def mission_item_reached_cb(data):
+    """Reached mission item"""
     rospy.loginfo("Mission Item reached"+str(data.seq))
     #notify the loop
 
@@ -110,8 +111,10 @@ def state_start():
         #iscurrent()
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
-            rospy.loginfo('State aborted: %s with command %s', 
-                          this_node.state_name, this_node.exec_comm.cmd)
+            rospy.loginfo(
+                'State aborted: %s with command %s',
+                this_node.state_name, 
+                this_node.exec_comm.cmd)
             break
         if rospy.Time.now() > timeout:
             segment_timeout = True

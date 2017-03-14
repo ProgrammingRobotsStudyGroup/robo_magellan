@@ -101,8 +101,8 @@ def start_transitions(txt):
     rospy.loginfo('Entered state: ' + state_name)
 
     # Set us to hold upon start
-    resp1 = __UAV_State.set_arm(False)
-    resp1 = __UAV_State.set_mode(MAVMODE.HOLD.name)
+    __UAV_State.set_arm(False)
+    __UAV_State.set_mode(MAVMODE.HOLD.name)
     # Set next state
     return (STATE.Following_waypoint.name, txt)
 
