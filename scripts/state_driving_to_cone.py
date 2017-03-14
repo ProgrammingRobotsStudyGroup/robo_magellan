@@ -25,12 +25,8 @@ import sys, argparse, math
 
 # ROS
 import rospy
-#from std_msgs.msg import String
-#from ._WaypointPull import *
 #
 from uav_state import MODE as MAVMODE
-import uav_state
-import uav_control
 
 import exec_comm
 from exec_comm import MSG_TO_STATE
@@ -40,6 +36,10 @@ from state_and_transition import TRANSITION
 
 from mavros_msgs.msg import OverrideRCIn
 from cone_finder.msg import location_msgs as Locations
+
+# Globals
+this_node = None
+
 
 # We will get angle between +pi/2 to -pi/2 for steering
 # We will get 480 pixels range for throttle but should limit this
@@ -60,56 +60,6 @@ steering_limits = [1135, 1435, 1735]  # middle is neutral
 throttle_limits = [1650, 1650, 1800]  # fwd range only; for testing; middle is NOT neutral
 
 
-#
-#
-#
-#
-# Exec command listener callback
-#
-def cmd_callback(data):
-    """Exec command listener callback"""
-    # Parses the message
-    # State is returned. If message state is our state, cmd is updated.
-    the_state = __ExecComm.parse_msg_to_state(data.data)
-
-    if the_state == __ExecComm.state:
-        rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
-        # Handle start, reset, pause, etc.
-        if __ExecComm.cmd == MSG_TO_STATE.START.name:
-            state_start()
-        elif __ExecComm.cmd == MSG_TO_STATE.RESET.name:
-            state_reset()
-        elif __ExecComm.cmd == MSG_TO_STATE.PAUSE.name:
-            state_pause()
-        else:
-            rospy.logwarn('Invalid cmd: '+data.data)
-
-
-
-
-#
-# Reset the state
-# For safety, for now set to HOLD
-#
-def state_reset():
-    """Reset the state"""
-    # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
-
-
-
-
-#
-# Pause the state
-#
-def state_pause():
-    """Pause the state"""
-    # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
-
-
 
 
 #
@@ -124,13 +74,12 @@ def state_pause():
 #
 def state_start():
     """Start the state"""
-    state_name = STATE.Driving_toward_cone.name
-    rospy.loginfo('state_start %s', state_name)
+    rospy.loginfo('state_start %s', this_node.state_name)
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
+    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+    this_node.uav_state.set_arm(False)
 
     #
     touched_cone = False
@@ -145,13 +94,13 @@ def state_start():
 
     # Get radio calibration values
     # [1] is neutral
-    steering_limits = [__UAV_Control.get_param_int('RC1_MIN'),
-                       __UAV_Control.get_param_int('RC1_TRIM'),
-                       __UAV_Control.get_param_int('RC1_MAX')]
+    steering_limits = [this_node.uav_control.get_param_int('RC1_MIN'),
+                       this_node.uav_control.get_param_int('RC1_TRIM'),
+                       this_node.uav_control.get_param_int('RC1_MAX')]
 
-    throttle_limits = [__UAV_Control.get_param_int('RC3_MIN'),
-                       __UAV_Control.get_param_int('RC3_TRIM'),
-                       __UAV_Control.get_param_int('RC3_MAX')]
+    throttle_limits = [this_node.uav_control.get_param_int('RC3_MIN'),
+                       this_node.uav_control.get_param_int('RC3_TRIM'),
+                       this_node.uav_control.get_param_int('RC3_MAX')]
 
     rate = rospy.Rate(2) # 2 hz
     global touched
@@ -160,8 +109,8 @@ def state_start():
 
     global subscriber
     subscriber = rospy.Subscriber('/cone_finder/locations', Locations, seek_cone)
-    __UAV_State.set_mode(MAVMODE.MANUAL.name)
-    __UAV_State.set_arm(True)
+    this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
+    this_node.uav_state.set_arm(True)
 
     # Driving To cone loop
     segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
@@ -172,47 +121,49 @@ def state_start():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
             rospy.loginfo(
-                'In %s state NODE. Timeout in: %d',
-                state_name,
+                'In %s state node. Timeout in: %d',
+                this_node.state_name,
                 timeout_secs)
         old_timeout_secs = timeout_secs
         if touched:
             touched_cone = True # Signal we touched a cone
             break
-        if __ExecComm.cmd != MSG_TO_STATE.START.name:
+        if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
-            rospy.loginfo('State aborted: %s with command %s', 
-                          state_name, __ExecComm.cmd)
+            rospy.loginfo(
+                'State aborted: %s with command %s',
+                this_node.state_name,
+                this_node.exec_comm.cmd)
             break
         if rospy.Time.now() > timeout:
             segment_timeout = True
             # TODO What's the transition?
-            rospy.loginfo('State timed out: %s', state_name)
+            rospy.loginfo('State timed out: %s', this_node.state_name)
             break
         rate.sleep()
 
     # Stop subscribing
     subscriber.unregister()
     touchSubscriber.unregister()
-    __UAV_Control.set_throttle_servo(throttle_limits[1], steering_limits[1])
+    this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
 
     # Put in safe mode
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
+    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+    this_node.uav_state.set_arm(False)
 
     # Publish transition
     if passed_last_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_last_cone.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_last_cone.name)
     elif course_timeout:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.course_timeout.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.course_timeout.name)
     elif touched_last_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_last_cone.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_last_cone.name)
     elif passed_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_cone.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_cone.name)
     elif segment_timeout:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.segment_timeout.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.segment_timeout.name)
     elif touched_cone:
-        __ExecComm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_cone.name)
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_cone.name)
 
 
 
@@ -271,33 +222,7 @@ def seek_cone(loc):
     if throttle < throttle_limits[0]:
         throttle = throttle_limits[0]
 
-    __UAV_Control.set_throttle_servo(throttle, steering)
-
-
-
-
-#
-# Start our node
-#
-def state_node(state_name):
-    """Start node"""
-
-    rospy.loginfo('State node starting: %s', state_name)
-    rospy.init_node(state_name, anonymous=False)
-
-    # Initialize UAV models
-    global __UAV_State
-    __UAV_State = uav_state.UAV_State()
-    global __UAV_Control
-    __UAV_Control = uav_control.UAV_Control()
-
-    # Exec/state comm
-    global __ExecComm
-    __ExecComm = exec_comm.ExecComm(state_name, cmd_callback)
-
-    rate = rospy.Rate(10) # 10 hz
-    while not rospy.is_shutdown():
-        rate.sleep()
+    this_node.uav_control.set_throttle_servo(throttle, steering)
 
 
 if __name__ == '__main__':
@@ -308,7 +233,9 @@ if __name__ == '__main__':
                         help='Steering step size factor')
     parser.parse_args(rospy.myargv(sys.argv[1:]), args)
     try:
-        state_node(STATE.Driving_toward_cone.name)
+        this_node = exec_comm.StateNode(STATE.Driving_toward_cone.name)
+        this_node.start = state_start
+        this_node.run_state_node()
     except rospy.ROSInterruptException:
         pass
 

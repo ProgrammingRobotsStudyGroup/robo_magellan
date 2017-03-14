@@ -26,6 +26,11 @@ from auto_number import AutoNumber
 import rospy
 from std_msgs.msg import String
 
+import uav_control
+import uav_state
+from uav_state import MODE as MAVMODE
+
+
 class MSG_TO_STATE(AutoNumber):
     """The permitted messages"""
     START = ()
@@ -121,3 +126,90 @@ class ExecComm():
         self.cmd = msg_token_list[1]
         self.transition = msg_token_list[2]
 
+
+
+class StateNode():
+    #
+    #
+    #
+    def __init__(self, state_name):
+        """Constructor"""
+        self.state_name = state_name
+#         self.exec_comm = ExecComm(self.state_name, self.cmd_callback)
+        self.exec_comm = None
+        self.uav_state = None
+        self.uav_control = None
+        self.start = self._state_start
+        self.pause = self._state_pause
+        self.reset = self._state_reset
+
+
+    #
+    # Exec command listener callback
+    #
+    def cmd_callback(self, data):
+        """Exec command listener callback"""
+        # Parses the message
+        # State is returned. If message state is our state, cmd is updated.
+        the_state = self.exec_comm.parse_msg_to_state(data.data)
+    
+        if the_state == self.exec_comm.state:
+            rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
+            # Handle start, reset, pause, etc.
+            if self.exec_comm.cmd == MSG_TO_STATE.START.name:
+                self.start()
+            elif self.exec_comm.cmd == MSG_TO_STATE.RESET.name:
+                self.reset()
+            elif self.exec_comm.cmd == MSG_TO_STATE.PAUSE.name:
+                self.pause()
+            else:
+                rospy.logwarn('Invalid cmd: '+data.data)
+
+
+    #
+    # Start the state
+    # This is a do nothing state expected to be
+    # overridden by an actual implementation
+    #
+    def _state_start(self):
+        """Reset the state"""
+        # Set UAV mode to hold while we get this state started
+        self.uav_state.set_mode(MAVMODE.HOLD.name)
+        self.uav_state.set_arm(False)
+
+
+    #
+    # Reset the state
+    # For safety, for now set to HOLD
+    #
+    def _state_reset(self):
+        """Reset the state"""
+        # Set UAV mode to hold while we get this state started
+        self.uav_state.set_mode(MAVMODE.HOLD.name)
+        self.uav_state.set_arm(False)
+
+
+    #
+    # Pause the state
+    #
+    def _state_pause(self):
+        """Pause the state"""
+        # Set UAV mode to hold while we get this state started
+        self.uav_state.set_mode(MAVMODE.HOLD.name)
+        self.uav_state.set_arm(False)
+
+
+    def run_state_node(self):
+        """Start State node"""
+
+        rospy.loginfo('State node starting: %s', self.state_name)
+        rospy.init_node(self.state_name, anonymous=False)
+
+        self.exec_comm = ExecComm(self.state_name, self.cmd_callback)
+        self.uav_state = uav_state.UAV_State()
+        self.uav_control = uav_control.UAV_Control()
+
+        rate = rospy.Rate(10) # 10 hz
+        while not rospy.is_shutdown():
+            rate.sleep()
+    

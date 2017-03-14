@@ -25,8 +25,6 @@ import rospy
 #
 
 from uav_state import MODE as MAVMODE
-import uav_state
-import uav_control
 
 import exec_comm
 from exec_comm import MSG_TO_STATE
@@ -34,55 +32,8 @@ from exec_comm import MSG_TO_EXEC
 from state_and_transition import STATE
 from state_and_transition import TRANSITION
 
-
-
-#
-# Exec command listener callback
-#
-def cmd_callback(data):
-    """Exec command listener callback"""
-    # Parses the message
-    # State is returned. If message state is our state, cmd is updated.
-    the_state = __ExecComm.parse_msg_to_state(data.data)
-
-    if the_state == __ExecComm.state:
-        rospy.loginfo(rospy.get_caller_id() + ' cmd_callback: %s', data.data)
-        # Handle start, reset, pause, etc.
-        if __ExecComm.cmd == MSG_TO_STATE.START.name:
-            state_start()
-        elif __ExecComm.cmd == MSG_TO_STATE.RESET.name:
-            state_reset()
-        elif __ExecComm.cmd == MSG_TO_STATE.PAUSE.name:
-            state_pause()
-        else:
-            rospy.logwarn('Invalid cmd: '+data.data)
-
-
-
-
-#
-# Reset the state
-# For safety, for now set to HOLD
-#
-def state_reset():
-    """Reset the state"""
-    # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
-
-
-
-
-#
-# Pause the state
-#
-def state_pause():
-    """Pause the state"""
-    # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
-
-
+# Globals
+this_node = None
 
 
 #
@@ -90,17 +41,16 @@ def state_pause():
 #
 def state_start():
     """Start the state"""
-    state_name = STATE.Driving_away_from_cone.name
-    rospy.loginfo('state_start %s', state_name)
+    rospy.loginfo('state_start %s', this_node.state_name)
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
-    __UAV_State.set_arm(False)
+    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+    this_node.uav_state.set_arm(False)
 
-#    __UAV_State.set_mode(MAVMODE.AUTO.name)
-    __UAV_State.set_mode(MAVMODE.LEARNING.name)
-    __UAV_State.set_arm(True)
+#    this_node.uav_state.set_mode(MAVMODE.AUTO.name)
+    this_node.uav_state.set_mode(MAVMODE.LEARNING.name)
+    this_node.uav_state.set_arm(True)
 
     rate = rospy.Rate(2) # 2 hz
 
@@ -113,19 +63,21 @@ def state_start():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
             rospy.loginfo(
-                'In %s state NODE. Timeout in: %d',
-                state_name,
+                'In %s state node. Timeout in: %d',
+                this_node.state_name,
                 timeout_secs)
         old_timeout_secs = timeout_secs
-        if __ExecComm.cmd != MSG_TO_STATE.START.name:
+        if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
-            rospy.loginfo('State aborted: %s with command %s', 
-                          state_name, __ExecComm.cmd)
+            rospy.loginfo(
+                'State aborted: %s with command %s',
+                this_node.state_name,
+                this_node.exec_comm.cmd)
             break
         if rospy.Time.now() > timeout:
             segment_timeout = True
             # TODO What's the transition?
-            rospy.loginfo('State timed out: %s', state_name)
+            rospy.loginfo('State timed out: %s', this_node.state_name)
             break
         # TODO Are we clear?
         rate.sleep()
@@ -133,41 +85,16 @@ def state_start():
     # Publish transition.
     cleared_cone = True
     if cleared_cone:
-        __ExecComm.send_message_to_exec(
+        this_node.exec_comm.send_message_to_exec(
             MSG_TO_EXEC.DONE.name,
             TRANSITION.cleared_cone.name)
 
 
-
-
-
-#
-# Start our node
-#
-def state_node(state_name):
-    """Start node"""
-
-    rospy.loginfo('State node starting: %s', state_name)
-    rospy.init_node(state_name, anonymous=False)
-
-    # Initialize UAV models 
-    global __UAV_State
-    __UAV_State = uav_state.UAV_State()
-    global __UAV_Control
-    __UAV_Control = uav_control.UAV_Control()
-
-    # Exec/state comm
-    global __ExecComm
-    __ExecComm = exec_comm.ExecComm(state_name, cmd_callback)
-
-    rate = rospy.Rate(10) # 10 hz
-    while not rospy.is_shutdown():
-        rate.sleep()
-
-
 if __name__ == '__main__':
     try:
-        state_node(STATE.Driving_away_from_cone.name)
+        this_node = exec_comm.StateNode(STATE.Driving_away_from_cone.name)
+        this_node.start = state_start
+        this_node.run_state_node()
     except rospy.ROSInterruptException:
         pass
 
