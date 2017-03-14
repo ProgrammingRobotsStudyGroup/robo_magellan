@@ -36,6 +36,7 @@ import mavros
 from mavros import setpoint as SP
 import mavros_msgs.msg
 import mavros_msgs.srv
+from mavros_msgs.msg import Mavlink
 from sensor_msgs.msg import BatteryState
 
 from auto_number import AutoNumber
@@ -99,6 +100,10 @@ class UAV_State:
             mavros.get_topic('state'),
             mavros_msgs.msg.State, self.__state_cb)
         self.battery_sub = rospy.Subscriber("/mavros/battery", BatteryState, self.__battery_cb)
+        self.mavlink_sub = rospy.Subscriber(
+            '/mavlink/from', Mavlink, self.__mavlink_cb)
+        self._mavlink_observers = []
+
 
     def __local_position_cb(self, topic):
 #        rospy.loginfo('__local_position_cb')
@@ -123,6 +128,57 @@ class UAV_State:
 #        rospy.loginfo('__battery_cb')
         self.current = round(data.current, 2)
         self.voltage = round(data.voltage, 2)
+
+    def __mavlink_cb(self, data):
+        unix_time = (int) (data.header.stamp.to_sec())
+
+
+        # ~ Switch statement
+        while True:
+#             # Heart beat
+#             if data.msgid == 0:
+#                 rospy.loginfo(
+#                     '%s msgid %s detected (heart beat)',
+#                     rospy.get_caller_id(),
+#                     data.msgid)
+#                break
+
+            # Camera feedback 
+            # See github.com/mavlink/c_library_v1/ardupilotmega/mavlink_msg_camera_feedback.h
+            if data.msgid == 180:
+                rospy.loginfo(
+                    '%s msgid %s detected',
+                    rospy.get_caller_id(),
+                    data.msgid)
+                ## Call callbacks
+                break
+    
+            # Mission item reached #46
+            # # See github.com/mavlink/c_library_v1/common/mavlink_msg_mission_item_reached.h
+            if data.msgid == 46:
+                rospy.loginfo(
+                    '%s msgid %s detected',
+                    rospy.get_caller_id(),
+                    data.msgid)
+                self.wp_reached = data.seq
+                self.wp_reached_when = unix_time
+                break
+            else:
+                break
+        # Notify observers
+        for id_observer in self._mavlink_observers:
+            if data.msgid == id_observer[0]:
+                id_observer[1](data)
+
+
+#
+#
+#
+    def add_mavlink_observer(self, observer, msgid):
+        self._mavlink_observers.append([msgid, observer])
+
+
+
 
     def __calculate_delay(self):
         tmp = float(datetime.utcnow().strftime('%S.%f'))
