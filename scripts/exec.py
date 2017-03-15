@@ -310,6 +310,7 @@ def __state_resp_cb(data):
         # Set state to start with
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
+        rospy.set_param("/LAST_ITEM", rospy.get_param("/START_ITEM"))
         # TODO What is our cargo? "TEST"? A series of waypoints?
         cargo = "RUN"
         # Start state machine

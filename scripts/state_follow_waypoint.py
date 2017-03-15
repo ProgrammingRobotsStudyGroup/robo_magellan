@@ -35,6 +35,9 @@ from state_and_transition import TRANSITION
 
 # Globals
 this_node = None
+cone_list = None
+start_wp = 0
+do_once = True
 
 #TODO: Rework code to use to_exec and to_state message formats
 #TODO: state_start. state_reset, state_pause
@@ -59,7 +62,7 @@ def iscurrent():
 def mission_item_reached_cb(data):
     """Reached mission item"""
     rospy.loginfo("Mission Item reached"+str(data.seq))
-    #notify the loop
+    rospy.set_param("/LAST_ITEM", data.seq)
 
 #
 #
@@ -67,29 +70,38 @@ def mission_item_reached_cb(data):
 def state_start():
     """Start the state"""
     rospy.loginfo('state_start %s', this_node.state_name)
+    global do_once
+    if not do_once:
+        this_node.uav_state.add_mavlink_observer(mission_item_reached_cb, 46)
+        do_once = True
+
+    #
+    # Transition
+    #
+    near_cone = False
+    obstacle_seen = False
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
     this_node.uav_state.set_arm(False)
-    ## TEST
-    #this_node.uav_control.pull_waypoints()
-    #wpl = this_node.uav_control.waypoint_list
-    #print wpl
-    #wpl.pop()
-    #print wpl
-    #this_node.uav_control.clear_waypoints()
-    #this_node.uav_control.push_waypoints(wpl)
-#    print this_node.uav_control.waypoint_list
-    # TODO Test push
-    # Pick wp to start index
     #iscurrent()
-    this_node.uav_control.set_current_waypoint(0)
+    last_item = rospy.get_param("/LAST_ITEM")
+    this_node.uav_control.set_current_waypoint(last_item)
+
+    # Force waypoint list refresh
+    this_node.uav_control.pull_waypoints()
+    waypoint_list = this_node.uav_control.waypoint_list
+    start_wp = 0
+    for waypoint in waypoint_list:
+        # Altitude >= 1000 indicates cone node
+        if waypoint.z_alt >= 1000:
+            cone_list.append(waypoint)
 
     this_node.uav_state.set_mode(MAVMODE.AUTO.name)
     this_node.uav_state.set_arm(True)
 
-    rate = rospy.Rate(2) # 2 hz
+    rate = rospy.Rate(4) # 4 hz
     #iscurrent()
 
     # WP Driving loop
@@ -101,6 +113,12 @@ def state_start():
     this_node.uav_state.add_mavlink_observer(mission_item_reached_cb, 46)
 
     while not rospy.is_shutdown():
+        the_last = rospy.get_param("/LAST_ITEM")
+        if last_item != the_last:
+            last_item = the_last
+            if this_node.uav_control.waypoint_list[the_last] in cone_list:
+                near_cone = True
+                break
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
             rospy.loginfo(
@@ -125,11 +143,7 @@ def state_start():
         rate.sleep()
 
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    #
-    # Transition
-    #
-    near_cone = True
-    obstacle_seen = False
+
     # Publish transition
     if obstacle_seen:
         this_node.exec_comm.send_message_to_exec(
@@ -139,6 +153,10 @@ def state_start():
         this_node.exec_comm.send_message_to_exec(
             MSG_TO_EXEC.DONE.name,
             TRANSITION.near_cone.name)
+    else:
+        this_node.exec_comm.send_message_to_exec(
+            MSG_TO_EXEC.DONE.name,
+            'unknown')
 
 
 
