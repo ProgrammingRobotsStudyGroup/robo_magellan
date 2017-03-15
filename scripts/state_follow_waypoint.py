@@ -36,7 +36,6 @@ from state_and_transition import TRANSITION
 # Globals
 this_node = None
 cone_list = None
-start_wp = 0
 do_once = True
 
 #TODO: Rework code to use to_exec and to_state message formats
@@ -87,12 +86,13 @@ def state_start():
     this_node.uav_state.set_arm(False)
     #iscurrent()
     last_item = rospy.get_param("/LAST_ITEM")
-    this_node.uav_control.set_current_waypoint(last_item)
+    next_item = rospy.get_param("/NEXT_ITEM")
+    
+    this_node.uav_control.set_current_waypoint(next_item)
 
     # Force waypoint list refresh
     this_node.uav_control.pull_waypoints()
     waypoint_list = this_node.uav_control.waypoint_list
-    start_wp = 0
     for waypoint in waypoint_list:
         # Altitude >= 1000 indicates cone node
         if waypoint.z_alt >= 1000:
@@ -116,6 +116,8 @@ def state_start():
         the_last = rospy.get_param("/LAST_ITEM")
         if last_item != the_last:
             last_item = the_last
+            rospy.set_param("/LAST_ITEM", last_item)
+            rospy.set_param("/NEXT_ITEM", last_item+1)
             if this_node.uav_control.waypoint_list[the_last] in cone_list:
                 near_cone = True
                 break

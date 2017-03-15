@@ -40,5 +40,7 @@ SEGMENT_EXTRA_SEC: 10
 START_STATE: Start
 
 
-
-START_ITEM: 0
+#
+# Item to start with when we follow Pixhawk WP list
+#
+NEXT_ITEM: 0
