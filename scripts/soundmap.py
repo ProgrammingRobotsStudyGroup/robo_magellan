@@ -34,8 +34,6 @@
 #
 
 import rospkg
-from std_msgs.msg import String
-
 import yaml
 
 from auto_number import AutoNumber
@@ -78,21 +76,25 @@ class SoundMapEnum(AutoNumber):
 
     @classmethod
     def tostring(cls, val):
+        """From string"""
         for k, v in vars(cls).iteritems():
             if v == val:
                 return k
 
     @classmethod
-    def fromstring(cls, str):
-        return getattr(cls, str.upper(), None)
+    def fromstring(self, a_string):
+        """From string"""
+        return getattr(self, a_string.upper(), None)
 
     @classmethod
-    def set_file_name(cls, str):
-        file_name = str
+    def set_file_name(self, a_string):
+        """Set file name"""
+        self.file_name = a_string
 
     @classmethod
-    def get_file_name(cls):
-        return file_name
+    def get_file_name(self):
+        """Get file name"""
+        return self.file_name
 
 
 # Read sound name/file association file
