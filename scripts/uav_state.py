@@ -78,6 +78,8 @@ class UAV_State:
         self.connection_delay = 0.0
         self.voltage = 0
         self.current = 0
+        self.wp_reached = None
+        self.wp_reached_when = None
         mavros.set_namespace("/mavros")
 
         # Service Proxies
@@ -99,25 +101,29 @@ class UAV_State:
         self.state_sub = rospy.Subscriber(
             mavros.get_topic('state'),
             mavros_msgs.msg.State, self.__state_cb)
-        self.battery_sub = rospy.Subscriber("/mavros/battery", BatteryState, self.__battery_cb)
+        self.battery_sub = rospy.Subscriber(
+            "/mavros/battery", BatteryState, self.__battery_cb)
         self.mavlink_sub = rospy.Subscriber(
             '/mavlink/from', Mavlink, self.__mavlink_cb)
         self._mavlink_observers = []
 
 
     def __local_position_cb(self, topic):
+        """Local position subscriber"""
 #        rospy.loginfo('__local_position_cb')
         self.current_pose.xpos = topic.pose.position.x
         self.current_pose.ypos = topic.pose.position.y
         self.current_pose.zpos = topic.pose.position.z
 
     def __setpoint_position_cb(self, topic):
+        """Pose subscriber"""
 #        rospy.loginfo('__setpoint_position_cb')
         self.setpoint_pose.xpos = topic.position.x
         self.setpoint_pose.ypos = topic.position.y
         self.setpoint_pose.zpos = topic.position.z
 
     def __state_cb(self, topic):
+        """MAV state subscriber"""
 #        rospy.loginfo('__state_cb')
         self.__calculate_delay()
         self.mode = topic.mode
@@ -125,12 +131,14 @@ class UAV_State:
         self.arm = topic.armed
 
     def __battery_cb(self, data):
+        """Battery subscriber"""
 #        rospy.loginfo('__battery_cb')
         self.current = round(data.current, 2)
         self.voltage = round(data.voltage, 2)
 
     def __mavlink_cb(self, data):
-        unix_time = (int) (data.header.stamp.to_sec())
+        """Mavlink subscriber"""
+        unix_time = (int)(data.header.stamp.to_sec())
 
 
         # ~ Switch statement
@@ -175,12 +183,15 @@ class UAV_State:
 #
 #
     def add_mavlink_observer(self, observer, msgid):
+        """Add a mavlink observer"""
         self._mavlink_observers.append([msgid, observer])
 
-
-
+    def clear_mavlink_observers(self, observer, msgid):
+        """Clear (all) mavlink observers"""
+        self._mavlink_observers = None
 
     def __calculate_delay(self):
+        """Calculate time delay"""
         tmp = float(datetime.utcnow().strftime('%S.%f'))
         if tmp < self.timestamp:
             # over a minute
@@ -227,7 +238,6 @@ class UAV_State:
             rospy.loginfo("Service arm call failed: %s. "
                           "Attempted to set %s",
                           err, new_arm)
-            pass
 
 
     def get_current_pose(self):
