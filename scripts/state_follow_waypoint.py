@@ -22,16 +22,12 @@
 
 # ROS
 import rospy
-#from std_msgs.msg import String
-#from ._WaypointPull import *
-#
+
 from uav_state import MODE as MAVMODE
 
 import exec_comm
-from exec_comm import MSG_TO_STATE
-from exec_comm import MSG_TO_EXEC
-from state_and_transition import STATE
-from state_and_transition import TRANSITION
+from exec_comm import MSG_TO_STATE, MSG_TO_EXEC
+from state_and_transition import STATE,  TRANSITION
 
 # Globals
 this_node = None
@@ -39,8 +35,7 @@ cone_list = None
 do_once = True
 
 #TODO: Rework code to use to_exec and to_state message formats
-#TODO: state_start. state_reset, state_pause
-
+#TODO: Test follow WP
 
 
 
@@ -71,6 +66,7 @@ def state_start():
     rospy.loginfo('state_start %s', this_node.state_name)
     global do_once
     if not do_once:
+        # Add callback for wp# mavlink message
         this_node.uav_state.add_mavlink_observer(mission_item_reached_cb, 46)
         do_once = True
 
@@ -87,7 +83,7 @@ def state_start():
     #iscurrent()
     last_item = rospy.get_param("/LAST_ITEM")
     next_item = rospy.get_param("/NEXT_ITEM")
-    
+
     this_node.uav_control.set_current_waypoint(next_item)
 
     # Force waypoint list refresh
@@ -108,9 +104,6 @@ def state_start():
     segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
     old_timeout_secs = 0
-
-    # Add callback for wp# mavlink message
-    this_node.uav_state.add_mavlink_observer(mission_item_reached_cb, 46)
 
     while not rospy.is_shutdown():
         the_last = rospy.get_param("/LAST_ITEM")
@@ -133,7 +126,7 @@ def state_start():
             # TODO What if any transition?
             rospy.loginfo(
                 'State aborted: %s with command %s',
-                this_node.state_name, 
+                this_node.state_name,
                 this_node.exec_comm.cmd)
             break
         if rospy.Time.now() > timeout:
