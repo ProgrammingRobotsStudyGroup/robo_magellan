@@ -139,13 +139,13 @@ class StateNode():
     def __init__(self, state_name):
         """Constructor"""
         self.state_name = state_name
-#         self.exec_comm = ExecComm(self.state_name, self.cmd_callback)
         self.exec_comm = None
         self.uav_state = None
         self.uav_control = None
         self.start = self._state_start
         self.pause = self._state_pause
         self.reset = self._state_reset
+        self.custom_startup = None
 
 
     #
@@ -216,7 +216,8 @@ class StateNode():
         self.exec_comm = ExecComm(self.state_name, self.cmd_callback)
         self.uav_state = uav_state.UAV_State()
         self.uav_control = uav_control.UAV_Control()
-
+        if None != self.custom_startup:
+            self.custom_startup()
         rate = rospy.Rate(10) # 10 hz
         while not rospy.is_shutdown():
             rate.sleep()
