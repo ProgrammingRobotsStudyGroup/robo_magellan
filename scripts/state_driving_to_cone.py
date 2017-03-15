@@ -47,6 +47,7 @@ this_node = None
 # We will get angle between +pi/2 to -pi/2 for steering
 # We will get 480 pixels range for throttle but should limit this
 class Args(object):
+    """Class to contain program arguments"""
     # Typically less than 1 unless the range isn't responsive
     throttle_factor = 1.0
     steering_factor = 1.0
@@ -187,39 +188,32 @@ def touched_cb(data):
 #
 #
 def drive_to(loc):
-    # Sort the poses by y distance to get the nearest cone
-#     poses = sorted(loc.poses, key=lambda loc: loc.y)
-#     cone_loc = poses[0]
     cs = ConeSeeker()
     (cone_loc, confidence, frame) = cs.seek_cone(loc)
     rospy.loginfo('Confidence (%d, %d) = %f' % (cone_loc.x, cone_loc.y, confidence))
 
     steering = steering_limits[1]
     # Steer if not in front
-#     if (cone_loc.x < -20) or (cone_loc.x > 20):
-#         # Sin(theta)
-#         z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
-#         #steering = steering + args.steering_factor*500*cone_loc.x/z
-#         steering = steering + args.steering_factor*2*cone_loc.x
-    if(cone_loc.x < -10 or cone_loc.x > 10):
+    if (cone_loc.x < -10) or (cone_loc.x > 10):
         #z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
         #steering = steering + args.steering_factor*500*cone_loc.x/z
         steering = steering + args.steering_factor*2*cone_loc.x
 
     # Slowest approach to cone
     throttle = throttle_limits[1] + 20
+    tadj = 0.0
     # Use real depth when available for throttle
     if cone_loc.z > 0:
         # Real depth is in mm and maximum would probably be less than 6m
         if cone_loc.z > 300:
-            throttle = throttle + args.throttle_factor*(cone_loc.z - 300)/20
+            tadj = args.throttle_factor*(cone_loc.z - 300)/50
     else:
-        y = cone_loc.y - 40
-        if y > 0:
-            throttle = throttle + args.throttle_factor*(y)
+        if(cone_loc.y > 40):
+            tadj = args.throttle_factor*(cone_loc.y - 40)
 
     #-- test with fixed throttle to start
     throttle = 1675
+    #throttle = throttle + tadj
 
     # Everything must be bounded
     if steering > steering_limits[2]:
