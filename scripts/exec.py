@@ -83,7 +83,9 @@ def wait_on_state_node(state_name):
 
         # If timeout, reset state as a fail safe
         if rospy.Time.now() > timeout:
-            __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
+            __ExecComm.send_message_to_state(
+                state_name, 
+                MSG_TO_STATE.RESET.name)
             rospy.loginfo('State timed out: %s', state_name)
             break
 
@@ -97,6 +99,7 @@ def wait_on_state_node(state_name):
 #  Start
 #
 def start_transitions(txt):
+    """Start State node & transitions"""
     state_name = STATE.Start.name
     rospy.loginfo('Entered state: ' + state_name)
 
