@@ -98,21 +98,25 @@ def state_start():
 
     # Get radio calibration values
     # [1] is neutral
+    global steering_limits
     steering_limits = [this_node.uav_control.get_param_int('RC1_MIN'),
                        this_node.uav_control.get_param_int('RC1_TRIM'),
                        this_node.uav_control.get_param_int('RC1_MAX')]
-
+    global throttle_limits
     throttle_limits = [this_node.uav_control.get_param_int('RC3_MIN'),
                        this_node.uav_control.get_param_int('RC3_TRIM'),
                        this_node.uav_control.get_param_int('RC3_MAX')]
+    print "steering_limits"
+    print steering_limits
+    print "throttle_limits"
+    print throttle_limits
 
     rate = rospy.Rate(2) # 2 hz
     global touched
     touched = False
-    touchSubscriber = rospy.Subscriber('/touch', Bool, touched_cb)
+    sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
-    global subscriber
-    subscriber = rospy.Subscriber('/cone_finder/locations', Locations, drive_to)
+    sub_location = rospy.Subscriber('/cone_finder/locations', Locations, drive_to, queue_size=1)
     this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
     this_node.uav_state.set_arm(True)
 
@@ -147,8 +151,8 @@ def state_start():
         rate.sleep()
 
     # Stop subscribing
-    subscriber.unregister()
-    touchSubscriber.unregister()
+    sub_location.unregister()
+    sub_touch.unregister()
     this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
 
     # Put in safe mode
@@ -214,6 +218,10 @@ def drive_to(loc):
     #-- test with fixed throttle to start
     throttle = 1675
     #throttle = throttle + tadj
+    pct_throttle = rospy.get_param("/CONE_PCT_THROTTLE")
+    if pct_throttle > 1:
+        pct_throttle /= 100.0
+        throttle = throttle_limits[1] + (throttle_limits[2]-throttle_limits[1])*pct_throttle
 
     # Everything must be bounded
     if steering > steering_limits[2]:

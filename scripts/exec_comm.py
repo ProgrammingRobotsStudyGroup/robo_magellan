@@ -160,7 +160,7 @@ class StateNode():
         if the_state == self.exec_comm.state:
             rospy.loginfo(
                 '%s cmd_callback: %s',
-                rospy.get_caller_id(), 
+                rospy.get_caller_id(),
                 data.data)
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
@@ -221,4 +221,4 @@ class StateNode():
         rate = rospy.Rate(10) # 10 hz
         while not rospy.is_shutdown():
             rate.sleep()
-    
+
