@@ -25,6 +25,7 @@ import sys, argparse, math
 
 # ROS
 import rospy
+from std_msgs.msg import Bool
 #
 from uav_state import MODE as MAVMODE
 
@@ -35,7 +36,9 @@ from state_and_transition import STATE
 from state_and_transition import TRANSITION
 
 from mavros_msgs.msg import OverrideRCIn
-from cone_finder.msg import location_msgs as Locations
+from robo_magellan.msg import location_msgs as Locations
+
+from cone_code import ConeSeeker
 
 # Globals
 this_node = None
@@ -105,10 +108,10 @@ def state_start():
     rate = rospy.Rate(2) # 2 hz
     global touched
     touched = False
-    touchSubscriber = rospy.Subscriber('/touch', Locations, touched_cb)
+    touchSubscriber = rospy.Subscriber('/touch', Bool, touched_cb)
 
     global subscriber
-    subscriber = rospy.Subscriber('/cone_finder/locations', Locations, seek_cone)
+    subscriber = rospy.Subscriber('/cone_finder/locations', Locations, drive_to)
     this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
     this_node.uav_state.set_arm(True)
 
@@ -183,17 +186,23 @@ def touched_cb(data):
 #
 #
 #
-def seek_cone(loc):
-    rospy.loginfo('seek_cone')
+def drive_to(loc):
     # Sort the poses by y distance to get the nearest cone
-    poses = sorted(loc.poses, key=lambda loc: loc.y)
-    cone_loc = poses[0]
+#     poses = sorted(loc.poses, key=lambda loc: loc.y)
+#     cone_loc = poses[0]
+    cs = ConeSeeker()
+    (cone_loc, confidence, frame) = cs.seek_cone(loc)
+    rospy.loginfo('Confidence (%d, %d) = %f' % (cone_loc.x, cone_loc.y, confidence))
 
     steering = steering_limits[1]
     # Steer if not in front
-    if (cone_loc.x < -20) or (cone_loc.x > 20):
-        # Sin(theta)
-        z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
+#     if (cone_loc.x < -20) or (cone_loc.x > 20):
+#         # Sin(theta)
+#         z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
+#         #steering = steering + args.steering_factor*500*cone_loc.x/z
+#         steering = steering + args.steering_factor*2*cone_loc.x
+    if(cone_loc.x < -10 or cone_loc.x > 10):
+        #z = math.sqrt(cone_loc.x*cone_loc.x + cone_loc.y*cone_loc.y)
         #steering = steering + args.steering_factor*500*cone_loc.x/z
         steering = steering + args.steering_factor*2*cone_loc.x
 
