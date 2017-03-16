@@ -63,20 +63,20 @@ class RosColorDepth:
     def stop(self):
         self.started = False
 
-    def markVideo(self, imghull, loc):
-        cl, conf, frame = self.cs.seek_cone(loc)
-        if(conf > 0.0):
+    def markVideo(self, imghull, poses):
+        cl, conf, frame = self.cs.seek_cone(poses)
+        if(conf > 0.1):
             #frame could be non zero
             (ih, iw) = imghull.shape[:2]
-            pt1 = (iw/2 + cl.x - cl.w/2, ih - cl.y)
-            pt2 = (iw/2 + cl.x + cl.w/2, ih - cl.y - cl.h)
+            pt1 = (iw/2 + cl.x - cl.w/2, ih - cl.y - cl.h)
+            pt2 = (iw/2 + cl.x + cl.w/2, ih - cl.y)
             cv2.rectangle(imghull, pt1, pt2, (0,0,255), 3)
             msg_str = '%.2f' % conf
             cv2.putText(imghull, msg_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (255,0,0), 2, cv2.LINE_AA)
+                        0.5, (0,0,255), 2, cv2.LINE_AA)
         
         msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
-        cv2.putText(imghull, msg_str, (0, 460), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(imghull, msg_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, (255,0,0), 2, cv2.LINE_AA)
 
     def publishImages(self, imghull, colorImage, depthImage):
@@ -132,7 +132,7 @@ class RosColorDepth:
                 cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
 
             if(args.publish_images):
-                self.markVideo(imghull, loc)
+                self.markVideo(imghull, poses)
                 self.publishImages(imghull, colorImage, depthImage)
 
             if(self.lc == 100):

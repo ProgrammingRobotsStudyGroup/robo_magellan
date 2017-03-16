@@ -30,7 +30,7 @@ args = Args()
       
 def drive_to_cone(loc):
     cs = ConeSeeker()
-    (cone_loc, confidence, frame) = cs.seek_cone(loc)
+    (cone_loc, confidence, frame) = cs.seek_cone(loc.poses)
     rospy.loginfo('Confidence (%d, %d) = %f' % (cone_loc.x, cone_loc.y, confidence))
 
     steering = steering_limits[1]

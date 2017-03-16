@@ -122,12 +122,12 @@ class ConeFinder:
         imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         # Threshold on low range of HSV red
-        low_redl = np.array([0, 135, 135])
+        low_redl = np.array([0, 135, 90])
         low_redh = np.array([19, 255, 255])
         imgThreshLow = cv2.inRange(imgHSV, low_redl, low_redh)
 
         # threshold on high range of HSV red
-        high_redl = np.array([160, 135, 135])
+        high_redl = np.array([160, 135, 90])
         high_redh = np.array([179, 255, 255])
         imgThreshHigh = cv2.inRange(imgHSV, high_redl, high_redh)
 
@@ -158,23 +158,10 @@ class ConeFinder:
         # Process orange color and convert to gray image
         imgThresh = self._process_orange_color(img)
                 
-        # clone/copy thresh image before smoothing
-        imgThreshSmoothed = imgThresh.copy()
-        # open image (erode, then dilate)
-        kernel = np.ones((3, 3), np.uint8)
-        imgThreshSmoothed = cv2.erode(imgThresh, kernel, iterations=1)
-        imgThreshSmoothed = cv2.dilate(imgThreshSmoothed, kernel, iterations=1)
-        # Gaussian blur
-        imgThreshSmoothed = cv2.GaussianBlur(imgThreshSmoothed, (5, 5), 0)
-        #cv2.imshow('imgThreshSmoothed ', imgThreshSmoothed)
-        # get Canny edges
-
-        imgCanny = cv2.Canny(imgThreshSmoothed, 160, 80)
-        #cv2.imshow('imgCanny ', imgCanny)
         if is_cv2():
-            contours, hierarchy = cv2.findContours(imgCanny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(imgThresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         else:
-            image, contours, hierarchy = cv2.findContours(imgCanny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            image, contours, hierarchy = cv2.findContours(imgThresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
         listOfHullsAndArea = []
         if len(contours) != 0:
@@ -193,7 +180,6 @@ class ConeFinder:
                 listOfHullsAndArea.append((hull, cv2.contourArea(hull), depthRange))
 
         listOfCones = []
-        pose = pose_data()
         poses = []
 
         # Sort the list by decreasing area
@@ -203,6 +189,7 @@ class ConeFinder:
             if (len(hull) >= 3 and self._convexHullIsPointingUp(hull)):
                 listOfCones.append(hull)
                 x, y, w, h = cv2.boundingRect(hull)
+                pose = pose_data()
                 pose.x = x + w/2 - image_centerX
                 pose.w = w
                 # Height is being measured top of screen to down so we need to invert y
@@ -245,11 +232,9 @@ class ConeSeeker:
         y1 = pose.y
         y2 = pose.y + pose.h
         conf = 0.0
-        # We need to remove entries that match
-        rem_pos_confs = []
-        for (prev_pose, prev_conf, frame) in self.prev_pos_confs:
+        matched_poses = []
+        for (id, (prev_pose, prev_conf, frame)) in enumerate(self.prev_pos_confs):
             if(frame == 0):
-                rem_pos_confs.append((prev_pose, prev_conf, frame))
                 continue
             old_x1 = prev_pose.x - prev_pose.w/2
             old_x2 = prev_pose.x + prev_pose.w/2
@@ -259,31 +244,38 @@ class ConeSeeker:
             dy = min(y2, old_y2) - max(y1, old_y1)
             if (dx>=0) and (dy>=0):
                 conf += prev_conf * (dx*dy*1.0)/(prev_pose.w*prev_pose.h)
-            else:
-                rem_pos_confs.append((prev_pose, prev_conf, frame))
-        self.prev_pos_confs = rem_pos_confs
-        return conf 
-          
-    def seek_cone(self, loc):
+                matched_poses.append(id)
+              
+        return (conf, matched_poses)
+                    
+    def seek_cone(self, poses):
         # Compute confidence for each hull by area and h distance
-        if(len(loc.poses)):
-            maxArea = max(pose.area for pose in loc.poses)
-            new_pos_confs = []
-            for pose in loc.poses:
-              # Need to figure out appropriate weightage for area and distance
-              # Scale distance as farther objects will use less pixels
-              pd = 1 + (pose.x/80.0)**2 + (pose.y/120.0)**2
-              # Find this cone among cones from previous frames and use the confidence
-              confidence = 2/pd + pose.area/(8.0*maxArea) + self._getConfFromOldFrames(pose)
-              new_pos_confs.append((pose, confidence, 0))
+        if(len(poses)):
+            maxArea = max(pose.area for pose in poses)
+            self._update_prev_poses()
             
+            all_matches = []
+            new_pos_confs = []
+            for pose in poses:
+              oldConf, matched_poses = self._getConfFromOldFrames(pose)
+              all_matches.extend(matched_poses)
+
+              # Scale distance as farther objects will use fewer pixels and this is not
+              # exact trigonometry so keep x weightage lower
+              pd = 1 + (pose.x/120.0)**2 + (pose.y/120.0)**2
+              # Find this cone among cones from previous frames and use the confidence
+              conf = 1/pd + pose.area/(4.0*maxArea) + oldConf
+              new_pos_confs.append((pose, conf, 0))
+              #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd, (pose.area*1.0/maxArea), conf, oldConf))
+
+            # Remove matched cones from the list
+            all_matches = list(set(all_matches))
+            for id in sorted(all_matches, reverse=True):
+              self.prev_pos_confs.pop(id)
+
             # Sort the new list by confidence and descending
-            new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
-            if len(self.prev_pos_confs):
-                self.prev_pos_confs.extend(new_pos_confs)
-                self._update_prev_poses()
-            else:
-                self.prev_pos_confs = new_pos_confs
+            self.prev_pos_confs.extend(new_pos_confs)
+            self.prev_pos_confs = sorted(self.prev_pos_confs, key=lambda pose: pose[1], reverse=True)
 
         # A cone from previous frames might have better confidence
         if len(self.prev_pos_confs):
@@ -291,5 +283,4 @@ class ConeSeeker:
         
         #This would only happen if the list is empty
         return ((0,0,0,0,0,0,0.0), 0.0, 0)
-
 
