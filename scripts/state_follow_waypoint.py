@@ -62,7 +62,7 @@ def iscurrent():
 
 def mission_item_reached_cb(data):
     """Reached mission item"""
-    rospy.loginfo("Mission Item reached"+str(data.seq))
+    rospy.loginfo("Mission Item reached"+str(data))
     rospy.set_param("/LAST_ITEM", data.seq)
 
 #
