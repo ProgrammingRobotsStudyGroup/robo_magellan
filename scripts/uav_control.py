@@ -62,6 +62,7 @@ class UAV_Control:
         self.lock = threading.Lock()
         #mavros.set_namespace("/mavros")
         self.waypoint_list = None
+        self.current_waypoint = None
 
         # Proxies
         rospy.wait_for_service('/mavros/param/get')
@@ -104,12 +105,11 @@ class UAV_Control:
 
 
     def __current_cb(self, topic):
-        rospy.loginfo('****************************************************')
-        rospy.loginfo('__current_cb: '+topic.data)
-        rospy.loginfo('****************************************************')
+        rospy.loginfo('__current_cb: ')
+        rospy.loginfo('__current_cb: '+str(topic))
         self.lock.acquire()
         try:
-            self.waypoint_list = topic.waypoints
+            self.current_waypoint = topic.data
         finally:
             self.lock.release()
 
