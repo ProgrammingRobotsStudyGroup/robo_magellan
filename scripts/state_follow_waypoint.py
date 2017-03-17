@@ -32,10 +32,17 @@ from state_and_transition import STATE,  TRANSITION
 # Globals
 this_node = None
 cone_list = None
-do_once = True
+do_once = False
 
-#TODO: Rework code to use to_exec and to_state message formats
-#TODO: Test follow WP
+# TODO: Rework code to use to_exec and to_state message formats
+# TODO: Test follow WP
+# TODO: move from wp to wp
+# Read WP list
+# list_cone_item = Create list of cone item #'s
+# start_at_wp = last_item
+# 
+# if wp in list_cone_item, we are at cone location, break.
+
 
 
 

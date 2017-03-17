@@ -24,7 +24,9 @@ from auto_number import AutoNumber
 
 # ROS
 import rospy
-from std_msgs.msg import String
+
+from robo_magellan.msg import to_exec as to_exec
+from robo_magellan.msg import to_state as to_state
 
 import uav_control
 import uav_state
@@ -62,15 +64,15 @@ class ExecComm():
 
         # Publishers
         self.pub_state_response = rospy.Publisher(
-            TOPICS.exec_command.name, String, queue_size=10)
+            TOPICS.exec_command.name, to_exec, queue_size=10)
         self.pub_state_cmd = rospy.Publisher(
-            TOPICS.state_command.name, String, queue_size=10)
+            TOPICS.state_command.name, to_state, queue_size=10)
 
         # Subscribers
         if state_msg_cb != None:
-            rospy.Subscriber(TOPICS.state_command.name, String, state_msg_cb)
+            rospy.Subscriber(TOPICS.state_command.name, to_state, state_msg_cb)
         if exec_msg_cb != None:
-            rospy.Subscriber(TOPICS.exec_command.name, String, exec_msg_cb)
+            rospy.Subscriber(TOPICS.exec_command.name, to_exec, exec_msg_cb)
 
 
 
@@ -78,9 +80,13 @@ class ExecComm():
     #
     #
     #
-    def send_message_to_exec(self, msg, transition):
+    def send_message_to_exec(self, inp_cmd, inp_transition):
         """Send message to exec"""
-        self.pub_state_response.publish(self.state+","+msg+","+transition)
+        toexec = to_exec()
+        toexec.state = self.state
+        toexec.cmd = inp_cmd
+        toexec.transition = inp_transition
+        self.pub_state_response.publish(toexec)
 
 
 
@@ -88,46 +94,13 @@ class ExecComm():
     #
     #
     #
-    def send_message_to_state(self, state, cmd):
+    def send_message_to_state(self, inp_state, inp_cmd):
         """Send message to state"""
-        self.pub_state_cmd.publish(state+","+cmd)
+        tostate = to_state()
+        tostate.state = inp_state
+        tostate.cmd = inp_cmd
+        self.pub_state_cmd.publish(tostate)
 
-
-
-
-    #
-    #
-    #
-    def parse_msg_to_state(self, msg):
-        """Parse a message sent to a state"""
-        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_to_state: %s', msg)
-        # Handle start, reset, pause, etc.
-        msg_token_list = msg.split(",")
-        the_state = msg_token_list[0]
-        cmd = msg_token_list[1]
-        #rospy.loginfo('the_state: '+the_state+'  cmd: '+cmd)
-        if the_state == self.state:
-            # TODO Command should be in MSG_TO_STATE
-            self.cmd = cmd
-        return the_state
-
-
-
-
-    #
-    # Parses a state's message to exec
-    # msg contains:
-    #  msg from state
-    #  msg text
-    #  next transition
-    #
-    def parse_msg_to_exec(self, msg):
-        """Parse a message sent to a exec"""
-        rospy.loginfo(rospy.get_caller_id() + ' parse_msg_from_state: %s', msg)
-        msg_token_list = msg.split(",")
-        self.state = msg_token_list[0]
-        self.cmd = msg_token_list[1]
-        self.transition = msg_token_list[2]
 
 
 
@@ -149,19 +122,18 @@ class StateNode():
 
 
     #
-    # Exec command listener callback
+    # State subscriber of exec commands
     #
     def cmd_callback(self, data):
-        """Exec command listener callback"""
-        # Parses the message
-        # State is returned. If message state is our state, cmd is updated.
-        the_state = self.exec_comm.parse_msg_to_state(data.data)
+        """State subscriber of exec commands"""
 
-        if the_state == self.exec_comm.state:
+        # State is returned. If message state is our state, cmd is updated.
+        if data.state == self.exec_comm.state:
             rospy.loginfo(
                 '%s cmd_callback: %s',
                 rospy.get_caller_id(),
-                data.data)
+                data.state)
+            self.exec_comm.cmd = data.cmd
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
                 self.start()

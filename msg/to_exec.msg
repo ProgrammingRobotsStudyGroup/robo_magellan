@@ -4,8 +4,8 @@ Header header
 # state = from state
 string state
 
-# msg = 
-string msg
+# cmd = 
+string cmd
 
 # transition = state transition
 string transition

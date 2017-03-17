@@ -303,9 +303,11 @@ def failure_transitions(txt):
 #
 def __state_resp_cb(data):
     """Handle messages from state nodes"""
-    #rospy.loginfo('__state_resp_cb: '+data.data)
-    __ExecComm.parse_msg_to_exec(data.data)
+    #rospy.loginfo('__state_resp_cb: '+str(data))
     global state_complete
+    __ExecComm.cmd = data.cmd
+    __ExecComm.transition = data.transition
+    __ExecComm.state = data.state
     #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
     if __ExecComm.cmd == MSG_TO_EXEC.DONE.name:
         state_complete = True
@@ -318,6 +320,11 @@ def __state_resp_cb(data):
         cargo = "RUN"
         # Start state machine
         machine.run(cargo)
+    else:
+        rospy.loginfo('No Action: State: %s; Cmd: %s, Transition: %s',
+                      data.cmd,
+                      data.transition,
+                      data.state)
 
 
 
