@@ -111,7 +111,7 @@ def state_start():
     print "throttle_limits"
     print throttle_limits
 
-    rate = rospy.Rate(2) # 2 hz
+    rate = rospy.Rate(10) # 2 hz
     global touched
     touched = False
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
@@ -193,7 +193,7 @@ def touched_cb(data):
 #
 def drive_to(loc):
     cs = ConeSeeker()
-    (cone_loc, confidence, frame) = cs.seek_cone(loc)
+    (cone_loc, confidence, frame) = cs.seek_cone(loc.poses)
     rospy.loginfo('Confidence (%d, %d) = %f' % (cone_loc.x, cone_loc.y, confidence))
 
     steering = steering_limits[1]
