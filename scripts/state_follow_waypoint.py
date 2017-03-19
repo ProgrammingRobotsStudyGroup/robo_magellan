@@ -31,7 +31,7 @@ from state_and_transition import STATE,  TRANSITION
 
 # Globals
 this_node = None
-cone_list = None
+cone_list = []
 do_once = False
 
 # TODO: Rework code to use to_exec and to_state message formats
@@ -100,6 +100,8 @@ def state_start():
         # Altitude >= 1000 indicates cone node
         if waypoint.z_alt >= 1000:
             cone_list.append(waypoint)
+
+    rospy.loginfo("cone_list:\n%s", str(cone_list))
 
     this_node.uav_state.set_mode(MAVMODE.AUTO.name)
     this_node.uav_state.set_arm(True)
