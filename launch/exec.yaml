@@ -53,3 +53,9 @@ NEXT_ITEM: 0
 #   40 to roll
 
 CONE_PCT_THROTTLE: 40
+
+#
+# Pct of calibrated (from pixhawk) left or right servo
+# Set to 0 for straight
+AWAY_PCT_SERVO: 90
+AWAY_PCT_THROTTLE: 40
