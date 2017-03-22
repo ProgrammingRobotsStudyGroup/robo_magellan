@@ -63,7 +63,10 @@ def iscurrent():
 def mission_item_reached_cb(data):
     """Reached mission item"""
     rospy.loginfo("Mission Item reached"+str(data))
-    rospy.set_param("/LAST_ITEM", data.payload64 & 0xFFFF)
+    rospy.set_param("/LAST_ITEM", data.payload64[0] & 0xFFFF)
+
+
+
 
 #
 #
@@ -134,7 +137,8 @@ def state_start():
                     "len(this_node.uav_control.waypoint_list): %s , BAD LAST_ITEM",
                     len(this_node.uav_control.waypoint_list)
                     )
-                pass
+                bad_wp = True
+                break
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
             rospy.loginfo(
