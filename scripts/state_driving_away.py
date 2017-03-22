@@ -69,7 +69,7 @@ def state_start():
     segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
     old_timeout_secs = 0
-    drive_pattern()
+    drive_away_strategy()
     timeout = rospy.Time.now()
     while not rospy.is_shutdown():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
@@ -107,7 +107,7 @@ def state_start():
 #  2) Stop for 1 second
 #  3) Adjust servo by pct (can be + or -)
 #
-def drive_pattern():
+def drive_away_strategy():
     """The pattern """
     print "steering_limits"
     print steering_limits
