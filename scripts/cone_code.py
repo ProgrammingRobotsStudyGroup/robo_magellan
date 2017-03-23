@@ -1,13 +1,14 @@
+""" This file contains the classes for cone detection and seeking """
 #
 # Common functions for cone detection and seeking
 #
-import numpy as np
 import cv2, time, rospy
-
+import numpy as np
+from threading import Timer
+    
 # Needed for publishing the messages
 from robo_magellan.msg import pose_data
-from robo_magellan.msg import location_msgs as location_data
- 
+
 def is_cv2():
     # if we are using OpenCV 2, then our cv2.__version__ will start
     # with '2.'
@@ -18,70 +19,74 @@ def is_cv3():
     # with '3.'
     return check_opencv_version("3.")
 
-def check_opencv_version(major, lib=None):
-    # if the supplied library is None, import OpenCV
-    if lib is None:
-        import cv2 as lib
-
+def check_opencv_version(major):
     # return whether or not the current OpenCV version matches the
     # major version number
-    return lib.__version__.startswith(major)
-       
+    return cv2.__version__.startswith(major)
+
 class ConeFinder:
+    """ ConeFinder class """
     codec = 'XVID'
 
-    def __init__(self, min_area=100):
+    def __init__(self, min_area=30):
         self.firstTime = True
         self.rgbOut = None
         self.depthOut = None
         self.min_area = min_area
-    
+
     def _initCapture(self, frame, outFile):
         (h, w) = frame.shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*self.codec)
         capOut = cv2.VideoWriter(outFile, fourcc, 15.0, (w, h), True)
-        if(capOut.isOpened() == False):
+        if not capOut.isOpened():
             capOut = None
-            rospy.loginfo("Could not open %s file to write video" % outFile)    
-        
-        return capOut            
+            rospy.loginfo("Could not open %s file to write video" % outFile)
 
-    #Returns depth range tuple (min, max)
+        return capOut
+
     def _getHullDepth(self, hull, depthImg=None):
-        if(depthImg is None):
+        """ Returns depth range tuple (min, max) """
+        if depthImg is None:
             return (0, 0)
 
-        h = depthImg.shape[:1]
         depthList = []
         # Get bounding box of the hull
         for point in hull:
-            depth = depthImg[point.x, point.y]
+            depth = depthImg[point[0][1], point[0][0]]
             # R200 provides depth from 50cm to 3.5m typically and each unit is mm
-            if(depth > 0):
+            if depth > 0:
                 depthList.append(depth)
 
         # If we have most of the points with depth, we will assume the rest were error
-        if(len(depthList) > len(hull)/2):
+        if len(depthList) > len(hull)/2:
             depthList.sort()
             return (depthList[0], depthList[-1])
 
         return (0, 0)
-        
+
     def _convexHullIsPointingUp(self, hull):
         (centerX, centerY), (w, h), angle = cv2.minAreaRect(hull)
+
         # Remove any cones with size less than certain threshold
-        if(h*w < self.min_area):
-            return False
-        
-        # Our cones are tall, rather than high
-        aspectRatio = float(w) / h
-        if aspectRatio > 0.9:
+        if h*w < self.min_area:
+            #print('Area %d too small' % (h*w))
             return False
 
-        # Very inclined cone, drop them
-        if(angle > 30 or angle < -30):
+        # Our cones are tall, rather than high but angle can affect w and h
+        # Angle goes from +90 to -90
+        if(angle > 60 or angle < -60):
+            aspectRatio = float(h) / w
+        elif(angle < 30 and angle > -30):
+            aspectRatio = float(w) / h
+        else:
+            # Very inclined cone, drop them
+            #print('Angle (%d) too steep' % angle)
             return False
-        
+            
+        #if aspectRatio > 0.9:
+            #print('Aspect ratio (%f) too low, %d' % (aspectRatio, angle))
+            #return False
+
         listOfPointsAboveCenter = []
         listOfPointsBelowCenter = []
 
@@ -91,27 +96,40 @@ class ConeFinder:
             # list of points above or below vertical center as applicable
             if point[0][1] < centerY:
                 listOfPointsAboveCenter.append(point)
-
-            if point[0][1] >= centerY:
+            else:
                 listOfPointsBelowCenter.append(point)
 
         intLeftMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
         intRightMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
+        intLeftMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
+        intRightMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
 
-        # determine left most point below center
+        # determine left and right most points below center
         for point in listOfPointsBelowCenter:
             if point[0][0] < intLeftMostPointBelowCenter:
                 intLeftMostPointBelowCenter = point[0][0]
-
-            # determine right most point below center
-        for point in listOfPointsBelowCenter:
             if point[0][0] >= intRightMostPointBelowCenter:
                 intRightMostPointBelowCenter = point[0][0]
 
-            # step through all points above center
+        # determine left and right most points above center
+        for point in listOfPointsAboveCenter:
+            if point[0][0] < intLeftMostPointAboveCenter:
+                intLeftMostPointAboveCenter = point[0][0]
+            if point[0][0] >= intRightMostPointAboveCenter:
+                intRightMostPointAboveCenter = point[0][0]
+
+        # Top should be smaller than base, ideally only a few pixels
+        top = intRightMostPointAboveCenter - intLeftMostPointAboveCenter
+        base = intRightMostPointBelowCenter - intLeftMostPointBelowCenter
+        if (top > base/2):
+            #print('top too wide')
+            return False
+
+        # Check for slanted cones
         for point in listOfPointsAboveCenter:
             if point[0][0] < intLeftMostPointBelowCenter or \
              point[0][0] > intRightMostPointBelowCenter:
+                #print('Slanted cone')
                 return False
 
         # if we get here, shape has passed pointing up check
@@ -135,33 +153,46 @@ class ConeFinder:
         return cv2.bitwise_or(imgThreshLow, imgThreshHigh)
 
     def captureFrames(self, cvRGB, cvDepth):
-        if(self.firstTime):    
+        if self.firstTime:
             # Initialize capture devices
-            timestr = time.strftime("%Y%m%d-%H%M%S")
+            timestr = time.strftime("%Y%m%d-%H%M")
             rgbOutFile = 'rgb%s.avi' % timestr
             depthOutFile = 'depth%s.avi' % timestr
-            self.rgbOut = self._initCapture(cvRGB, rgbOutFile)
-            self.depthOut = self._initCapture(cvDepth, depthOutFile)
+            if cvRGB is not None:
+                self.rgbOut = self._initCapture(cvRGB, rgbOutFile)
+            if cvDepth is not None:
+                self.depthOut = self._initCapture(cvDepth, depthOutFile)
             self.firstTime = False
 
-        if(self.rgbOut is not None and self.rgbOut.isOpened() and cvRGB is not None):
+        if self.rgbOut is not None and self.rgbOut.isOpened() and cvRGB is not None:
             self.rgbOut.write(cvRGB)
-        if(self.depthOut is not None and self.depthOut.isOpened() and cvDepth is not None):
+        if self.depthOut is not None and self.depthOut.isOpened() and cvDepth is not None:
             self.depthOut.write(cv2.cvtColor((cvDepth/256).astype('uint8'), cv2.COLOR_GRAY2BGR))
 
+    def release(self):
+        if(self.rgbOut is not None):
+            self.rgbOut.release()
+        if(self.depthOut is not None):
+            self.depthOut.release()
+        
     def find_cones(self, img, depthImg=None):
         h, w = img.shape[:2]
-        
+
         image_centerX = w/2
         image_centerY = h  # y goes down from top
-            
+
         # Process orange color and convert to gray image
         imgThresh = self._process_orange_color(img)
-                
+        #imgThresh = cv2.GaussianBlur(imgThresh, (3, 3), 0)
+        #imgThresh = cv2.medianBlur(imgThresh, 5)
+        imgThresh = cv2.bilateralFilter(imgThresh, 5, 20, 20)
+        
         if is_cv2():
-            contours, hierarchy = cv2.findContours(imgThresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(imgThresh, cv2.RETR_EXTERNAL,
+                                                   cv2.CHAIN_APPROX_SIMPLE)
         else:
-            image, contours, hierarchy = cv2.findContours(imgThresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            image, contours, hierarchy = cv2.findContours(imgThresh, cv2.RETR_EXTERNAL,
+                                                          cv2.CHAIN_APPROX_SIMPLE)
 
         listOfHullsAndArea = []
         if len(contours) != 0:
@@ -172,10 +203,8 @@ class ConeFinder:
                 #contour = cv2.approxPolyDP(cnt, 6.7, True)
                 # Find convex hulls.
                 hull = cv2.convexHull(contour, returnPoints=True)
-                # See how the hull looks as a triangle
-                # tri = cv2.minEnclosingTriangle(hull)
-                # get the depth for the hull. Is it one value or multiple?
-                depthRange = self._getHullDepth(hull)
+                # get the depth range for the hull - min and max
+                depthRange = self._getHullDepth(hull, depthImg)
                 # We need to sort and store the contours by proximity of their centroids
                 listOfHullsAndArea.append((hull, cv2.contourArea(hull), depthRange))
 
@@ -186,7 +215,7 @@ class ConeFinder:
         listOfHullsAndArea.sort(key=lambda (h, a, d): a, reverse=True)
         for (hull, area, (dMin, dMax)) in listOfHullsAndArea:
             # print 'convexHull',len(temp)
-            if (len(hull) >= 3 and self._convexHullIsPointingUp(hull)):
+            if len(hull) >= 3 and self._convexHullIsPointingUp(hull):
                 listOfCones.append(hull)
                 x, y, w, h = cv2.boundingRect(hull)
                 pose = pose_data()
@@ -202,30 +231,46 @@ class ConeFinder:
 
         return (poses, listOfCones)
 
-# We will get angle between +pi/2 to -pi/2 for steering
-# We will get 480 pixels range for throttle but should limit this
 class ConeSeeker:
+    """ ConeSeeker class """
     # Typically less than 1 unless the range isn't responsive
-    conf_decay_factor = 0.80
-    nItems = 64
+    conf_decay_rate = 0.8
+    nItems = 16
 
     def __init__(self):
         self.prev_pos_confs = []
-    
+        self.seek_started = False
+        self.timer = None
+        # Turn right
+        self.st_delta = 1.0
+
+    def _search_timeout(self):
+        # Reverse steering values at each timeout
+        self.st_delta = 0 - self.st_delta
+
+    def _search_cone(self):
+        # start a timer and set a random value for steering_delta
+        if self.timer is None:
+            # Change st_delta every 15 seconds
+            self.timer = Timer(15, self._search_timeout)
+            self.timer.start()
+
+        return (self.st_delta, 0.25)
+
     def _update_prev_poses(self):
         new_pos_confs = []
         for (prev_pose, confidence, frame) in self.prev_pos_confs:
-            confidence *= self.conf_decay_factor
+            confidence *= self.conf_decay_rate
             frame += 1
-            if(confidence > 0.03):
+            if confidence > 0.05:
                 new_pos_confs.append((prev_pose, confidence, frame))
 
         new_pos_confs.sort(key=lambda (p, c, f): f, reverse=True)
         #print(new_pos_confs[0:2])
-            
+
         # Keep only top nItems items
         self.prev_pos_confs = new_pos_confs[0:self.nItems]
-        
+
     def _getConfFromOldFrames(self, pose):
         x1 = pose.x - pose.w/2
         x2 = pose.x + pose.w/2
@@ -233,8 +278,8 @@ class ConeSeeker:
         y2 = pose.y + pose.h
         conf = 0.0
         matched_poses = []
-        for (id, (prev_pose, prev_conf, frame)) in enumerate(self.prev_pos_confs):
-            if(frame == 0):
+        for (idx, (prev_pose, prev_conf, frame)) in enumerate(self.prev_pos_confs):
+            if frame == 0:
                 continue
             old_x1 = prev_pose.x - prev_pose.w/2
             old_x2 = prev_pose.x + prev_pose.w/2
@@ -242,45 +287,80 @@ class ConeSeeker:
             old_y2 = prev_pose.y + prev_pose.h
             dx = min(x2, old_x2) - max(x1, old_x1)
             dy = min(y2, old_y2) - max(y1, old_y1)
-            if (dx>=0) and (dy>=0):
+            if (dx >= 0) and (dy >= 0):
                 conf += prev_conf * (dx*dy*1.0)/(prev_pose.w*prev_pose.h)
-                matched_poses.append(id)
-              
+                matched_poses.append(idx)
+
         return (conf, matched_poses)
-                    
+
+    def _get_drive_deltas(self, cone_loc):
+        steering_delta = 0
+        # Steer if not in front
+        if cone_loc.x < -10 or cone_loc.x > 10:
+            steering_delta = cone_loc.x/320.0
+
+        # Slowest approach to cone
+        throttle_delta = 0.1
+        # Use real depth when available for throttle
+        if cone_loc.z > 0:
+            # Real depth is in mm and maximum would probably be less than 6m
+            if cone_loc.z > 100:
+                throttle_delta += (cone_loc.z - 100.0)/6000
+        else:
+            if cone_loc.y > 20:
+                throttle_delta += (cone_loc.y - 20.0)/480
+        
+        return (steering_delta, throttle_delta)
+
     def seek_cone(self, poses):
+        """ Return steering and throttle adjustments on a 0 to 1 range to drive
+            to where the cone with most confidence is
+        """
         # Compute confidence for each hull by area and h distance
-        if(len(poses)):
+        if len(poses):
             maxArea = max(pose.area for pose in poses)
             self._update_prev_poses()
-            
+
             all_matches = []
             new_pos_confs = []
             for pose in poses:
-              oldConf, matched_poses = self._getConfFromOldFrames(pose)
-              all_matches.extend(matched_poses)
+                oldConf, matched_poses = self._getConfFromOldFrames(pose)
+                all_matches.extend(matched_poses)
 
-              # Scale distance as farther objects will use fewer pixels and this is not
-              # exact trigonometry so keep x weightage lower
-              pd = 1 + (pose.x/120.0)**2 + (pose.y/120.0)**2
-              # Find this cone among cones from previous frames and use the confidence
-              conf = 1/pd + pose.area/(4.0*maxArea) + oldConf
-              new_pos_confs.append((pose, conf, 0))
-              #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd, (pose.area*1.0/maxArea), conf, oldConf))
+                # Distance is proportional to inverse of pose.y (which is sort of z direction in 3D)
+                # Pose.x also scales with distance, more the distance
+                pd = 1 + (pose.x/40.0 * pose.y/40.0)**2 + (pose.y/40.0)**2
+                # Find this cone among cones from previous frames and use the confidence
+                conf = 0.5 * (1/pd + pose.area/(4.0*maxArea)) + oldConf
+                if conf > 1.0: conf = 1.0
+                new_pos_confs.append((pose, conf, 0))
+                #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd,
+                        # (pose.area*1.0/maxArea), conf, oldConf))
 
             # Remove matched cones from the list
             all_matches = list(set(all_matches))
-            for id in sorted(all_matches, reverse=True):
-              self.prev_pos_confs.pop(id)
+            for idx in sorted(all_matches, reverse=True):
+                self.prev_pos_confs.pop(idx)
 
             # Sort the new list by confidence and descending
             self.prev_pos_confs.extend(new_pos_confs)
-            self.prev_pos_confs = sorted(self.prev_pos_confs, key=lambda pose: pose[1], reverse=True)
+            self.prev_pos_confs = sorted(self.prev_pos_confs, key=lambda pose: pose[1],
+                                         reverse=True)
 
         # A cone from previous frames might have better confidence
         if len(self.prev_pos_confs):
-            return self.prev_pos_confs[0]
-        
+            self.seek_started = True
+            (cone_loc, confidence, area) = self.prev_pos_confs[0]
+            (sd, td) = self._get_drive_deltas(cone_loc)
+            return (cone_loc, confidence, sd, td)
+
         #This would only happen if the list is empty
-        return ((0,0,0,0,0,0,0.0), 0.0, 0)
+        pose = pose_data()
+        pose.x = pose.y = pose.z = pose.w = pose.h = pose.d = 0
+        pose.area = 0.0
+        if self.seek_started:
+            return (pose, 0.0, 0.0, 0.0)
+        
+        (sd, td) = self._search_cone()
+        return (pose, 0.0, sd, td)
 
