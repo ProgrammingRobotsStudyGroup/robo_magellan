@@ -23,6 +23,10 @@
 # ROS
 import rospy
 
+from std_msgs.msg import Int16
+from mavros_msgs.msg import Mavlink
+from mavros import mavlink
+
 from uav_state import MODE as MAVMODE
 
 import exec_comm
@@ -32,9 +36,9 @@ from state_and_transition import STATE,  TRANSITION
 # Globals
 this_node = None
 cone_list = []
+cone_idx_list = []
 do_once = False
 
-# TODO: Rework code to use to_exec and to_state message formats
 # TODO: Test follow WP
 # TODO: move from wp to wp
 # Read WP list
@@ -99,12 +103,16 @@ def state_start():
     # Force waypoint list refresh
     this_node.uav_control.pull_waypoints()
     waypoint_list = this_node.uav_control.waypoint_list
+    idx = 0
     for waypoint in waypoint_list:
         # Altitude >= 1000 indicates cone node
         if waypoint.z_alt >= 1000:
             cone_list.append(waypoint)
+            cone_idx_list.append(idx)
+        idx += 1
 
     rospy.loginfo("cone_list:\n%s", str(cone_list))
+    rospy.loginfo("cone_wp item # list: %s", str(cone_idx_list))
 
     this_node.uav_state.set_mode(MAVMODE.AUTO.name)
     this_node.uav_state.set_arm(True)
@@ -119,11 +127,13 @@ def state_start():
 
     while not rospy.is_shutdown():
         the_last = rospy.get_param("/LAST_ITEM")
+        next_item = rospy.get_param("/NEXT_ITEM")
         if last_item != the_last:
             rospy.loginfo(
-                "WP # Changed. /LAST_ITEM set to %s, previously %s",
+                "WP # Changed. /LAST_ITEM: %s, previously: %s; /NEXT_ITEM: %s",
                 str(the_last),
                 str(last_item),
+                str(next_item)
                 )
             last_item = the_last
             rospy.set_param("/LAST_ITEM", last_item)
@@ -178,13 +188,27 @@ def state_start():
             MSG_TO_EXEC.DONE.name,
             'unknown')
 
+def simulate_reached_cb(topic):
+    """Simulate reached wp callback"""
+    # Simulate a Mavlink message
+    ml = Mavlink()
+    ml.len = 2
+    ml.msgid = 46
+    ml.payload64 = mavlink.convert_to_payload64([topic.data])
+    mission_item_reached_cb(ml)
+    pass
 
+def startup_code():
+    """Custom startup code"""
+    rospy.Subscriber('simulate_reached_wp', Int16, simulate_reached_cb)
 
 
 if __name__ == '__main__':
     try:
         this_node = exec_comm.StateNode(STATE.Following_waypoint.name)
         this_node.start = state_start
+        this_node.custom_startup = startup_code
+
         this_node.run_state_node()
     except rospy.ROSInterruptException:
         pass
