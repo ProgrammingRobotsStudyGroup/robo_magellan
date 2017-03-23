@@ -164,13 +164,13 @@ class UAV_State:
             # Mission item reached #46
             # # See github.com/mavlink/c_library_v1/common/mavlink_msg_mission_item_reached.h
             if data.msgid == 46:
+                self.wp_reached = data.payload64[0] & 0xFFFF
+                self.wp_reached_when = unix_time
                 rospy.loginfo(
                     '%s msgid %s detected. WP item # %s',
                     rospy.get_caller_id(),
                     data.msgid,
-                    str(data.payload64 & 0xFFFF))
-                self.wp_reached = data.seq
-                self.wp_reached_when = unix_time
+                    str(self.wp_reached))
                 break
             else:
                 break
