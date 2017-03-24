@@ -35,8 +35,6 @@ from state_and_transition import STATE,  TRANSITION
 
 # Globals
 this_node = None
-cone_list = []
-cone_idx_list = []
 do_once = False
 
 # TODO: Test follow WP
@@ -77,6 +75,10 @@ def mission_item_reached_cb(data):
 #
 def state_start():
     """Start the state"""
+
+    cone_list = []
+    cone_idx_list = []
+
     rospy.loginfo('state_start %s', this_node.state_name)
     global do_once
     if not do_once:
@@ -139,7 +141,7 @@ def state_start():
             rospy.set_param("/LAST_ITEM", last_item)
             rospy.set_param("/NEXT_ITEM", last_item+1)
             if the_last<len(this_node.uav_control.waypoint_list):
-                if this_node.uav_control.waypoint_list[the_last] in cone_list:
+                if the_last in cone_idx_list:
                     near_cone = True
                     break
             else:
