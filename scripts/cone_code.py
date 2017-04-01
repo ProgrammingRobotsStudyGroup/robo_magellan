@@ -251,11 +251,12 @@ class ConeSeeker:
     def _search_cone(self):
         # start a timer and set a random value for steering_delta
         if self.timer is None:
-            # Change st_delta every 15 seconds
-            self.timer = Timer(15, self._search_timeout)
+            # Change st_delta every 5 seconds
+            self.timer = Timer(5, self._search_timeout)
             self.timer.start()
 
-        return (self.st_delta, 0.25)
+        pct_throttle = rospy.get_param("/CONE_PCT_THROTTLE")/100.
+        return (self.st_delta, pct_throttle)
 
     def _update_prev_poses(self):
         new_pos_confs = []
@@ -294,21 +295,19 @@ class ConeSeeker:
         return (conf, matched_poses)
 
     def _get_drive_deltas(self, cone_loc):
-        steering_delta = 0
+        steering_delta = 0.
         # Steer if not in front
         if cone_loc.x < -10 or cone_loc.x > 10:
             steering_delta = cone_loc.x/320.0
 
         # Slowest approach to cone
-        throttle_delta = 0.1
+        throttle_delta = rospy.get_param("/CONE_MIN_THROTTLE")/100.
         # Use real depth when available for throttle
         if cone_loc.z > 0:
-            # Real depth is in mm and maximum would probably be less than 6m
-            if cone_loc.z > 100:
-                throttle_delta += (cone_loc.z - 100.0)/6000
+            # Real depth is in mm and maximum would probably be less than 5m
+            throttle_delta += ((1 - throttle_delta) * cone_loc.z)/5000.
         else:
-            if cone_loc.y > 20:
-                throttle_delta += (cone_loc.y - 20.0)/480
+            throttle_delta += ((1 - throttle_delta) * cone_loc.y)/480.
         
         return (steering_delta, throttle_delta)
 
@@ -331,7 +330,8 @@ class ConeSeeker:
                 # Pose.x also scales with distance, more the distance
                 pd = 1 + (pose.x/40.0 * pose.y/40.0)**2 + (pose.y/40.0)**2
                 # Find this cone among cones from previous frames and use the confidence
-                conf = 0.5 * (1/pd + pose.area/(4.0*maxArea)) + oldConf
+                # Reduce effect of area as cone gets closer
+                conf = 0.5 * (1/pd + pose.area*pose.y/(40.0*maxArea)) + oldConf
                 if conf > 1.0: conf = 1.0
                 new_pos_confs.append((pose, conf, 0))
                 #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd,

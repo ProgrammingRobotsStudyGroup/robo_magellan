@@ -53,6 +53,7 @@ NEXT_ITEM: 0
 #   40 to roll
 
 CONE_PCT_THROTTLE: 0
+CONE_MIN_THROTTLE: 20
 
 #
 # Pct of calibrated (from pixhawk) left or right servo
