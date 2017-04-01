@@ -21,7 +21,7 @@
 # using cone_finder/location messages
 #
 
-import sys, argparse, math
+import sys, argparse, math, time
 
 # ROS
 import rospy
@@ -82,16 +82,18 @@ def state_start():
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    this_node.uav_state.set_arm(False)
+#    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+#    this_node.uav_state.set_arm(False)
 
     #
     touched_cone = False
     #
-    passed_cone = True
+#    passed_cone = True
+    passed_cone = False
     segment_timeout = False
     #
-    touched_last_cone = True
+#    touched_last_cone = True
+    touched_last_cone = False
     #
     passed_last_cone = False
     course_timeout = False
@@ -117,8 +119,13 @@ def state_start():
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
     sub_location = rospy.Subscriber('/cone_finder/locations', Locations, drive_to, queue_size=1)
+
+    # Change to manual
     this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
-    this_node.uav_state.set_arm(True)
+    time.sleep(0.5)
+    if not this_node.uav_state.arm:
+        this_node.uav_state.set_arm(True)
+        time.sleep(0.5)
 
     # Driving To cone loop
     segment_duration_sec = rospy.get_param("/SEGMENT_DURATION_SEC")
@@ -145,7 +152,6 @@ def state_start():
             break
         if rospy.Time.now() > timeout:
             segment_timeout = True
-            # TODO What's the transition?
             rospy.loginfo('State timed out: %s', this_node.state_name)
             break
         rate.sleep()
@@ -157,7 +163,7 @@ def state_start():
 
     # Put in safe mode
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    this_node.uav_state.set_arm(False)
+#    this_node.uav_state.set_arm(False)
 
     # Publish transition
     if passed_last_cone:
@@ -204,7 +210,7 @@ def drive_to(loc):
     throttle = throttle_limits[1] + args.throttle_factor*tadj*throttle_range
 
     #-- test with fixed throttle to start
-    throttle = 1675
+    #throttle = 1675
     #throttle = throttle + tadj
     pct_throttle = rospy.get_param("/CONE_PCT_THROTTLE")
     if pct_throttle > 1:
@@ -221,6 +227,16 @@ def drive_to(loc):
     if throttle < throttle_limits[0]:
         throttle = throttle_limits[0]
 
+    # Bound min throttle
+    fwd_range = throttle_limits[2] - throttle_limits[1]
+    fwd_range_30pct = fwd_range * 0.3
+    if throttle < throttle_limits[1] + fwd_range_30pct:
+        throttle = throttle_limits[1] + fwd_range_30pct
+    rospy.loginfo("Fwd Rg: %s; 30pct: %s; Throttle: %s",
+        str(fwd_range),
+        str(fwd_range_30pct),
+        str(throttle)
+        )
     this_node.uav_control.set_throttle_servo(throttle, steering)
 
 
