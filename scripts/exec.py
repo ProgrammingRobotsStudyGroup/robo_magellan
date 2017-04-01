@@ -103,9 +103,12 @@ def start_transitions(txt):
     state_name = STATE.Start.name
     rospy.loginfo('Entered state: ' + state_name)
 
+    global state_complete
+    state_complete = False
+
     # Set us to hold upon start
-    __UAV_State.set_arm(False)
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    #__UAV_State.set_arm(False)
+    #__UAV_State.set_mode(MAVMODE.HOLD.name)
     # Set next state
     return (STATE.Following_waypoint.name, txt)
 
@@ -123,6 +126,9 @@ def following_waypoint_transitions(txt):
     state_name = STATE.Following_waypoint.name
     rospy.loginfo('Entered state: ' + state_name)
 
+    global state_complete
+    state_complete = False
+
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
 
@@ -136,6 +142,10 @@ def following_waypoint_transitions(txt):
         new_state = STATE.Avoiding_obstacle.name
     elif __ExecComm.transition == TRANSITION.near_cone.name:
         new_state = STATE.Driving_toward_cone.name
+    elif __ExecComm.transition == TRANSITION.segment_timeout.name:
+        new_state = STATE.Failure.name
+    elif  __ExecComm.transition == TRANSITION.exit_out.name:
+        new_state = STATE.Success.name
     else:
         rospy.logwarn('Unknown transition:'+__ExecComm.transition)
         new_state = STATE.Failure.name
@@ -154,6 +164,9 @@ def avoiding_obstacle_transitions(txt):
     """Avoid obstacle State node & transitions"""
     state_name = STATE.Avoiding_obstacle.name
     rospy.loginfo('Entered state: ' + state_name)
+
+    global state_complete
+    state_complete = False
 
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
@@ -193,7 +206,7 @@ def driving_toward_cone_transitions(txt):
     state_complete = False
 
     # Set UAV mode to hold while we get this state started
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    #__UAV_State.set_mode(MAVMODE.HOLD.name)
 
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
@@ -235,6 +248,8 @@ def driving_away_from_cone_transitions(txt):
     state_name = STATE.Driving_away_from_cone.name
     rospy.loginfo('Entered state: ' + state_name)
 
+    global state_complete
+    state_complete = False
 
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.RESET.name)
     __ExecComm.send_message_to_state(state_name, MSG_TO_STATE.START.name)
@@ -268,10 +283,13 @@ def success_transitions(txt):
     state_name = STATE.Success.name
     rospy.loginfo('Entered state: ' + state_name)
 
+    global state_complete
+    state_complete = False
+
     # Set UAV to hold
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    #__UAV_State.set_mode(MAVMODE.HOLD.name)
     # Disarm
-    __UAV_State.set_arm(False)
+    #__UAV_State.set_arm(False)
 
     new_state = STATE.End.name
     return (new_state, txt)
@@ -289,10 +307,13 @@ def failure_transitions(txt):
     state_name = STATE.Failure.name
     rospy.loginfo('Entered state: ' + state_name)
 
+    global state_complete
+    state_complete = False
+
     # Set UAV to hold
-    __UAV_State.set_mode(MAVMODE.HOLD.name)
+    #__UAV_State.set_mode(MAVMODE.HOLD.name)
     # Disarm
-    __UAV_State.set_arm(False)
+    #__UAV_State.set_arm(False)
 
     new_state = STATE.End.name
     return (new_state, txt)
@@ -305,13 +326,20 @@ def __state_resp_cb(data):
     """Handle messages from state nodes"""
     #rospy.loginfo('__state_resp_cb: '+str(data))
     global state_complete
-    __ExecComm.cmd = data.cmd
-    __ExecComm.transition = data.transition
-    __ExecComm.state = data.state
+    rospy.loginfo("data.cmd: %s", data.cmd)
     #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
-    if __ExecComm.cmd == MSG_TO_EXEC.DONE.name:
+    if data.cmd == MSG_TO_EXEC.DONE.name:
+        __ExecComm.cmd = data.cmd
+        __ExecComm.transition = data.transition
+        __ExecComm.state = data.state
+
         state_complete = True
-    elif __ExecComm.cmd == MSG_TO_EXEC.START_EXEC.name:
+        rospy.loginfo("From state: %s Cmd: %s; Transition: %s",
+            __ExecComm.state,
+            __ExecComm.cmd,
+            __ExecComm.transition
+            )
+    elif data.cmd == MSG_TO_EXEC.START_EXEC.name:
         # Set state to start with
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
