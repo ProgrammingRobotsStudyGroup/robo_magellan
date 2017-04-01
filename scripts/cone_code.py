@@ -99,28 +99,31 @@ class ConeFinder:
             else:
                 listOfPointsBelowCenter.append(point)
 
-        intLeftMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
-        intRightMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
-        intLeftMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
-        intRightMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
+        base = 0
+        if len(listOfPointsBelowCenter):
+            intLeftMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
+            intRightMostPointBelowCenter = listOfPointsBelowCenter[0][0][0]
+            # determine left and right most points below center
+            for point in listOfPointsBelowCenter:
+                if point[0][0] < intLeftMostPointBelowCenter:
+                    intLeftMostPointBelowCenter = point[0][0]
+                if point[0][0] >= intRightMostPointBelowCenter:
+                    intRightMostPointBelowCenter = point[0][0]
+            base = intRightMostPointBelowCenter - intLeftMostPointBelowCenter
 
-        # determine left and right most points below center
-        for point in listOfPointsBelowCenter:
-            if point[0][0] < intLeftMostPointBelowCenter:
-                intLeftMostPointBelowCenter = point[0][0]
-            if point[0][0] >= intRightMostPointBelowCenter:
-                intRightMostPointBelowCenter = point[0][0]
-
-        # determine left and right most points above center
-        for point in listOfPointsAboveCenter:
-            if point[0][0] < intLeftMostPointAboveCenter:
-                intLeftMostPointAboveCenter = point[0][0]
-            if point[0][0] >= intRightMostPointAboveCenter:
-                intRightMostPointAboveCenter = point[0][0]
-
+        top = 0
+        if len(listOfPointsAboveCenter):
+            intLeftMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
+            intRightMostPointAboveCenter = listOfPointsAboveCenter[0][0][0]
+            # determine left and right most points above center
+            for point in listOfPointsAboveCenter:
+                if point[0][0] < intLeftMostPointAboveCenter:
+                    intLeftMostPointAboveCenter = point[0][0]
+                if point[0][0] >= intRightMostPointAboveCenter:
+                    intRightMostPointAboveCenter = point[0][0]
+            top = intRightMostPointAboveCenter - intLeftMostPointAboveCenter
+        
         # Top should be smaller than base, ideally only a few pixels
-        top = intRightMostPointAboveCenter - intLeftMostPointAboveCenter
-        base = intRightMostPointBelowCenter - intLeftMostPointBelowCenter
         if (top > base/2):
             #print('top too wide')
             return False
