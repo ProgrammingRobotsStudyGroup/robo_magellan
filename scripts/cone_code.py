@@ -28,7 +28,7 @@ class ConeFinder:
     """ ConeFinder class """
     codec = 'XVID'
 
-    def __init__(self, min_area=30):
+    def __init__(self, min_area=200):
         self.firstTime = True
         self.rgbOut = None
         self.depthOut = None
@@ -324,10 +324,10 @@ class ConeSeeker:
         """ Return steering and throttle adjustments on a 0 to 1 range to drive
             to where the cone with most confidence is
         """
+        self._update_prev_poses()
         # Compute confidence for each hull by area and h distance
         if len(poses):
             maxArea = max(pose.area for pose in poses)
-            self._update_prev_poses()
 
             all_matches = []
             new_pos_confs = []
@@ -339,11 +339,9 @@ class ConeSeeker:
                 # Pose.x also scales with distance, more the distance
                 pd = 1 + (pose.x/40.0 * pose.y/40.0)**2 + (pose.y/40.0)**2
                 # Find this cone among cones from previous frames and use the confidence
-                # Reduce effect of area as cone gets closer
-                conf = 0.5 * (1/pd + pose.area*pose.y/(480.0*maxArea)) + oldConf
+                # No need to reduce effect of area as cone gets closer since we want closer cone
+                conf = 0.5 * (1/pd + pose.area/maxArea) + oldConf
                 new_pos_confs.append((pose, conf, 0))
-                #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd,
-                        # (pose.area*1.0/maxArea), conf, oldConf))
 
             # Remove matched cones from the list
             all_matches = list(set(all_matches))

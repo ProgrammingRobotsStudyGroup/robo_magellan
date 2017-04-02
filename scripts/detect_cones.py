@@ -128,11 +128,11 @@ class RosColorDepth:
                 self.cf.captureFrames(cvRGB, cvDepth)
 
             imghull = cvRGB.copy()
+            loc = location_data()
+            loc.poses = poses
+            loc.header.stamp = rospy.Time.now()
+            self.pub.publish(loc)
             if len(poses):
-                loc = location_data()
-                loc.poses = poses
-                loc.header.stamp = rospy.Time.now()
-                self.pub.publish(loc)
                 # Frame big 3 cones - they are sorted by area
                 cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
 

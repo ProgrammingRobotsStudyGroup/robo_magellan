@@ -26,14 +26,16 @@ class Args(object):
     throttle_range = 1.0
     steering_range = 1.0
     min_throttle = 0.3
+    cs = None
 
 args = Args()
 
 def drive_to_cone(loc):
-    #args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")
-    cs = ConeSeeker(args.min_throttle)
+    if args.cs is None:
+        #args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")
+        args.cs = ConeSeeker(args.min_throttle)
     # sadj = [-1. to 1.], tadj = [0 to 1.]
-    (cl, conf, sadj, tadj) = cs.seek_cone(loc.poses)
+    (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 
     # Assuming equal range spread for steering
     steering_range = (steering_limits[2] - steering_limits[0])/2
