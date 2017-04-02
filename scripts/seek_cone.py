@@ -17,7 +17,7 @@ cone_seeker: reading cone_finder location messages and
 hard_limits = [1000, 1500, 2000]  # microseconds for servo signal
 steering_limits = [1135, 1435, 1735]  # middle is neutral
 # throttle_limits = [1200, 1500, 1800]  # middle is neutral
-throttle_limits = [1650, 1650, 1800]  # fwd range only; for testing; middle is NOT neutral
+throttle_limits = [1650, 1650, 2000]  # fwd range only; for testing; middle is NOT neutral
 
 # We will get angle between +pi/2 to -pi/2 for steering
 # We will get 480 pixels range for throttle but should limit this

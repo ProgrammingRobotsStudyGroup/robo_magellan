@@ -52,11 +52,11 @@ NEXT_ITEM: 0
 #   25 to test on blocks
 #   40 to roll
 
-CONE_PCT_THROTTLE: 40
+CONE_PCT_THROTTLE: 0
 CONE_MIN_THROTTLE: 30
 
 #
 # Pct of calibrated (from pixhawk) left or right servo
 # Set to 0 for straight
 AWAY_PCT_SERVO: 90
-AWAY_PCT_THROTTLE: 40
+AWAY_PCT_THROTTLE: 60

@@ -86,6 +86,11 @@ class ExecComm():
         toexec.state = self.state
         toexec.cmd = inp_cmd
         toexec.transition = inp_transition
+        rospy.loginfo("State: %s; Cmd: %s; Transition: %s",
+            toexec.state,
+            toexec.cmd,
+            toexec.transition
+            )
         self.pub_state_response.publish(toexec)
 
 
@@ -130,9 +135,10 @@ class StateNode():
         # State is returned. If message state is our state, cmd is updated.
         if data.state == self.exec_comm.state:
             rospy.loginfo(
-                '%s cmd_callback: %s',
+                '%s cmd_callback: %s; Cmd: %s',
                 rospy.get_caller_id(),
-                data.state)
+                data.state,
+                data.cmd)
             self.exec_comm.cmd = data.cmd
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
@@ -154,8 +160,9 @@ class StateNode():
     def _state_start(self):
         """Reset the state"""
         # Set UAV mode to hold while we get this state started
-        self.uav_state.set_mode(MAVMODE.HOLD.name)
-        self.uav_state.set_arm(False)
+#        self.uav_state.set_mode(MAVMODE.HOLD.name)
+#        self.uav_state.set_arm(False)
+        pass
 
 
     #
@@ -165,8 +172,9 @@ class StateNode():
     def _state_reset(self):
         """Reset the state"""
         # Set UAV mode to hold while we get this state started
-        self.uav_state.set_mode(MAVMODE.HOLD.name)
-        self.uav_state.set_arm(False)
+#        self.uav_state.set_mode(MAVMODE.HOLD.name)
+#        self.uav_state.set_arm(False)
+        pass
 
 
     #

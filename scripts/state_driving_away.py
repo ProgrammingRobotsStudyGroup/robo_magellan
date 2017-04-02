@@ -46,11 +46,14 @@ def state_start():
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    this_node.uav_state.set_arm(False)
+#    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+#    this_node.uav_state.set_arm(False)
 
     this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
-    this_node.uav_state.set_arm(True)
+    time.sleep(0.5)
+    if not this_node.uav_state.arm:
+        this_node.uav_state.set_arm(True)
+        time.sleep(0.5)
 
     # Get radio calibration values
     # [1] is neutral
@@ -71,28 +74,28 @@ def state_start():
     old_timeout_secs = 0
     drive_away_strategy()
     timeout = rospy.Time.now()
-    while not rospy.is_shutdown():
-        timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
-        if timeout_secs <> old_timeout_secs:
-            rospy.loginfo(
-                'In %s state node. Timeout in: %d',
-                this_node.state_name,
-                timeout_secs)
-        old_timeout_secs = timeout_secs
-        if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
-            # TODO What if any transition?
-            rospy.loginfo(
-                'State aborted: %s with command %s',
-                this_node.state_name,
-                this_node.exec_comm.cmd)
-            break
-        if rospy.Time.now() > timeout:
-            segment_timeout = True
-            # TODO What's the transition?
-            rospy.loginfo('State timed out: %s', this_node.state_name)
-            break
-        # TODO Are we clear?
-        rate.sleep()
+#    while not rospy.is_shutdown():
+#        timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
+#        if timeout_secs <> old_timeout_secs:
+#            rospy.loginfo(
+#                'In %s state node. Timeout in: %d',
+#                this_node.state_name,
+#                timeout_secs)
+#        old_timeout_secs = timeout_secs
+#        if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
+#            # TODO What if any transition?
+#            rospy.loginfo(
+#                'State aborted: %s with command %s',
+#                this_node.state_name,
+#                this_node.exec_comm.cmd)
+#            break
+#        if rospy.Time.now() > timeout:
+#            segment_timeout = True
+#            # TODO What's the transition?
+#            rospy.loginfo('State timed out: %s', this_node.state_name)
+#            break
+#        # TODO Are we clear?
+#        rate.sleep()
 
     # Publish transition.
     cleared_cone = True
@@ -130,7 +133,7 @@ def drive_away_strategy():
 
     rospy.loginfo("Second 00: Pause");
     this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
-    time.sleep(0.1)
+    time.sleep(1.0)
     
     rospy.loginfo("Second 01: Backup");
     start = time.clock()
@@ -139,16 +142,11 @@ def drive_away_strategy():
     elapsed = elapsed - start
     rospy.loginfo("Time spent in set_throttle_servo() is: %s ",
                   str(elapsed))
-    time.sleep(0.1) 
+    time.sleep(1.0) 
 
-    rospy.loginfo("Second 02: Backup");
-    start = time.clock()
-    this_node.uav_control.set_throttle_servo(neg_throttle, steering_limits[1])
-    elapsed = time.clock()
-    elapsed = elapsed - start
-    rospy.loginfo("Time spent in set_throttle_servo() is: %s ",
-                  str(elapsed))
-    time.sleep(0.1)
+    rospy.loginfo("Second 02: Pause");
+    this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
+    time.sleep(1.0)
 
     rospy.loginfo("Second 03: Backup");
     start = time.clock()
@@ -157,23 +155,32 @@ def drive_away_strategy():
     elapsed = elapsed - start
     rospy.loginfo("Time spent in set_throttle_servo() is: %s ",
                   str(elapsed))
-    time.sleep(0.1)
+    time.sleep(1.0)
 
-    rospy.loginfo("Second 04: Pause");
+    rospy.loginfo("Second 03: Backup");
+    start = time.clock()
+    this_node.uav_control.set_throttle_servo(neg_throttle, steering_limits[1])
+    elapsed = time.clock()
+    elapsed = elapsed - start
+    rospy.loginfo("Time spent in set_throttle_servo() is: %s ",
+                  str(elapsed))
+    time.sleep(1.0)
+
+    rospy.loginfo("Second 05: Pause");
     this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
-    time.sleep(0.1)
-
-    rospy.loginfo("Second 05: Forward");
-    this_node.uav_control.set_throttle_servo(pos_throttle, steering)
-    time.sleep(0.1)
+    time.sleep(1.0)
 
     rospy.loginfo("Second 06: Forward");
     this_node.uav_control.set_throttle_servo(pos_throttle, steering)
-    time.sleep(0.1)
+    time.sleep(1.0)
+
+    rospy.loginfo("Second 06: Forward");
+    this_node.uav_control.set_throttle_servo(pos_throttle, steering)
+    time.sleep(1.0)
 
     rospy.loginfo("Second 07: Pause/Done");
     this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
-    time.sleep(0.1) 
+    time.sleep(1.0) 
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
 
 

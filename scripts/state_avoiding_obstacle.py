@@ -45,11 +45,15 @@ def state_start():
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
-    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    this_node.uav_state.set_arm(True)
+#    this_node.uav_state.set_mode(MAVMODE.HOLD.name)
+#    this_node.uav_state.set_arm(True)
 
 #    this_node.uav_state.set_mode(MAVMODE.AUTO.name)
-    this_node.uav_state.set_mode(MAVMODE.LEARNING.name)
+    this_node.uav_state.set_mode(MAVMODE.MANUAL.name)
+    time.sleep(0.5)
+    if not this_node.uav_state.arm:
+        this_node.uav_state.set_arm(True)
+        time.sleep(0.5)
 
     rate = rospy.Rate(2) # 2 hz
 
@@ -80,7 +84,7 @@ def state_start():
 
     # Put in safe mode
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
-    this_node.uav_state.set_arm(False)
+#    this_node.uav_state.set_arm(False)
 
     # Publish transition
     obstacle_cleared = True # TODO: Hard coded
