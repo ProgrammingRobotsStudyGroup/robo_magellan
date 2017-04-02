@@ -316,6 +316,8 @@ class ConeSeeker:
         
         if throttle_delta < self.min_throttle:
             throttle_delta = self.min_throttle
+        if throttle_delta > 1.0:
+            throttle_delta = 1.0
         return (steering_delta, throttle_delta)
 
     def seek_cone(self, poses):
