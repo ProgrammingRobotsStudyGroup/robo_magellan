@@ -5,10 +5,10 @@
 import cv2, time, rospy
 import numpy as np
 from threading import Timer
-    
+
 # Needed for publishing the messages
 from robo_magellan.msg import pose_data
-
+ 
 def is_cv2():
     # if we are using OpenCV 2, then our cv2.__version__ will start
     # with '2.'
@@ -189,7 +189,7 @@ class ConeFinder:
         #imgThresh = cv2.GaussianBlur(imgThresh, (3, 3), 0)
         #imgThresh = cv2.medianBlur(imgThresh, 5)
         imgThresh = cv2.bilateralFilter(imgThresh, 5, 20, 20)
-        
+
         if is_cv2():
             contours, hierarchy = cv2.findContours(imgThresh, cv2.RETR_EXTERNAL,
                                                    cv2.CHAIN_APPROX_SIMPLE)
@@ -235,21 +235,26 @@ class ConeFinder:
         return (poses, listOfCones)
 
 class ConeSeeker:
-    """ ConeSeeker class """
-    # Typically less than 1 unless the range isn't responsive
+    """ ConeSeeker class
+        It will produce a steering range of -1. to 1. and
+        a throttle value of min_throttle to 1.
+    """
+    # Must be between 0. to 1.
     conf_decay_rate = 0.8
     nItems = 16
 
-    def __init__(self):
+    def __init__(self, min_throttle=0.3):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
         # Turn right
         self.st_delta = 1.0
+        self.min_throttle = min_throttle
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
-        self.st_delta = 0 - self.st_delta
+        self.st_delta = -self.st_delta
+        self.timer = None
 
     def _search_cone(self):
         # start a timer and set a random value for steering_delta
@@ -258,8 +263,7 @@ class ConeSeeker:
             self.timer = Timer(5, self._search_timeout)
             self.timer.start()
 
-        pct_throttle = rospy.get_param("/CONE_PCT_THROTTLE")/100.
-        return (self.st_delta, pct_throttle)
+        return (self.st_delta, self.min_throttle)
 
     def _update_prev_poses(self):
         new_pos_confs = []
@@ -269,10 +273,10 @@ class ConeSeeker:
             if confidence > 0.05:
                 new_pos_confs.append((prev_pose, confidence, frame))
 
-        new_pos_confs.sort(key=lambda (p, c, f): f, reverse=True)
+        new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
         #print(new_pos_confs[0:2])
 
-        # Keep only top nItems items
+        # Keep only top nItems items with high confidence
         self.prev_pos_confs = new_pos_confs[0:self.nItems]
 
     def _getConfFromOldFrames(self, pose):
@@ -303,15 +307,15 @@ class ConeSeeker:
         if cone_loc.x < -10 or cone_loc.x > 10:
             steering_delta = cone_loc.x/320.0
 
-        # Slowest approach to cone
-        throttle_delta = rospy.get_param("/CONE_MIN_THROTTLE")/100.
         # Use real depth when available for throttle
         if cone_loc.z > 0:
             # Real depth is in mm and maximum would probably be less than 5m
-            throttle_delta += ((1 - throttle_delta) * cone_loc.z)/5000.
+            throttle_delta = cone_loc.z/6000.
         else:
-            throttle_delta += ((1 - throttle_delta) * cone_loc.y)/480.
+            throttle_delta = cone_loc.y/480.
         
+        if throttle_delta < self.min_throttle:
+            throttle_delta = self.min_throttle
         return (steering_delta, throttle_delta)
 
     def seek_cone(self, poses):
@@ -334,8 +338,7 @@ class ConeSeeker:
                 pd = 1 + (pose.x/40.0 * pose.y/40.0)**2 + (pose.y/40.0)**2
                 # Find this cone among cones from previous frames and use the confidence
                 # Reduce effect of area as cone gets closer
-                conf = 0.5 * (1/pd + pose.area*pose.y/(40.0*maxArea)) + oldConf
-                if conf > 1.0: conf = 1.0
+                conf = 0.5 * (1/pd + pose.area*pose.y/(480.0*maxArea)) + oldConf
                 new_pos_confs.append((pose, conf, 0))
                 #print('x=%d, y=%d, pd=%d, ar=%f, cf=%f, ocf=%f' % (pose.x, pose.y, pd,
                         # (pose.area*1.0/maxArea), conf, oldConf))
@@ -345,10 +348,20 @@ class ConeSeeker:
             for idx in sorted(all_matches, reverse=True):
                 self.prev_pos_confs.pop(idx)
 
-            # Sort the new list by confidence and descending
-            self.prev_pos_confs.extend(new_pos_confs)
-            self.prev_pos_confs = sorted(self.prev_pos_confs, key=lambda pose: pose[1],
-                                         reverse=True)
+            # Add old entries to this list and sort by confidence
+            new_pos_confs.extend(self.prev_pos_confs)
+            new_pos_confs.sort(key=lambda (p, c, f): c, reverse=True)
+            
+            # There is at least one cone here, confidence is second item
+            max_conf = new_pos_confs[0][1]
+            if max_conf > 1.0:
+                self.prev_pos_confs = []
+                # Cap confidence at 1. and add it to 
+                for (p, c, f) in new_pos_confs:
+                    c /= max_conf
+                    self.prev_pos_confs.append((p, c, f))
+            else:
+                self.prev_pos_confs = new_pos_confs
 
         # A cone from previous frames might have better confidence
         if len(self.prev_pos_confs):
@@ -361,9 +374,9 @@ class ConeSeeker:
         pose = pose_data()
         pose.x = pose.y = pose.z = pose.w = pose.h = pose.d = 0
         pose.area = 0.0
-        if self.seek_started:
-            return (pose, 0.0, 0.0, 0.0)
-        
         (sd, td) = self._search_cone()
+        if self.seek_started:
+            return (pose, 0.0, 0.0, td)
+        
         return (pose, 0.0, sd, td)
 

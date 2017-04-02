@@ -22,23 +22,26 @@ throttle_limits = [1650, 1650, 1800]  # fwd range only; for testing; middle is N
 # We will get angle between +pi/2 to -pi/2 for steering
 # We will get 480 pixels range for throttle but should limit this
 class Args(object):
-    # Typically less than 1 unless the range isn't responsive
-    throttle_factor = 1.0
-    steering_factor = 1.0
+    # Ranges are between 0. to 1.0
+    throttle_range = 1.0
+    steering_range = 1.0
+    min_throttle = 0.3
 
 args = Args()
 
 def drive_to_cone(loc):
-    cs = ConeSeeker()
+    #args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")
+    cs = ConeSeeker(args.min_throttle)
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = cs.seek_cone(loc.poses)
 
-    # Assuming equal range spread
+    # Assuming equal range spread for steering
     steering_range = (steering_limits[2] - steering_limits[0])/2
-    throttle_range = (throttle_limits[2] - throttle_limits[0])/2
+    #Throttle doesn't have -ve range
+    throttle_range = throttle_limits[2] - throttle_limits[1]
     
-    steering = steering_limits[1] + args.steering_factor*sadj*steering_range
-    throttle = throttle_limits[1] + args.throttle_factor*tadj*throttle_range
+    steering = steering_limits[1] + args.steering_range*sadj*steering_range
+    throttle = throttle_limits[1] + args.throttle_range*tadj*throttle_range
 
     rc = OverrideRCIn()
     rc.channels = [int(steering), 0, int(throttle), 0, 0, 0, 0, 0]
@@ -46,11 +49,14 @@ def drive_to_cone(loc):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Drive to cone found')
-    parser.add_argument('--throttle_factor', '-t', default=1.0, type=float,
-                        help='Throttle step size factor')
-    parser.add_argument('--steering_factor', '-s', default=1.0, type=float,
-                        help='Steering step size factor')
+    parser.add_argument('--throttle_range', '-t', default=1.0, type=float,
+                        help='Throttle range on a scale of 0. (min) to 1.0 (max)')
+    parser.add_argument('--steering_range', '-s', default=1.0, type=float,
+                        help='Steering range on a scale of 0. (min) to 1.0 (max)')
+    parser.add_argument('--min_throttle', '-m', default=0.3, type=float,
+                        help='Minimum throttle factor to use')
     parser.parse_args(rospy.myargv(sys.argv[1:]), args)
+
     try:
         pub = rospy.Publisher('/mavros/rc/override', OverrideRCIn, queue_size=10)
         rospy.init_node('cone_seeker', anonymous=True)

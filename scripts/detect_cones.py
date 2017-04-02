@@ -23,7 +23,7 @@ class RosColorDepth:
     thread_lock = threading.Lock()
     ts = time.clock()
     cf = ConeFinder()
-    cs = ConeSeeker()
+    cs = None
     lc = 0
     pub = rospy.Publisher('cone_finder/locations', location_data, queue_size=10)
     colorPub = rospy.Publisher("cone_finder/colorImage", Image, queue_size=10)
@@ -65,6 +65,10 @@ class RosColorDepth:
         self.started = False
 
     def markVideo(self, imghull, poses):
+        if self.cs is None:
+            # ConeSeeker only used to mark cone confidence, default throttle is good
+            self.cs = ConeSeeker()
+
         (cl, conf, sadj, tadj) = self.cs.seek_cone(poses)
         if conf > 0.1:
             #frame could be non zero
