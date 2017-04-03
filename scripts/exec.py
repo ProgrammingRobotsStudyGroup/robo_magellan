@@ -23,6 +23,9 @@
 
 # ROS
 import rospy
+from mavros.utils import *
+from mavros import command
+
 from std_msgs.msg import String
 
 ## Our Code
@@ -347,6 +350,9 @@ def __state_resp_cb(data):
         # TODO What is our cargo? "TEST"? A series of waypoints?
         cargo = "RUN"
         # Start state machine
+        rospy.loginfo("Set command.trigger_control")
+        command.trigger_control(trigger_enable=True,
+                                      cycle_time=0.0)
         machine.run(cargo)
     else:
         rospy.loginfo('No Action: State: %s; Cmd: %s, Transition: %s',
