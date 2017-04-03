@@ -1,13 +1,27 @@
 <launch>
 
-  <!-- simple launch for cone_seeker tests -->
+  <!-- Competition launch file for RoboMagellan
+       Parameters:
+         vid: display video debug
+       Example:
+         roslaunch robo_magellan exec.launch vid:=true
+        vs
+         roslaunch robo_magellan exec.launch
+        
+  -->
 
   <include file="$(find mavros)/launch/apm.launch">
     <!-- this must match the UP port-baud rate connected to Pixhawk -->
     <arg name="fcu_url" value="/dev/ttyS1:115200" />
   </include>
 
-  <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
+  <arg name="vid" default="false" />
+  <group if="$(arg vid)">
+    <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
+  </group>
+  <group unless="$(arg vid)" >
+    <include file="$(find robo_magellan)/launch/cone_finder.launch" />
+  </group>
 
   <!-- Executive and state nodes -->
   <rosparam command="load" file="$(find robo_magellan)/launch/exec.yaml" />
