@@ -5,6 +5,7 @@
          vid: display video debug
        Example:
          roslaunch robo_magellan exec.launch vid:=true
+         Remember to use -X if you are using ssh
         vs
          roslaunch robo_magellan exec.launch
         
