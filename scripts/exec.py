@@ -357,6 +357,8 @@ def __state_resp_cb(data):
         cargo = "RUN"
         # Start state machine
         machine.run(cargo)
+    elif data.cmd == MSG_TO_EXEC.REBOOT_MAV.name:
+        __UAV_Control.send_mavros_cmd(True, 246, False, 1, 1, 0, 0, 0, 0, 0)
     else:
         rospy.loginfo('No Action: State: %s; Cmd: %s, Transition: %s',
                       data.cmd,

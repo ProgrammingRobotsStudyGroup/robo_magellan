@@ -43,6 +43,7 @@ class MSG_TO_EXEC(AutoNumber):
     """The permitted messages"""
     START_EXEC = ()
     DONE = ()
+    REBOOT_MAV = ()
 
 class TOPICS(AutoNumber):
     """exec and state topic names"""
