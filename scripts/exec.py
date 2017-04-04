@@ -347,12 +347,15 @@ def __state_resp_cb(data):
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
         rospy.set_param("/LAST_ITEM", rospy.get_param("/NEXT_ITEM")-1)
+        rospy.loginfo("Set command.trigger_control")
+
+        __UAV_Control.send_mavros_cmd(True, 203, False, 0, 0, 0, 0, 1, 0, 0)
+#         command.trigger_control(trigger_enable=True,
+#                                       cycle_time=0.0)
+
         # TODO What is our cargo? "TEST"? A series of waypoints?
         cargo = "RUN"
         # Start state machine
-        rospy.loginfo("Set command.trigger_control")
-        command.trigger_control(trigger_enable=True,
-                                      cycle_time=0.0)
         machine.run(cargo)
     else:
         rospy.loginfo('No Action: State: %s; Cmd: %s, Transition: %s',

@@ -46,6 +46,8 @@ from mavros_msgs.msg import WaypointList
 from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
 #from mavros_msgs.srv import *
 from mavros_msgs.srv import ParamGet
+
+from mavros_msgs.srv import CommandLong
 #from mavros_msgs.srv import ParamSet, SetMode
 #TODO Missing import from mavros_msgs.srv import WaypointGOTO
 #from mavros.mission import *
@@ -81,6 +83,11 @@ class UAV_Control:
         self.svc_set_current_waypoint = rospy.ServiceProxy(
             'mavros/mission/set_current',
             WaypointSetCurrent)
+
+        rospy.wait_for_service('/mavros/cmd/command')
+        self._srv_cmd_long = rospy.ServiceProxy(
+            '/mavros/cmd/command', CommandLong, persistent=True)
+
 
         # Publishers
         self.pub_rc_override = rospy.Publisher(
@@ -297,4 +304,12 @@ class UAV_Control:
         except rospy.ServiceException as ex:
             rospy.logerr(ex)
             return None
+
+    def send_mavros_cmd(self, bool1, msgid, bool2, p0, p1, p2, p3, p4, p5, p6):
+        """Send a mavros command"""
+        rospy.loginfo("/mavros/cmd/command/ %s %s %s %s %s %s %s %s %s %s",
+                      str(bool1), str(msgid), 
+                      str(bool2), str(p0), 
+                      str(p1), str(p2), str(p3), str(p4), str(p5), str(p6))
+        self._srv_cmd_long(bool1, msgid, bool2, p0, p1, p2, p3, p4, p5, p6)
 
