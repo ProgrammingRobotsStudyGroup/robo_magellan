@@ -52,8 +52,13 @@ NEXT_ITEM: 0
 #   25 to test on blocks
 #   40 to roll
 
-CONE_PCT_THROTTLE: 0
-CONE_MIN_THROTTLE: 30
+#CONE_PCT_THROTTLE: 0
+#Min throttle value during cone seek - actually just the min value
+#that Victoria can drive at. For road - 30, small grass - 40 and 
+#tall grass - 50 or more
+CONE_MIN_THROTTLE: 50
+# Minimum confidence for cone seeker to assume we have a cone
+CONE_MIN_CONFIDENCE: 10
 
 #
 # Pct of calibrated (from pixhawk) left or right servo

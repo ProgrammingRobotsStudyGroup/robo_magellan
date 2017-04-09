@@ -243,13 +243,14 @@ class ConeSeeker:
     conf_decay_rate = 0.8
     nItems = 16
 
-    def __init__(self, min_throttle=0.3):
+    def __init__(self, min_throttle=0.3, min_conf=0.1):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
         # Turn right
         self.st_delta = 1.0
         self.min_throttle = min_throttle
+        self.min_confidence = min_conf
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
@@ -365,10 +366,14 @@ class ConeSeeker:
 
         # A cone from previous frames might have better confidence
         if len(self.prev_pos_confs):
-            self.seek_started = True
             (cone_loc, confidence, area) = self.prev_pos_confs[0]
-            (sd, td) = self._get_drive_deltas(cone_loc)
-            return (cone_loc, confidence, sd, td)
+            self.seek_started = True
+            #If confidence falls below threshold, we need to start searching for cone again
+            if confidence < self.min_confidence:
+                self.seek_started = False
+            if self.seek_started:
+                (sd, td) = self._get_drive_deltas(cone_loc)
+                return (cone_loc, confidence, sd, td)
 
         #This would only happen if the list is empty
         pose = pose_data()

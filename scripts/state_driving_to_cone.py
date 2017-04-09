@@ -202,7 +202,8 @@ def touched_cb(data):
 def drive_to(loc):
     if args.cs is None:
         args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")/100.0
-        args.cs = ConeSeeker(args.min_throttle)
+        min_conf = rospy.get_param("/CONE_MIN_CONFIDENCE")/100.0
+        args.cs = ConeSeeker(args.min_throttle, min_conf)
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 
