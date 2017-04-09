@@ -49,9 +49,7 @@ this_node = None
 class Args(object):
     """Class to contain program arguments"""
     # Ranges are between 0. to 1.0
-    throttle_range = 1.0
-    steering_range = 1.0
-    min_throttle = 0.3
+    min_throttle = 0.4
     cs = None
 
 
@@ -110,12 +108,13 @@ def state_start():
     throttle_limits = [this_node.uav_control.get_param_int('RC3_MIN'),
                        this_node.uav_control.get_param_int('RC3_TRIM'),
                        this_node.uav_control.get_param_int('RC3_MAX')]
+    msgStr = "throttle_limits %d %d %d" % (throttle_limits[0], throttle_limits[1], throttle_limits[2])
+    rospy.loginfo(msgStr)
     print "steering_limits"
     print steering_limits
     print "throttle_limits"
     print throttle_limits
 
-    rate = rospy.Rate(10) # 2 hz
     global touched
     touched = False
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
@@ -134,6 +133,7 @@ def state_start():
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
     old_timeout_secs = 0
 
+    rate = rospy.Rate(10) # 10 hz
     while not rospy.is_shutdown():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
@@ -211,16 +211,8 @@ def drive_to(loc):
     #Throttle doesn't have -ve range
     throttle_range = throttle_limits[2] - throttle_limits[1]
 
-    steering = steering_limits[1] + args.steering_range*sadj*steering_range
-    throttle = throttle_limits[1] + args.throttle_range*tadj*throttle_range
-
-    #-- test with fixed throttle to start
-    #throttle = 1675
-    #throttle = throttle + tadj
-    #pct_throttle = rospy.get_param("/CONE_PCT_THROTTLE")
-    #if pct_throttle > 1:
-    #    pct_throttle /= 100.0
-    #    throttle = throttle_limits[1] + (throttle_limits[2]-throttle_limits[1])*pct_throttle
+    steering = steering_limits[1] + sadj*steering_range
+    throttle = throttle_limits[1] + tadj*throttle_range
 
     # Everything must be bounded
     if steering > steering_limits[2]:
@@ -232,25 +224,11 @@ def drive_to(loc):
     if throttle < throttle_limits[0]:
         throttle = throttle_limits[0]
 
-    # Bound min throttle
-    fwd_range = throttle_limits[2] - throttle_limits[1]
-    fwd_range_30pct = fwd_range * 0.3
-    if throttle < throttle_limits[1] + fwd_range_30pct:
-        throttle = throttle_limits[1] + fwd_range_30pct
-    rospy.loginfo("Fwd Rg: %s; 30pct: %s; Throttle: %s",
-        str(fwd_range),
-        str(fwd_range_30pct),
-        str(throttle)
-        )
     this_node.uav_control.set_throttle_servo(throttle, steering)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Drive to cone found')
-    parser.add_argument('--throttle_range', '-t', default=1.0, type=float,
-                        help='Throttle range on a scale of 0. (min) to 1.0 (max)')
-    parser.add_argument('--steering_range', '-s', default=1.0, type=float,
-                        help='Steering range on a scale of 0. (min) to 1.0 (max)')
     parser.add_argument('--min_throttle', '-m', default=0.3, type=float,
                         help='Minimum throttle factor to use')
     parser.parse_args(rospy.myargv(sys.argv[1:]), args)
@@ -260,4 +238,3 @@ if __name__ == '__main__':
         this_node.run_state_node()
     except rospy.ROSInterruptException:
         pass
-
