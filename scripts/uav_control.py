@@ -144,18 +144,10 @@ class UAV_Control:
     def set_throttle(self, throttle):
         """Set throttle"""
         rospy.loginfo('mavros/rc/override, throttle')
-        rate = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
-        start = time.time()
-        flag = True    # time flag
         msg.channels[THROTTLE_CHANNEL] = throttle        # Desired PWM value
-        while not rospy.is_shutdown() and flag:
-            sample_time = time.time()
-            if (sample_time - start) > EXEC_TIME:
-                flag = False
-                rospy.loginfo(msg)
-                self.pub_rc_override.publish(msg)
-                rate.sleep()
+        rospy.loginfo(msg)
+        self.pub_rc_override.publish(msg)
 
 
     #
@@ -164,19 +156,10 @@ class UAV_Control:
     def set_servo(self, servo):
         """Set servo"""
         rospy.loginfo('mavros/rc/override, servo')
-        #rate = rospy.Rate(10) #10hz
         msg = OverrideRCIn()
-        start = time.time()
-        flag = True #time flag
         msg.channels[STEER_CHANNEL] = servo        # Desired PWM value
-        while not rospy.is_shutdown() and flag:
-            sample_time = time.time()
-            if (sample_time - start) > EXEC_TIME:
-                flag = False
-                rospy.loginfo(msg)
-                self.pub_rc_override.publish(msg)
-                time.sleep(0.05)
-                #r.sleep()
+        rospy.loginfo(msg)
+        self.pub_rc_override.publish(msg)
 
 
     #
@@ -185,20 +168,12 @@ class UAV_Control:
     #
     def set_throttle_servo(self, throttle, servo):
         """Set throttle AND servo"""
-        #rospy.loginfo('mavros/rc/override, throttle and servo')
-        rate = rospy.Rate(10) #10hz
+        rospy.loginfo('mavros/rc/override, throttle and servo')
         msg = OverrideRCIn()
-        start = time.time()
-        flag = True #time flag
         msg.channels[THROTTLE_CHANNEL] = throttle  # Desired PWM value
         msg.channels[STEER_CHANNEL] = servo        # Desired PWM value
-        while not rospy.is_shutdown() and flag:
-            sample_time = time.time()
-            if (sample_time - start) > EXEC_TIME:
-                flag = False
-                rospy.loginfo(msg)
-                self.pub_rc_override.publish(msg)
-                rate.sleep()
+        rospy.loginfo(msg)
+        self.pub_rc_override.publish(msg)
 
 
     #
