@@ -8,7 +8,8 @@ from threading import Timer
 
 # Needed for publishing the messages
 from robo_magellan.msg import pose_data
- 
+from robo_magellan.msg import drive_params
+
 def is_cv2():
     # if we are using OpenCV 2, then our cv2.__version__ will start
     # with '2.'
@@ -243,7 +244,7 @@ class ConeSeeker:
     conf_decay_rate = 0.8
     nItems = 16
 
-    def __init__(self, min_throttle=0.3, min_conf=0.1):
+    def __init__(self, min_throttle=0.3, min_conf=0.1, debug=False):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
@@ -251,6 +252,10 @@ class ConeSeeker:
         self.st_delta = 1.0
         self.min_throttle = min_throttle
         self.min_confidence = min_conf
+        self.cut_throttle_start_time = 0
+        self._debug = debug
+        if debug:
+            dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
@@ -366,13 +371,35 @@ class ConeSeeker:
 
         # A cone from previous frames might have better confidence
         if len(self.prev_pos_confs):
-            (cone_loc, confidence, area) = self.prev_pos_confs[0]
+            (cone_loc, confidence, frame) = self.prev_pos_confs[0]
             self.seek_started = True
             #If confidence falls below threshold, we need to start searching for cone again
             if confidence < self.min_confidence:
                 self.seek_started = False
             if self.seek_started:
                 (sd, td) = self._get_drive_deltas(cone_loc)
+                # Cut throttle if we get really near
+                if cone_loc.area > 25000:
+                    td = 0
+                else:
+                    if cone_loc.area > 15000 and self.cut_throttle_start_time == 0:
+                        self.cut_throttle_start_time = rospy.Time.now()
+                    # Cut throttle on timeout when we are near
+                    if self.cut_throttle_start_time:
+                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(2):
+                           td = 0
+                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(5):
+                            self.cut_throttle_start_time = 0
+                if self._debug:
+                    dp = drive_params()
+                    dp.confidence = int(confidence*100)
+                    dp.throttle = int(td*100)
+                    dp.steering = int(sd*100)
+                    dp.h = cone_loc.h
+                    dp.d = cone_loc.d
+                    dp.area = cone_loc.area
+                    dp.header.stamp = rospy.Time.now()
+                    self.dpPub.publish(dp)
                 return (cone_loc, confidence, sd, td)
 
         #This would only happen if the list is empty
@@ -380,6 +407,17 @@ class ConeSeeker:
         pose.x = pose.y = pose.z = pose.w = pose.h = pose.d = 0
         pose.area = 0.0
         (sd, td) = self._search_cone()
+        if self._debug:
+            dp = drive_params()
+            dp.confidence = 0
+            dp.throttle = int(td*100)
+            dp.steering = 0 if self.seek_started else int(sd*100)
+            dp.h = 0
+            dp.d = 0
+            dp.area = 0
+            dp.header.stamp = rospy.Time.now()
+            self.dpPub.publish(dp)
+
         if self.seek_started:
             return (pose, 0.0, 0.0, td)
         

@@ -54,6 +54,7 @@ add_message_files(
   FILES
   Num.msg
   pose_data.msg
+  drive_params.msg
   location_msgs.msg
   to_exec.msg
   to_state.msg
