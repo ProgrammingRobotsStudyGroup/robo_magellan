@@ -228,8 +228,8 @@ class ConeFinder:
                 # Height is being measured top of screen to down so we need to invert y
                 pose.y = (image_centerY - (y+h))
                 pose.h = h
-                pose.z = dMin   # But this is the hypotenuse
-                pose.d = dMax - dMin
+                pose.z = int(dMin)   # But this is the hypotenuse
+                pose.d = int(dMax - dMin)
                 pose.area = area
                 poses.append(pose)
 
@@ -255,7 +255,7 @@ class ConeSeeker:
         self.cut_throttle_start_time = 0
         self._debug = debug
         if debug:
-            dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
+            self.dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
@@ -379,14 +379,14 @@ class ConeSeeker:
             if self.seek_started:
                 (sd, td) = self._get_drive_deltas(cone_loc)
                 # Cut throttle if we get really near
-                if cone_loc.area > 25000:
+                if cone_loc.area > 50000:
                     td = 0
                 else:
-                    if cone_loc.area > 15000 and self.cut_throttle_start_time == 0:
+                    if cone_loc.area > 20000 and self.cut_throttle_start_time == 0:
                         self.cut_throttle_start_time = rospy.Time.now()
                     # Cut throttle on timeout when we are near
                     if self.cut_throttle_start_time:
-                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(2):
+                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(3):
                            td = 0
                         if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(5):
                             self.cut_throttle_start_time = 0

@@ -31,7 +31,7 @@ args = Args()
 def drive_to_cone(loc):
     if args.cs is None:
         #args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")
-        args.cs = ConeSeeker(args.min_throttle)
+        args.cs = ConeSeeker(args.min_throttle, debug=True)
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 
