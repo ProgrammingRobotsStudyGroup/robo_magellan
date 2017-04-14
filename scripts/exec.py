@@ -26,6 +26,7 @@ import rospy
 from mavros.utils import *
 from mavros import command
 
+from robo_magellan.msg import to_exec as to_exec
 from std_msgs.msg import String
 
 ## Our Code
@@ -367,6 +368,15 @@ def __state_resp_cb(data):
 
 
 
+def __simple_exec_cb(data):
+    """TODO: simplified exec command"""
+    toexec = to_exec()
+    toexec.state = ""
+    toexec.cmd = data.data
+    toexec.transition = ""
+    __state_resp_cb(toexec)
+
+
 
 #
 # State machine setup
@@ -408,6 +418,9 @@ def executive():
     __ExecComm = exec_comm.ExecComm(
         STATE.Following_waypoint.name,
         exec_msg_cb=__state_resp_cb)
+
+    # Simplify user commands
+    rospy.Subscriber("exec_cmd_simple", String, __simple_exec_cb)
 
     rate = rospy.Rate(2) # 1 hz
     while not rospy.is_shutdown():
