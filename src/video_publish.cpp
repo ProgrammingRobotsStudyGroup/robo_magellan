@@ -16,6 +16,7 @@
 int main(int argc, char **argv) {
   int frameRate;
   std::string videoFile;
+  int startFrame;
   
   ros::init(argc, argv, "video_publish");
   ros::NodeHandle n("~");
@@ -25,6 +26,7 @@ int main(int argc, char **argv) {
     std::cerr << "Video file not set" << std::endl;
     return 1;
   }
+  n.param("start_frame", startFrame, 1);
 
   ros::Publisher imagePub = n.advertise<sensor_msgs::Image>("/color/image_raw", 1000);
 
@@ -41,9 +43,16 @@ int main(int argc, char **argv) {
 
   cv::Mat frame;
 
-  ROS_INFO("Got here");
-
   long frameCount = 0;
+
+  while (frameCount+1 < startFrame) {
+    if (!video.read(frame)) {
+      ROS_INFO("End of video file");
+      break;
+    }
+    ++frameCount;
+  }
+  
   while (ros::ok()) {
     if (!video.read(frame)) {
       ROS_INFO("End of video file");

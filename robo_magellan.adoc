@@ -30,6 +30,10 @@ The video file from which to extract and publish frames.
 `~frame_rate` (`int`, default: 15)::
 The frame rate at which to publish images from the video file.
 
+`~start_frame` (`int`, default: 1)::
+The first frame of the video to publish. If greater than zero, skips to the
+indicated frame before starting to publish.
+
 === `video_odometry` -- Publishes odometry from video
 
 A ROS node that accepts image messages and calculates odometry. Optionally,
@@ -51,6 +55,9 @@ if `~publish_flow` is set.
 Video image in RGB format.
 
 ==== Parameters
+
+`~frame_rate` (`int`, default: 15)::
+Expected video frame rate, in frames per second.
 
 `~horizon_width` (`int`, default: 400)::
 Width of the horizon patch at the top of the image, observed to determine
@@ -101,6 +108,12 @@ Linear scaling factor to converting heading movement in pixels to radians.
 
 `~odom_scaling` (`double`, default: 0.003)::
 Linear scaling factor to convert odometry patch movement in pixels to meters.
+
+`~odom_frame` (`string`, default: `odom`)::
+Frame name the odometry messsages are relative to.
+
+`~child_frame` (`string`, default: `base_link`)::
+Frame name on the robot which is the odometry location.
 
 `~publish_flow` (`boolean`, default: false)::
 If true, publish the marked-up video frames showing optical flow vectors.
