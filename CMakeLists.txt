@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   genmsg
   mavros_msgs
+  cv_bridge
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -145,6 +147,14 @@ add_dependencies(add_two_ints_server robo_magellan_gencpp)
 add_executable(add_two_ints_client src/add_two_ints_client.cpp)
 target_link_libraries(add_two_ints_client ${catkin_LIBRARIES})
 add_dependencies(add_two_ints_client robo_magellan_gencpp)
+
+add_executable(video_publish src/video_publish.cpp)
+target_link_libraries(video_publish ${catkin_LIBRARIES})
+add_dependencies(video_publish robo_magellan_generate_messages_cpp)
+
+add_executable(video_odometry src/video_odometry.cpp)
+target_link_libraries(video_odometry ${catkin_LIBRARIES})
+add_dependencies(video_odometry robo_magellan_generate_messages_cpp)
 
 #############
 ## Install ##
