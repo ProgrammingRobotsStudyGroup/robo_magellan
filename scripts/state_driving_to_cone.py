@@ -142,10 +142,12 @@ def state_start():
         old_timeout_secs = timeout_secs
         if touched:
             touched_cone = True # Signal we touched a cone
+            this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
+            time.sleep(0.1)
             # As soon as we touch cone, reverse for 2s
-            #backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
-            #this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
-            #time.sleep(1.5)
+            backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
+            this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
+            time.sleep(0.5)
             break
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
