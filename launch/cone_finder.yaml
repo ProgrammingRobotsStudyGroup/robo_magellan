@@ -1,0 +1,43 @@
+# Copyright 2017 Robot Garden, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#
+# Settings for cone_finder
+#
+
+#CONE_PCT_THROTTLE: 0
+#Min throttle value during cone seek - actually just the min value
+#that Victoria can drive at. For road - 30, small grass - 40 and 
+#tall grass - 50 or more
+min_throttle: 0.25
+max_throttle: 1.0
+# Minimum confidence for cone seeker to assume we have a cone
+min_confidence: 0.1
+
+# Params for cutting throttle
+# On a 640x480 size image, cone area is ~300 sq pixels @25'
+# ~2500sp @10', ~8'sp @6', ~12500sp @5', ~20000sp @4'
+# ~34000sp @3' and cone starts to cut and area may decrease
+min_area: 300
+threshold_tc_cone_size: 10000    # When this threshold is reached (~4')
+max_tc_cone_size: 35000          # Cut throttle if this is reached (<3')
+# Even after the throttle is cut, rover may continue to roll
+tc_timeout: 1                    # Cut throttle after this timeout
+tc_max: 8                        # Reset conditions after this time
+
+#Settings when searching for cone
+search_period: 8
+search_throttle: 0.6
+

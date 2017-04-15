@@ -29,7 +29,8 @@ class ConeFinder:
     """ ConeFinder class """
     codec = 'XVID'
 
-    def __init__(self, min_area=200):
+    # On a 640x480 size image, cone area is ~300 sq pixels @25ft
+    def __init__(self, min_area=300):
         self.firstTime = True
         self.rgbOut = None
         self.depthOut = None
@@ -238,26 +239,17 @@ class ConeFinder:
 class ConeSeeker:
     """ ConeSeeker class
         It will produce a steering range of -1. to 1. and
-        a throttle value of min_throttle to 1.
+        a throttle value of min_throttle to max_throttle
     """
     # Must be between 0. to 1.
     conf_decay_rate = 0.8
     nItems = 16
-    # When cone hasn't been found, go left or right for loiter_period
-    loiter_period = 10
-    # Params for cutting throttle
-    threshold_tc_cone_size = 20000 # When this threshold is reached
-    tc_timeout = 3                 # Cut throttle after this timeout
-    tc_max = 5                     # Reset conditions after this time
-    max_tc_cone_size = 50000       # Cut throttle if this is reached
-    def __init__(self, min_throttle=0.3, min_conf=0.1, debug=False):
+    def __init__(self, debug=False):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
         # Turn right
         self.st_delta = 1.0
-        self.min_throttle = min_throttle
-        self.min_confidence = min_conf
         self.cut_throttle_start_time = 0
         self._debug = debug
         if debug:
@@ -265,17 +257,16 @@ class ConeSeeker:
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
-        self.st_delta = -self.st_delta
+        #self.st_delta = -self.st_delta
         self.timer = None
 
     def _search_cone(self):
         # start a timer and set a random value for steering_delta
         if self.timer is None:
             # Change st_delta every loiter_period seconds
-            self.timer = Timer(self.loiter_period, self._search_timeout)
+            self.timer = Timer(rospy.get_param('cone_finder/search_period'), self._search_timeout)
             self.timer.start()
-
-        return (self.st_delta, self.min_throttle)
+        return (self.st_delta, rospy.get_param('cone_finder/search_throttle'))
 
     def _update_prev_poses(self):
         new_pos_confs = []
@@ -314,22 +305,20 @@ class ConeSeeker:
         return (conf, matched_poses)
 
     def _get_drive_deltas(self, cone_loc):
-        steering_delta = 0.
-        # Steer if not in front
-        if cone_loc.x < -10 or cone_loc.x > 10:
-            steering_delta = cone_loc.x/320.0
+        # Steer if not in front, needs more throttle when angle is not sharp
+        steering_delta = cone_loc.x/320.0
 
+        #These need to be less than 1
+        min_throttle = rospy.get_param('cone_finder/min_throttle')
+        max_throttle = rospy.get_param('cone_finder/max_throttle')
+        throttle_delta = max_throttle
         # Use real depth when available for throttle
         if cone_loc.z > 0:
             # Real depth is in mm and maximum would probably be less than 5m
-            throttle_delta = cone_loc.z/6000.
+            throttle_delta -= (max_throttle - min_throttle) * cone_loc.z/6000.
         else:
-            throttle_delta = cone_loc.y/480.
+            throttle_delta -= (max_throttle - min_throttle) * cone_loc.y/480.
         
-        if throttle_delta < self.min_throttle:
-            throttle_delta = self.min_throttle
-        if throttle_delta > 1.0:
-            throttle_delta = 1.0
         return (steering_delta, throttle_delta)
 
     def seek_cone(self, poses):
@@ -381,21 +370,25 @@ class ConeSeeker:
             (cone_loc, confidence, frame) = self.prev_pos_confs[0]
             self.seek_started = True
             #If confidence falls below threshold, we need to start searching for cone again
-            if confidence < self.min_confidence:
+            if confidence < rospy.get_param('cone_finder/min_confidence'):
                 self.seek_started = False
             if self.seek_started:
                 (sd, td) = self._get_drive_deltas(cone_loc)
                 # Cut throttle if we get really near
-                if cone_loc.area > self.max_tc_cone_size:
+                min_throttle = rospy.get_param('cone_finder/min_throttle')
+                if cone_loc.area > rospy.get_param('cone_finder/max_tc_cone_size'):
                     td = 0
                 else:
-                    if cone_loc.area > self.threshold_tc_cone_size and self.cut_throttle_start_time == 0:
+                    if cone_loc.area > rospy.get_param('cone_finder/threshold_tc_cone_size') \
+                        and self.cut_throttle_start_time == 0:
                         self.cut_throttle_start_time = rospy.Time.now()
                     # Cut throttle on timeout when we are near
                     if self.cut_throttle_start_time:
-                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(self.tc_timeout):
-                           td = 0
-                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(self.tc_max):
+                        tc_timeout = rospy.get_param('cone_finder/tc_timeout')
+                        tc_max = rospy.get_param('cone_finder/tc_max')
+                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(tc_timeout):
+                           td = min_throttle/2
+                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(tc_max):
                             self.cut_throttle_start_time = 0
                 if self._debug:
                     dp = drive_params()

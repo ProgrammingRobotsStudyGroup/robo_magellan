@@ -48,8 +48,6 @@ this_node = None
 # We will get 480 pixels range for throttle but should limit this
 class Args(object):
     """Class to contain program arguments"""
-    # Ranges are between 0. to 1.0
-    min_throttle = 0.4
     cs = None
 
 
@@ -145,9 +143,9 @@ def state_start():
         if touched:
             touched_cone = True # Signal we touched a cone
             # As soon as we touch cone, reverse for 2s
-            backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
-            this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
-            time.sleep(1.5)
+            #backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
+            #this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
+            #time.sleep(1.5)
             break
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
@@ -205,9 +203,7 @@ def touched_cb(data):
 #
 def drive_to(loc):
     if args.cs is None:
-        args.min_throttle = rospy.get_param("/CONE_MIN_THROTTLE")/100.0
-        min_conf = rospy.get_param("/CONE_MIN_CONFIDENCE")/100.0
-        args.cs = ConeSeeker(args.min_throttle, min_conf)
+        args.cs = ConeSeeker()
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 
@@ -233,10 +229,6 @@ def drive_to(loc):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Drive to cone found')
-    parser.add_argument('--min_throttle', '-m', default=0.3, type=float,
-                        help='Minimum throttle factor to use')
-    parser.parse_args(rospy.myargv(sys.argv[1:]), args)
     try:
         this_node = exec_comm.StateNode(STATE.Driving_toward_cone.name)
         this_node.start = state_start
