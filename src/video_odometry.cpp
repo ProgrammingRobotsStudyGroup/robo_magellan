@@ -50,17 +50,17 @@ ros::Publisher imagePub;
 void makeMasks(const cv::Mat &frame) {
   cv::Scalar ones(255, 255, 255);
 
-  cv::Point2f horizonNW(0, frame.cols/2 - horizonWidth/2);
-  cv::Point2f horizonSE(horizonHeight, frame.cols/2 + horizonWidth/2);
+  cv::Point2f horizonNW(frame.cols/2 - horizonWidth/2, 0);
+  cv::Point2f horizonSE(frame.cols/2 + horizonWidth/2, horizonHeight);
   horizonMask = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-  cv::rectangle(horizonMask, horizonNW, horizonSE, ones);
+  cv::rectangle(horizonMask, horizonNW, horizonSE, ones, CV_FILLED);
 
-  cv::Point2f odomNW(frame.rows - odomMargin - odomHeight,
-		     frame.cols/2 - odomWidth/2);
-  cv::Point2f odomSE(frame.rows - odomMargin,
-		     frame.cols/2 + odomWidth/2);
+  cv::Point2f odomNW(frame.cols/2 - odomWidth/2,
+		     frame.rows - odomMargin - odomHeight);
+  cv::Point2f odomSE(frame.cols/2 + odomWidth/2,
+		     frame.rows - odomMargin);
   odomMask = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-  cv::rectangle(odomMask, odomNW, odomSE, ones);
+  cv::rectangle(odomMask, odomNW, odomSE, ones, CV_FILLED);
 
   horizonWindow = cv::Size(horizonWindowSize, horizonWindowSize);
   odomWindow = cv::Size(odomWindowSize, odomWindowSize);
