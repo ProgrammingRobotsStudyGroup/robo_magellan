@@ -1,0 +1,33 @@
+= `robo_magellan` -- Package information
+:imagesdir: ./doc/images
+:toc: macro
+
+toc::[]
+
+== Overview
+
+This package implements nodes needed for the Robot Garden Victory robot for
+Robo Magellan competitions.
+
+
+== ROS API
+
+=== `video_publish` -- Publish video frames from a video file to a ROS topic
+
+A ROS node that reads a video file and publishes frames on a ROS topic at a
+specified frame rate.
+
+==== Published Topics
+
+`color/image_raw` (link:http://docs.ros.org/api/sensor_msgs/html/msg/Image.html[`sensor_msgs/Image`])::
+Video image in RGB format.
+
+==== Parameters
+
+`~file` (`string`)::
+The video file from which to extract and publish frames.
+
+`~frame_rate` (`int`, default: 15)::
+The frame rate at which to publish images from the video file.
+
+ 
