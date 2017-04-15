@@ -78,11 +78,11 @@ class RosColorDepth:
             cv2.rectangle(imghull, pt1, pt2, (0, 0, 255), 3)
             msg_str = '%.2f' % conf
             cv2.putText(imghull, msg_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (0, 0, 255), 2, cv2.LINE_AA)
+                        1, (0, 0, 255), 2, cv2.LINE_AA)
 
         msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
         cv2.putText(imghull, msg_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5, (255, 0, 0), 2, cv2.LINE_AA)
+                    1, (255, 0, 0), 2, cv2.LINE_AA)
 
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
