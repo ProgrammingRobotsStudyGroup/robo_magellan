@@ -152,6 +152,10 @@ add_executable(video_publish src/video_publish.cpp)
 target_link_libraries(video_publish ${catkin_LIBRARIES})
 add_dependencies(video_publish robo_magellan_generate_messages_cpp)
 
+add_executable(video_odometry src/video_odometry.cpp)
+target_link_libraries(video_odometry ${catkin_LIBRARIES})
+add_dependencies(video_odometry robo_magellan_generate_messages_cpp)
+
 #############
 ## Install ##
 #############
