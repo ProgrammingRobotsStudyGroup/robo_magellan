@@ -91,6 +91,9 @@ double normalizeDeltaAngle(double phi) {
 
 void publishOdometry(double dcx, double dcy, double dvx, double dvy) {
   bool hasVelocity = !isnan(dvx);
+  if (!hasVelocity) {
+    dvx = dvy = 0;
+  }
 
   double newTheta = normalizeAngle(theta + headingScaling*dcx);
   double dTheta = normalizeDeltaAngle(newTheta - theta);
@@ -98,7 +101,7 @@ void publishOdometry(double dcx, double dcy, double dvx, double dvy) {
   double adjDvy = dvy - dcy;
   double dv = lastDv;
   if (hasVelocity) {
-    if (abs(dvx) < 0.01) {
+    if (fabs(dvx) < 0.01) {
       dv = 0;
     } else {
       dv = sqrt(dvx*dvx + adjDvy*adjDvy);
