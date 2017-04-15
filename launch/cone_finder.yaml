@@ -26,9 +26,23 @@ max_throttle: 1.0
 # Minimum confidence for cone seeker to assume we have a cone
 min_confidence: 0.1
 
+# Height values at different distance
+# On a 640x480 size image (realsense), cone height is ~40 pixels @25'
+# ~100p @10', ~120p @9', ~130p @8', ~150p @7', ~170@6'
+# ~210p @5', ~270@4', ~370@3', ~440 @2', 480@18"-10" and cone starts to cut and area may decrease
+height_25ft: 40
+height_15ft: 65
+height_10ft: 100
+height_7ft: 150
+height_5ft: 210
+height_4ft: 270
+height_3ft: 370
+height_2ft: 440
+height_max: 480
+
 # Params for cutting throttle
 # On a 640x480 size image, cone area is ~300 sq pixels @25'
-# ~2500sp @10', ~8'sp @6', ~12500sp @5', ~20000sp @4'
+# ~2500sp @10', ~8000sp @6', ~12500sp @5', ~20000sp @4'
 # ~34000sp @3' and cone starts to cut and area may decrease
 min_area: 300
 threshold_tc_cone_size: 10000    # When this threshold is reached (~4')
