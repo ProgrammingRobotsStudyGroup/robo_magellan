@@ -115,6 +115,14 @@ def state_start():
 
     global touched
     touched = False
+    
+    min_throttle = 0.0
+    if rospy.get_param("/CONE_ON_GRASS"):
+        min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
+    else:
+        min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
+    self.cf_params = rospy.set_param('cone_finder/min_throttle', min_throttle)
+
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
     sub_location = rospy.Subscriber('/cone_finder/locations', Locations, drive_to, queue_size=1)
