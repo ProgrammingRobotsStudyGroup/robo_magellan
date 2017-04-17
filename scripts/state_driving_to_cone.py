@@ -209,8 +209,14 @@ def touched_cb(data):
 #
 #
 def drive_to(loc):
+    global touched
     if args.cs is None:
         args.cs = ConeSeeker()
+        
+    # Once the cone is touched, don't do anything
+    if touched:
+        return
+        
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 
