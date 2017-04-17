@@ -172,7 +172,7 @@ def state_start():
 #    this_node.uav_state.set_arm(False)
 
     # Found last wp?
-    found_last_wp = rospy.get_param("/FOUND_LAST_WP")
+    found_last_wp = rospy.get_param("/LAST_CONE_NO_BACKUP")
     if touched_cone and found_last_wp:
         touched_last_cone = True
 
