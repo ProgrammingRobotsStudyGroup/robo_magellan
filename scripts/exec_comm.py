@@ -140,6 +140,9 @@ class StateNode():
                 rospy.get_caller_id(),
                 data.state,
                 data.cmd)
+            self.uav_state.pub_diagnostic.publish(
+                "STATE: " + data.state + " ENTERED. "
+                "COMMAND: " + data.cmd)
             self.exec_comm.cmd = data.cmd
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:

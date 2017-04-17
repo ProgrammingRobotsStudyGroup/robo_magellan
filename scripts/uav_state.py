@@ -31,6 +31,8 @@ from datetime import datetime
 
 # import ROS libraries
 import rospy
+from std_msgs.msg import String
+
 import mavros
 #from mavros.utils import *
 from mavros import setpoint as SP
@@ -90,6 +92,10 @@ class UAV_State:
         rospy.wait_for_service('/mavros/set_mode')
         self.svc_set_mode = rospy.ServiceProxy(
             '/mavros/set_mode', mavros_msgs.srv.SetMode)
+
+#         # Publishers
+        self.pub_diagnostic = rospy.Publisher(
+            '/vicky/diagnostic', String, queue_size=10)
 
         # Subscribers
         self.local_position_sub = rospy.Subscriber(
