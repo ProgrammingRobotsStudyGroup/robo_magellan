@@ -351,6 +351,8 @@ def __state_resp_cb(data):
         rospy.loginfo("Set command.trigger_control")
 
         __UAV_Control.send_mavros_cmd(True, 203, False, 0, 0, 0, 0, 1, 0, 0)
+        rospy.set_param("/LAST_CONE_NO_BACKUP", False)
+
 #         command.trigger_control(trigger_enable=True,
 #                                       cycle_time=0.0)
 

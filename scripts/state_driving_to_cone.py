@@ -171,6 +171,11 @@ def state_start():
     this_node.uav_state.set_mode(MAVMODE.HOLD.name)
 #    this_node.uav_state.set_arm(False)
 
+    # Found last wp?
+    found_last_wp = rospy.get_param("/FOUND_LAST_WP")
+    if touched_cone and found_last_wp:
+        touched_last_cone = True
+
     # Publish transition
     if passed_last_cone:
         this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_last_cone.name)
@@ -180,10 +185,10 @@ def state_start():
         this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_last_cone.name)
     elif passed_cone:
         this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.passed_cone.name)
-    elif segment_timeout:
-        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.segment_timeout.name)
     elif touched_cone:
         this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.touched_cone.name)
+    elif segment_timeout:
+        this_node.exec_comm.send_message_to_exec(MSG_TO_EXEC.DONE.name, TRANSITION.segment_timeout.name)
 
 
 
