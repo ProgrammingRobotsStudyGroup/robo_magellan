@@ -135,14 +135,13 @@ class StateNode():
 
         # State is returned. If message state is our state, cmd is updated.
         if data.state == self.exec_comm.state:
-            rospy.loginfo(
-                '%s cmd_callback: %s; Cmd: %s',
+            self.uav_state.pubdiag_loginfo(
+                "{} cmd_callback: STATE: {}; CMD: {}".
+                format(
                 rospy.get_caller_id(),
                 data.state,
-                data.cmd)
-            self.uav_state.pub_diagnostic.publish(
-                "STATE: " + data.state + " ENTERED. "
-                "COMMAND: " + data.cmd)
+                data.cmd))
+
             self.exec_comm.cmd = data.cmd
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
@@ -153,7 +152,7 @@ class StateNode():
                 self.pause()
             else:
                 rospy.logwarn(
-                    'Invalid cmd: %s', data.data)
+                    'Invalid cmd: {}'.format(self.exec_comm.cmd))
 
 
     #
@@ -205,4 +204,11 @@ class StateNode():
         rate = rospy.Rate(10) # 10 hz
         while not rospy.is_shutdown():
             rate.sleep()
+
+    def pub_timeout_diag(self, timeout_secs):
+        """ Publishes timeout diagnotistic"""
+        if timeout_secs % 2 == 0:
+            self.uav_state.pub_diagnostic.publish(
+                "In {} state node. Timeout in: {}".
+                format(self.state_name, timeout_secs))
 

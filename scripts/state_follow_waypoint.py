@@ -195,6 +195,7 @@ def state_start():
                 'In %s state node. Timeout in: %d',
                 this_node.state_name,
                 timeout_secs)
+            this_node.pub_timeout_diag(timeout_secs)
         old_timeout_secs = timeout_secs
         #iscurrent()
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
@@ -243,6 +244,13 @@ def simulate_reached_cb(topic):
     ml.len = 2
     ml.msgid = 46
     ml.payload64 = mavlink.convert_to_payload64([topic.data])
+    this_node.uav_state.pubdiag_loginfo(
+        "SIMULATED WP {} MsgId {} detected. WP item # {}".
+        format(
+            rospy.get_caller_id(),
+            ml.msgid,
+            ml.payload64[0] & 0xFFFF
+            ))
     mission_item_reached_cb(ml)
     pass
 

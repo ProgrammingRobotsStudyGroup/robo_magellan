@@ -172,11 +172,13 @@ class UAV_State:
             if data.msgid == 46:
                 self.wp_reached = data.payload64[0] & 0xFFFF
                 self.wp_reached_when = unix_time
-                rospy.loginfo(
-                    '%s msgid %s detected. WP item # %s',
-                    rospy.get_caller_id(),
-                    data.msgid,
-                    str(self.wp_reached))
+                self.pubdiag_loginfo(
+                    "{} MsgId {} detected. WP item # {}".
+                    format(
+                        rospy.get_caller_id(),
+                        data.msgid,
+                        str(self.wp_reached)
+                        ))
                 break
             else:
                 break
@@ -273,3 +275,8 @@ class UAV_State:
     def get_voltage(self):
         """Get battery voltage"""
         return self.voltage
+
+    def pubdiag_loginfo(self, astr):
+        """ Publish to /vicky/diagnostic/ and log to info"""
+        self.pub_diagnostic.publish(astr)
+        rospy.loginfo(astr)

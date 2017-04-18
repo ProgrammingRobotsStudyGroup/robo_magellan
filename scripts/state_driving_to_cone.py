@@ -139,6 +139,7 @@ def state_start():
                 'In %s state node. Timeout in: %d',
                 this_node.state_name,
                 timeout_secs)
+            this_node.pub_timeout_diag(timeout_secs)
         old_timeout_secs = timeout_secs
         if touched:
             touched_cone = True # Signal we touched a cone
@@ -198,7 +199,7 @@ def state_start():
 def touched_cb(data):
     """Touch listener"""
     global touched
-    rospy.loginfo("touched_cb: "+str(data.data))
+    this_node.uav_state.pubdiag_loginfo("Cone touched touched_cb: "+str(data.data))
     if data.data == True:
         touched = True
 
@@ -209,6 +210,7 @@ def touched_cb(data):
 #
 #
 def drive_to(loc):
+    """Driving to cone logic"""
     if args.cs is None:
         args.cs = ConeSeeker()
     # sadj = [-1. to 1.], tadj = [0 to 1.]
