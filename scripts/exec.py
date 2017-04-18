@@ -151,7 +151,7 @@ def following_waypoint_transitions(txt):
     elif  __ExecComm.transition == TRANSITION.exit_out.name:
         new_state = STATE.Success.name
     else:
-        rospy.logwarn('Unknown transition:'+__ExecComm.transition)
+        __UAV_State.pubdiag_loginfo("Unknown transition:"+str(__ExecComm.transition))
         new_state = STATE.Failure.name
         rospy.logwarn('Default to:'+new_state)
     return (mod_state(new_state), txt)
@@ -320,7 +320,7 @@ def __state_resp_cb(data):
     global state_complete
     rospy.loginfo("data.cmd: %s", data.cmd)
     __UAV_State.pubdiag_loginfo(
-        "Msg to EXEC from STATE: {} CMD: {} TRANSITION: {}"
+        "Msg to EXEC from STATE: {} CMD: {} TRANSITION: {}".
         format(data.state, data.cmd, data.transition))
 
     if data.cmd == MSG_TO_EXEC.DONE.name:

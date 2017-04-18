@@ -142,6 +142,7 @@ class StateNode():
                 data.state,
                 data.cmd))
 
+            self.exec_comm.cmd = data.cmd
             # Handle start, reset, pause, etc.
             if self.exec_comm.cmd == MSG_TO_STATE.START.name:
                 self.start()
@@ -151,7 +152,7 @@ class StateNode():
                 self.pause()
             else:
                 rospy.logwarn(
-                    'Invalid cmd: %s', data.data)
+                    'Invalid cmd: {}'.format(self.exec_comm.cmd))
 
 
     #
