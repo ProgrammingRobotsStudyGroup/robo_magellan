@@ -117,6 +117,19 @@ class UAV_Control:
         self.lock.acquire()
         try:
             self.current_waypoint = topic.data
+            wp = self.waypoint_list[self.current_waypoint]
+            cone_alt = wp.z_alt
+            (q, r) = divmod(cone_alt, 2)
+            if r == 1:
+                rospy.set_param("/CONE_ON_GRASS", True)
+                rospy.loginfo('Cone is on grass')
+            else:
+                rospy.set_param("/CONE_ON_GRASS", False)
+                rospy.loginfo('Cone is not on grass')
+        except:
+            rospy.loginfo("Failed to get current waypoint details")
+            # Make a safe bet
+            rospy.set_param("/CONE_ON_GRASS", True)
         finally:
             self.lock.release()
 
