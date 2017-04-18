@@ -57,3 +57,5 @@ NEXT_ITEM: 0
 # Set to 0 for straight
 AWAY_PCT_SERVO: 90
 AWAY_PCT_THROTTLE: 60
+
+CONE_ON_GRASS: True
