@@ -252,6 +252,9 @@ class ConeSeeker:
         self.st_delta = 1.0
         self.cut_throttle_start_time = 0
         self._debug = debug
+        self.last_distance = 0
+        self.last_distance_timeout = rospy.Time.now()
+        self.cf_params = rospy.get_param('cone_finder')
         if debug:
             self.dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
 
@@ -264,9 +267,9 @@ class ConeSeeker:
         # start a timer and set a random value for steering_delta
         if self.timer is None:
             # Change st_delta every loiter_period seconds
-            self.timer = Timer(rospy.get_param('cone_finder/search_period'), self._search_timeout)
+            self.timer = Timer(self.cf_params['search_period'], self._search_timeout)
             self.timer.start()
-        return (self.st_delta, rospy.get_param('cone_finder/search_throttle'))
+        return (self.st_delta, self.cf_params['search_throttle'])
 
     def _update_prev_poses(self):
         new_pos_confs = []
@@ -304,24 +307,60 @@ class ConeSeeker:
 
         return (conf, matched_poses)
 
+    def _get_distance_to_cone(self, cone_loc):
+        # At nearly <10" cone detection stops. Closest we can get is 7"
+        # so we should be able to cover 3"
+        if cone_loc.h > self.cf_params['height_2ft']:
+            distance = 0.8 + 1.2*(self.cf_params['height_max'] - cone_loc.h)/(self.cf_params['height_max'] - self.cf_params['height_2ft'])
+        elif cone_loc.h > self.cf_params['height_3ft']:
+            distance = 2.0 + (self.cf_params['height_2ft'] - cone_loc.h)/(self.cf_params['height_2ft'] - self.cf_params['height_3ft'])
+        elif cone_loc.h > self.cf_params['height_4ft']:
+            distance = 3.0 + (self.cf_params['height_3ft'] - cone_loc.h)/(self.cf_params['height_3ft'] - self.cf_params['height_4ft'])
+        elif cone_loc.h > self.cf_params['height_5ft']:
+            distance = 4.0 + (self.cf_params['height_4ft'] - cone_loc.h)/(self.cf_params['height_4ft'] - self.cf_params['height_5ft'])
+        elif cone_loc.h > self.cf_params['height_7ft']:
+            distance = 5.0 + 2.0 * (self.cf_params['height_5ft'] - cone_loc.h)/(self.cf_params['height_5ft'] - self.cf_params['height_7ft'])
+        elif cone_loc.h > self.cf_params['height_10ft']:
+            distance = 7.0 + 3.0 * (self.cf_params['height_7ft'] - cone_loc.h)/(self.cf_params['height_7ft'] - self.cf_params['height_10ft'])
+        elif cone_loc.h > self.cf_params['height_15ft']:
+            distance = 10.0 + 5.0 * (self.cf_params['height_10ft'] - cone_loc.h)/(self.cf_params['height_10ft'] - self.cf_params['height_15ft'])
+        elif cone_loc.h > self.cf_params['height_25ft']:
+            distance = 15.0 + 10.0 * (self.cf_params['height_15ft'] - cone_loc.h)/(self.cf_params['height_15ft'] - self.cf_params['height_25ft'])
+        else:
+            distance = 25.0 # Beyond this, we may not get here
+
+        if cone_loc.h == 0:
+            # If we missed the distance just recently, we use last distance
+            if rospy.Time.now() < self.last_distance_timeout + rospy.Duration(self.cf_params['tc_timeout']):
+                distance = self.last_distance
+        else:
+            self.last_distance = distance
+            self.last_distance_timeout = rospy.Time.now()
+
+        return distance
+
     def _get_drive_deltas(self, cone_loc):
         # Steer if not in front, needs more throttle when angle is not sharp
         steering_delta = cone_loc.x/320.0
 
-        #These need to be less than 1
-        min_throttle = rospy.get_param('cone_finder/min_throttle')
-        max_throttle = rospy.get_param('cone_finder/max_throttle')
-        throttle_delta = max_throttle
-        # Use real depth when available for throttle
-        if cone_loc.z > 0:
-            # Real depth is in mm and maximum would probably be less than 5m
-            throttle_delta -= (max_throttle - min_throttle) * cone_loc.z/6000.
+        distance = self._get_distance_to_cone(cone_loc)
+        min_throttle = self.cf_params['min_throttle']
+        max_throttle = self.cf_params['max_throttle']
+        throttle_delta = min_throttle
+        if distance > 15:
+            throttle_delta = max_throttle
+        elif distance > 10:
+            throttle_delta = max_throttle - (max_throttle - min_throttle)*(15 - distance)/10.0
+        elif distance > 6:
+            throttle_delta = (max_throttle + min_throttle)/2 - (max_throttle - min_throttle)*(10 - distance)/8.0
+        elif distance > 0.7: # Between 2 - 6 ft
+            throttle_delta = min_throttle
         else:
-            throttle_delta -= (max_throttle - min_throttle) * cone_loc.y/480.
+            throttle_delta = 0
         
         return (steering_delta, throttle_delta)
 
-    def seek_cone(self, poses):
+    def _seek_cone(self, poses):
         """ Return steering and throttle adjustments on a 0 to 1 range to drive
             to where the cone with most confidence is
         """
@@ -370,57 +409,37 @@ class ConeSeeker:
             (cone_loc, confidence, frame) = self.prev_pos_confs[0]
             self.seek_started = True
             #If confidence falls below threshold, we need to start searching for cone again
-            if confidence < rospy.get_param('cone_finder/min_confidence'):
+            if confidence < self.cf_params['min_confidence']:
                 self.seek_started = False
             if self.seek_started:
                 (sd, td) = self._get_drive_deltas(cone_loc)
-                # Cut throttle if we get really near
-                min_throttle = rospy.get_param('cone_finder/min_throttle')
-                if cone_loc.area > rospy.get_param('cone_finder/max_tc_cone_size'):
-                    td = 0
-                else:
-                    if cone_loc.area > rospy.get_param('cone_finder/threshold_tc_cone_size') \
-                        and self.cut_throttle_start_time == 0:
-                        self.cut_throttle_start_time = rospy.Time.now()
-                    # Cut throttle on timeout when we are near
-                    if self.cut_throttle_start_time:
-                        tc_timeout = rospy.get_param('cone_finder/tc_timeout')
-                        tc_max = rospy.get_param('cone_finder/tc_max')
-                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(tc_timeout):
-                           td = min_throttle/2
-                        if rospy.Time.now() > self.cut_throttle_start_time + rospy.Duration(tc_max):
-                            self.cut_throttle_start_time = 0
-                if self._debug:
-                    dp = drive_params()
-                    dp.confidence = int(confidence*100)
-                    dp.throttle = int(td*100)
-                    dp.steering = int(sd*100)
-                    dp.h = cone_loc.h
-                    dp.d = cone_loc.d
-                    dp.area = cone_loc.area
-                    dp.header.stamp = rospy.Time.now()
-                    self.dpPub.publish(dp)
+                self.last_sd = sd
                 return (cone_loc, confidence, sd, td)
 
         #This would only happen if the list is empty
         pose = pose_data()
         pose.x = pose.y = pose.z = pose.w = pose.h = pose.d = 0
         pose.area = 0.0
-        (sd, td) = self._search_cone()
-        if self._debug:
-            dp = drive_params()
-            dp.confidence = confidence
-            dp.throttle = int(td*100)
-            dp.steering = 0 if self.seek_started else int(sd*100)
-            dp.h = 0
-            dp.d = 0
-            dp.area = 0
-            dp.header.stamp = rospy.Time.now()
-            self.dpPub.publish(dp)
 
         # Saw a cone but confidence is low but not 0
         if self.seek_started and confidence > 0.:
-            return (pose, 0.0, 0.0, td)
+            return (pose, 0.0, self.last_sd, self.last_td)
         
+        (sd, td) = self._search_cone()
         return (pose, 0.0, sd, td)
 
+    def seek_cone(self, poses):
+        (pose, conf, sd, td) = self._seek_cone(poses)
+        if self._debug:
+            dp = drive_params()
+            dp.confidence = conf
+            dp.throttle = td
+            dp.steering = sd
+            dp.h = pose.h
+            #dp.d = pose.d
+            dp.d = self._get_distance_to_cone(pose)
+            dp.area = pose.area
+            dp.header.stamp = rospy.Time.now()
+            self.dpPub.publish(dp)
+
+        return (pose, conf, sd, td)

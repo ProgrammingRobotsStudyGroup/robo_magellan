@@ -96,6 +96,7 @@ def state_start():
     segment_timeout = False
     last_cone = False
     last_cone_no_bkup = False
+    exit_out = False
 
     # TODO Setting mode to HOLD is precautionary.
     # Set UAV mode to hold while we get this state started
@@ -159,11 +160,21 @@ def state_start():
 
             if the_last+1==len(this_node.uav_control.waypoint_list):
                 # Reached last WP
-                # TODO: Deal with 2000 stuff
+                rospy.loginfo("Reached last WP")
+                # alt>=2000
                 if waypoint_list[the_last].z_alt >= 2000:
-                    last_cone_no_bkup = True
-                else:
+                    rospy.loginfo("rosparam last_cone_no_bkup set = True")
+                    rospy.set_param("/LAST_CONE_NO_BACKUP", True)
                     near_cone = True
+                    rospy.loginfo("near_cone set = True")
+                # 2000>alt>=1000
+                # Follow wp->[near cone]->Driving to cone>[touched]->Driving away from cone->[done]->Success
+                if waypoint_list[the_last].z_alt >= 1000:
+                    near_cone = True
+                # alt<1000
+                else:
+                    exit_out = True
+                    rospy.loginfo("exit_out = True")
                 break
             if the_last>=len(this_node.uav_control.waypoint_list):
                 # WP # too big
@@ -212,6 +223,10 @@ def state_start():
         this_node.exec_comm.send_message_to_exec(
             MSG_TO_EXEC.DONE.name,
             TRANSITION.near_cone.name)
+    elif exit_out:
+        this_node.exec_comm.send_message_to_exec(
+            MSG_TO_EXEC.DONE.name,
+            TRANSITION.exit_out.name)
     elif segment_timeout:
         this_node.exec_comm.send_message_to_exec(
             MSG_TO_EXEC.DONE.name,

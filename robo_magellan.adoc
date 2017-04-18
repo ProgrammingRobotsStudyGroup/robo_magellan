@@ -1,0 +1,119 @@
+= `robo_magellan` -- Package information
+:imagesdir: ./doc/images
+:toc: macro
+
+toc::[]
+
+== Overview
+
+This package implements nodes needed for the Robot Garden Victory robot for
+Robo Magellan competitions.
+
+
+== ROS API
+
+=== `video_publish` -- Publish video frames from a video file to a ROS topic
+
+A ROS node that reads a video file and publishes frames on a ROS topic at a
+specified frame rate.
+
+==== Published Topics
+
+`color/image_raw` (link:http://docs.ros.org/api/sensor_msgs/html/msg/Image.html[`sensor_msgs/Image`])::
+Video image in RGB format.
+
+==== Parameters
+
+`~file` (`string`)::
+The video file from which to extract and publish frames.
+
+`~frame_rate` (`int`, default: 15)::
+The frame rate at which to publish images from the video file.
+
+`~start_frame` (`int`, default: 1)::
+The first frame of the video to publish. If greater than zero, skips to the
+indicated frame before starting to publish.
+
+=== `video_odometry` -- Publishes odometry from video
+
+A ROS node that accepts image messages and calculates odometry. Optionally,
+it publishes marked-up image frames with the calculated optical flow
+vectors.
+
+==== Published Topics
+
+`odom` (link:http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html[`nav_msgs/Odometry`])::
+Publishes the inferred odometry.
+
+`color/image_flow` (link:http://docs.ros.org/api/sensor_msgs/html/msg/Image.html[`sensor_msgs/Image`])::
+The marked-up video images with vectors showing optical flow. Only published
+if `~publish_flow` is set.
+
+==== Subscribed Topics
+
+`color/image_raw` (link:http://docs.ros.org/api/sensor_msgs/html/msg/Image.html[`sensor_msgs/Image`])::
+Video image in RGB format.
+
+==== Parameters
+
+`~frame_rate` (`int`, default: 15)::
+Expected video frame rate, in frames per second.
+
+`~horizon_width` (`int`, default: 400)::
+Width of the horizon patch at the top of the image, observed to determine
+heading.
+
+`~horizon_height` (`int`, default: 150)::
+Height of the horizon patch at the top of the image, observed to determine
+heading.
+
+`~odom_width` (`int`, default: 300)::
+Width in pixels of the odometry patch at the bottom of the image,
+observed to determine velocity.
+
+`~odom_height` (`int`, default: 150)::
+Height in pixels of the odometry patch at the bottom of the image,
+observed to determine velocity.
+
+`~odom_margin` (`int`, default: 50)::
+Margin in pixels between the odometry patch and the bottom of the video
+image.
+
+`~horizon_features` (`int`, default: 500)::
+Maximum number of horizon features to find.
+
+`~horizon_quality` (`double`, default: 0.01)::
+Feature quality level for finding horizon features.
+
+`~horizon_min_distance` (`int`, default: 1)::
+Minimum distance between features in the horizon patch.
+
+`~horizon_window_size` (`int`, default: 21)::
+Size of the optical flow search window for horizon features.
+
+`~odom_features` (`int`, default: 500)::
+Maximum number of odometry patch features to find.
+
+`~odom_quality` (`double`, default: 0.01)::
+Feature quality level for finding odometry features.
+
+`~odom_min_distance` (`int`, default: 1)::
+Minimum distance between features in the odometry patch.
+
+`~odom_window_size` (`int`, default: 21)::
+Size of the optical flow search window for odometry features.
+
+`~heading_scaling` (`double`, default: 0.002)::
+Linear scaling factor to converting heading movement in pixels to radians.
+
+`~odom_scaling` (`double`, default: 0.003)::
+Linear scaling factor to convert odometry patch movement in pixels to meters.
+
+`~odom_frame` (`string`, default: `odom`)::
+Frame name the odometry messsages are relative to.
+
+`~child_frame` (`string`, default: `base_link`)::
+Frame name on the robot which is the odometry location.
+
+`~publish_flow` (`boolean`, default: false)::
+If true, publish the marked-up video frames showing optical flow vectors.
