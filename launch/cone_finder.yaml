@@ -35,7 +35,9 @@ max_throttle_on_road: 0.6
 # Range2 [2]-[1] => use throttle between min and (max+min)/2
 # Range1 [1]-[0] => use min throttle
 # Range0    <[0] => cut the throttle
-throttle_distances: [0.7, 8, 15, 20]
+throttle_distances_on_grass: [0.7, 6, 12, 20]
+throttle_distances_on_road: [1, 8, 16, 25]
+#throttle_distances will be set as parameter in code from one of these
 
 # Minimum confidence for cone seeker to assume we have a cone
 min_confidence: 0.1

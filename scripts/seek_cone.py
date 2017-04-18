@@ -29,7 +29,7 @@ args = Args()
 
 def drive_to_cone(loc):
     if args.cs is None:
-        args.cs = ConeSeeker(debug=True)
+        args.cs = ConeSeeker(onGrass=False, debug=True)
     # sadj = [-1. to 1.], tadj = [0 to 1.]
     (cl, conf, sadj, tadj) = args.cs.seek_cone(loc.poses)
 

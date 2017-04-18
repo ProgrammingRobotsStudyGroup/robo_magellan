@@ -244,7 +244,7 @@ class ConeSeeker:
     # Must be between 0. to 1.
     conf_decay_rate = 0.8
     nItems = 16
-    def __init__(self, debug=False):
+    def __init__(self, onGrass=True, debug=False):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
@@ -254,9 +254,26 @@ class ConeSeeker:
         self._debug = debug
         self.last_distance = 0
         self.last_distance_timeout = rospy.Time.now()
+        self._set_drive_conditions(onGrass)
         self.cf_params = rospy.get_param('cone_finder')
         if debug:
             self.dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
+
+    def _set_drive_conditions(self, onGrass):
+        if onGrass:
+            min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
+            max_throttle = rospy.get_param('cone_finder/max_throttle_on_grass')
+            search_throttle = rospy.get_param('cone_finder/search_throttle_on_grass')
+            throttle_distances = rospy.get_param('cone_finder/throttle_distances_on_grass')
+        else:
+            min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
+            max_throttle = rospy.get_param('cone_finder/max_throttle_on_road')
+            search_throttle = rospy.get_param('cone_finder/search_throttle_on_road')
+            throttle_distances = rospy.get_param('cone_finder/throttle_distances_on_road')
+        rospy.set_param('cone_finder/min_throttle', min_throttle)
+        rospy.set_param('cone_finder/max_throttle', max_throttle)
+        rospy.set_param('cone_finder/search_throttle', search_throttle)
+        rospy.set_param('cone_finder/throttle_distances', throttle_distances)
 
     def _search_timeout(self):
         # Reverse steering values at each timeout

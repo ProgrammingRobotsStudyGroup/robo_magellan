@@ -112,23 +112,6 @@ def state_start():
     global touched
     touched = False
     
-    min_throttle = 0.0
-    max_throttle = 1.0
-    search_throttle = 0.5
-    if rospy.get_param("/CONE_ON_GRASS"):
-        this_node.uav_state.pubdiag_loginfo("Cone is on grass")
-        min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
-        max_throttle = rospy.get_param('cone_finder/max_throttle_on_grass')
-        search_throttle = rospy.get_param('cone_finder/search_throttle_on_grass')
-    else:
-        this_node.uav_state.pubdiag_loginfo("Cone is on pavement")
-        min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
-        max_throttle = rospy.get_param('cone_finder/max_throttle_on_road')
-        search_throttle = rospy.get_param('cone_finder/search_throttle_on_road')
-    rospy.set_param('cone_finder/min_throttle', min_throttle)
-    rospy.set_param('cone_finder/max_throttle', max_throttle)
-    rospy.set_param('cone_finder/search_throttle', search_throttle)
-
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
     sub_location = rospy.Subscriber('/cone_finder/locations', Locations, drive_to, queue_size=1)
@@ -229,7 +212,8 @@ def drive_to(loc):
     """Driving to cone logic"""
     global touched
     if args.cs is None:
-        args.cs = ConeSeeker()
+        onGrass = rospy.get_param("/CONE_ON_GRASS")
+        args.cs = ConeSeeker(onGrass=onGrass)
         
     # Once the cone is touched, don't do anything
     if touched:
