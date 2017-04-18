@@ -285,20 +285,9 @@ def driving_away_from_cone_transitions(txt):
 def success_transitions(txt):
     """Success State node & transitions"""
     state_name = STATE.Success.name
-    rospy.loginfo('Entered state: ' + state_name)
-
-    global state_complete
-    state_complete = False
-
-    # Set UAV to hold
-    #__UAV_State.set_mode(MAVMODE.HOLD.name)
-    # Disarm
-    #__UAV_State.set_arm(False)
-
+    __UAV_State.pubdiag_loginfo("Entered state: " + state_name)
     new_state = STATE.End.name
     return (new_state, txt)
-
-
 
 
 #
@@ -309,17 +298,16 @@ def success_transitions(txt):
 def failure_transitions(txt):
     """Failure State node & transitions"""
     state_name = STATE.Failure.name
-    rospy.loginfo('Entered state: ' + state_name)
-
-    global state_complete
-    state_complete = False
-
-    # Set UAV to hold
-    #__UAV_State.set_mode(MAVMODE.HOLD.name)
-    # Disarm
-    #__UAV_State.set_arm(False)
-
+    __UAV_State.pubdiag_loginfo("Entered state: " + state_name)
     new_state = STATE.End.name
+    return (new_state, txt)
+
+
+def end(txt):
+    """End State, no transitions"""
+    state_name = STATE.End.name
+    __UAV_State.pubdiag_loginfo("Entered state: " + state_name)
+    new_state = None
     return (new_state, txt)
 
 
@@ -331,7 +319,10 @@ def __state_resp_cb(data):
     #rospy.loginfo('__state_resp_cb: '+str(data))
     global state_complete
     rospy.loginfo("data.cmd: %s", data.cmd)
-    #rospy.loginfo('__ExecComm.cmd: '+__ExecComm.cmd)
+    __UAV_State.pubdiag_loginfo(
+        "Msg to EXEC from STATE: {} CMD: {} TRANSITION: {}"
+        format(data.state, data.cmd, data.transition))
+
     if data.cmd == MSG_TO_EXEC.DONE.name:
         __ExecComm.cmd = data.cmd
         __ExecComm.transition = data.transition
@@ -347,6 +338,7 @@ def __state_resp_cb(data):
         # Set state to start with
         start_state = rospy.get_param("/START_STATE")
         machine.set_start(start_state)
+        rospy.set_param("/NEXT_ITEM", rospy.get_param("/START_ITEM"))
         rospy.set_param("/LAST_ITEM", rospy.get_param("/NEXT_ITEM")-1)
         rospy.loginfo("Set command.trigger_control")
 
@@ -399,7 +391,9 @@ def executive():
                       driving_away_from_cone_transitions)
     machine.add_state(STATE.Success.name, success_transitions)
     machine.add_state(STATE.Failure.name, failure_transitions)
-    machine.add_state(STATE.End.name, None, end_state=1)
+#     machine.add_state(STATE.End.name, None, end_state=1)
+    # TODO: handler 'end()' not called though set
+    machine.add_state(STATE.End.name, end, end_state=1)
     #
     machine.set_start(STATE.Start.name)
 

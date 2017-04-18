@@ -43,7 +43,7 @@ START_STATE: Start
 #
 # Item to start with when we follow Pixhawk WP list
 #
-NEXT_ITEM: 0
+START_ITEM: 0
 
 #
 # Pct of calibrated (from pixhawk) forward throttle
