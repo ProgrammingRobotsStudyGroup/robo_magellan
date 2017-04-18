@@ -108,22 +108,26 @@ def state_start():
                        this_node.uav_control.get_param_int('RC3_MAX')]
     msgStr = "throttle_limits %d %d %d" % (throttle_limits[0], throttle_limits[1], throttle_limits[2])
     rospy.loginfo(msgStr)
-    print "steering_limits"
-    print steering_limits
-    print "throttle_limits"
-    print throttle_limits
 
     global touched
     touched = False
     
     min_throttle = 0.0
+    max_throttle = 1.0
+    search_throttle = 0.5
     if rospy.get_param("/CONE_ON_GRASS"):
+        this_node.uav_state.pubdiag_loginfo("Cone is on grass")
         min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
-        #this_node.uav_state.pubdiag_loginfo("Cone is on grass")
+        max_throttle = rospy.get_param('cone_finder/max_throttle_on_grass')
+        search_throttle = rospy.get_param('cone_finder/search_throttle_on_grass')
     else:
+        this_node.uav_state.pubdiag_loginfo("Cone is on pavement")
         min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
-        #this_node.uav_state.pubdiag_loginfo("Cone is on asphalt")
+        max_throttle = rospy.get_param('cone_finder/max_throttle_on_road')
+        search_throttle = rospy.get_param('cone_finder/search_throttle_on_road')
     rospy.set_param('cone_finder/min_throttle', min_throttle)
+    rospy.set_param('cone_finder/max_throttle', max_throttle)
+    rospy.set_param('cone_finder/search_throttle', search_throttle)
 
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
@@ -153,13 +157,14 @@ def state_start():
         old_timeout_secs = timeout_secs
         if touched:
             touched_cone = True # Signal we touched a cone
-            #this_node.uav_state.pubdiag_loginfo("Cone touched")
+            this_node.uav_state.pubdiag_loginfo("Cone touched")
             this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
             time.sleep(0.1)
             # As soon as we touch cone, reverse for 2s
             backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
             this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
-            time.sleep(0.5)
+            time.sleep(0.7)
+            this_node.uav_state.pubdiag_loginfo("Cone touch breaking complete")
             break
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
