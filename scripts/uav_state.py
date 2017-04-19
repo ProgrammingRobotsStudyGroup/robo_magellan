@@ -82,6 +82,7 @@ class UAV_State:
         self.current = 0
         self.wp_reached = None
         self.wp_reached_when = None
+        self.param_count = 0
         mavros.set_namespace("/mavros")
 
         # Service Proxies
@@ -166,7 +167,10 @@ class UAV_State:
                     data.msgid)
                 ## Call callbacks
                 break
-    
+
+            if data.msgid == 22:
+                self.param_count += 1
+                break
             # Mission item reached #46
             # # See github.com/mavlink/c_library_v1/common/mavlink_msg_mission_item_reached.h
             if data.msgid == 46:

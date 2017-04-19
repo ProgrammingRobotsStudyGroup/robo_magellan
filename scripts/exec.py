@@ -418,8 +418,15 @@ def executive():
     # Simplify user commands
     rospy.Subscriber("exec_cmd_simple", String, __simple_exec_cb)
 
-    rate = rospy.Rate(2) # 1 hz
+    rate = rospy.Rate(1) # 1 hz
+    ## Track messages
+    last_count = 0
+    __UAV_State.pubdiag_loginfo("Exec is starting")
     while not rospy.is_shutdown():
+        ## Track messages
+        if abs(__UAV_State.param_count - last_count)>2:
+            __UAV_State.pubdiag_loginfo("New parameters received")
+        last_count = __UAV_State.param_count
         rate.sleep()
 
 if __name__ == '__main__':
