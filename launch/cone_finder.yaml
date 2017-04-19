@@ -21,8 +21,9 @@
 #Min throttle value during cone seek - actually just the min value
 #that Victoria can drive at. For road - 30, small grass - 40 and 
 #tall grass - 50 or more
-min_throttle: 0.4
-max_throttle: 0.9
+min_throttle_on_grass: 0.4
+min_throttle_on_road: 0.2
+max_throttle: 0.6
 # Minimum confidence for cone seeker to assume we have a cone
 min_confidence: 0.1
 
