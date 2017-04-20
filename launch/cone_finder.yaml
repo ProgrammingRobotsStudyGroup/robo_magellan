@@ -17,13 +17,30 @@
 # Settings for cone_finder
 #
 
-#CONE_PCT_THROTTLE: 0
 #Min throttle value during cone seek - actually just the min value
 #that Victoria can drive at. For road - 30, small grass - 40 and 
 #tall grass - 50 or more
-min_throttle_on_grass: 0.4
-min_throttle_on_road: 0.2
-max_throttle: 0.6
+#min_throttle_on_grass: 0.4
+min_throttle_on_grass: 0.55
+min_throttle_on_road: 0.15
+#min_throttle will be set as parameter in code from one of these
+
+#Max throttle needs to be higher on grass than on road
+#max_throttle_on_grass: 0.8
+max_throttle_on_grass: 1.0
+max_throttle_on_road: 0.6
+#max_throttle will be set as parameter in code from one of these
+
+#These distances (in ft) are used to control the throttle when approaching cones
+# Range4    >[3] => use max throttle
+# Range3 [3]-[2] => use throttle between max and (max+min)/2
+# Range2 [2]-[1] => use throttle between min and (max+min)/2
+# Range1 [1]-[0] => use min throttle
+# Range0    <[0] => cut the throttle
+throttle_distances_on_grass: [0.7, 6, 12, 20]
+throttle_distances_on_road: [1, 12, 20, 25]
+#throttle_distances will be set as parameter in code from one of these
+
 # Minimum confidence for cone seeker to assume we have a cone
 min_confidence: 0.1
 
@@ -46,13 +63,14 @@ height_max: 480
 # ~2500sp @10', ~8000sp @6', ~12500sp @5', ~20000sp @4'
 # ~34000sp @3' and cone starts to cut and area may decrease
 min_area: 300
-threshold_tc_cone_size: 10000    # When this threshold is reached (~4')
-max_tc_cone_size: 35000          # Cut throttle if this is reached (<3')
+
 # Even after the throttle is cut, rover may continue to roll
 tc_timeout: 2                    # Cut throttle after this timeout
-tc_max: 8                        # Reset conditions after this time
 
 #Settings when searching for cone
 search_period: 8
-search_throttle: 0.6
+#search_throttle_on_grass: 0.6
+search_throttle_on_grass: 0.7
+search_throttle_on_road:  0.3
+#search_throttle will be set as parameter in code from one of these
 

@@ -244,7 +244,7 @@ class ConeSeeker:
     # Must be between 0. to 1.
     conf_decay_rate = 0.8
     nItems = 16
-    def __init__(self, debug=False):
+    def __init__(self, onGrass=True, debug=False):
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
@@ -254,9 +254,26 @@ class ConeSeeker:
         self._debug = debug
         self.last_distance = 0
         self.last_distance_timeout = rospy.Time.now()
+        self._set_drive_conditions(onGrass)
         self.cf_params = rospy.get_param('cone_finder')
         if debug:
             self.dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
+
+    def _set_drive_conditions(self, onGrass):
+        if onGrass:
+            min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
+            max_throttle = rospy.get_param('cone_finder/max_throttle_on_grass')
+            search_throttle = rospy.get_param('cone_finder/search_throttle_on_grass')
+            throttle_distances = rospy.get_param('cone_finder/throttle_distances_on_grass')
+        else:
+            min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
+            max_throttle = rospy.get_param('cone_finder/max_throttle_on_road')
+            search_throttle = rospy.get_param('cone_finder/search_throttle_on_road')
+            throttle_distances = rospy.get_param('cone_finder/throttle_distances_on_road')
+        rospy.set_param('cone_finder/min_throttle', min_throttle)
+        rospy.set_param('cone_finder/max_throttle', max_throttle)
+        rospy.set_param('cone_finder/search_throttle', search_throttle)
+        rospy.set_param('cone_finder/throttle_distances', throttle_distances)
 
     def _search_timeout(self):
         # Reverse steering values at each timeout
@@ -341,24 +358,25 @@ class ConeSeeker:
 
     def _get_drive_deltas(self, cone_loc):
         # Steer if not in front, needs more throttle when angle is not sharp
-        steering_delta = cone_loc.x/320.0
+        steering = cone_loc.x/320.0
 
         distance = self._get_distance_to_cone(cone_loc)
-        min_throttle = self.cf_params['min_throttle']
-        max_throttle = self.cf_params['max_throttle']
-        throttle_delta = min_throttle
-        if distance > 15:
-            throttle_delta = max_throttle
-        elif distance > 10:
-            throttle_delta = max_throttle - (max_throttle - min_throttle)*(15 - distance)/10.0
-        elif distance > 6:
-            throttle_delta = (max_throttle + min_throttle)/2 - (max_throttle - min_throttle)*(10 - distance)/8.0
-        elif distance > 0.7: # Between 2 - 6 ft
-            throttle_delta = min_throttle
-        else:
-            throttle_delta = 0
+        minT = self.cf_params['min_throttle']
+        maxT = self.cf_params['max_throttle']
+        tr = maxT - minT
+        td = self.cf_params['throttle_distances']
+        if distance > td[3]: # Range4
+            throttle = maxT
+        elif distance > td[2]: # Range3
+            throttle = maxT - tr*(td[3] - distance)/(2*(td[3] - td[2]))
+        elif distance > td[1]: # Range2
+            throttle = (maxT + minT)/2 - tr*(td[2] - distance)/(2*(td[2] - td[1]))
+        elif distance > td[0]: # Range1
+            throttle = minT
+        else: #Range0
+            throttle = 0
         
-        return (steering_delta, throttle_delta)
+        return (steering, throttle)
 
     def _seek_cone(self, poses):
         """ Return steering and throttle adjustments on a 0 to 1 range to drive

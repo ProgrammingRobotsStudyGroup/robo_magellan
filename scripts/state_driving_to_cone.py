@@ -108,23 +108,10 @@ def state_start():
                        this_node.uav_control.get_param_int('RC3_MAX')]
     msgStr = "throttle_limits %d %d %d" % (throttle_limits[0], throttle_limits[1], throttle_limits[2])
     rospy.loginfo(msgStr)
-    print "steering_limits"
-    print steering_limits
-    print "throttle_limits"
-    print throttle_limits
 
     global touched
     touched = False
     
-    min_throttle = 0.0
-    if rospy.get_param("/CONE_ON_GRASS"):
-        min_throttle = rospy.get_param('cone_finder/min_throttle_on_grass')
-        #this_node.uav_state.pubdiag_loginfo("Cone is on grass")
-    else:
-        min_throttle = rospy.get_param('cone_finder/min_throttle_on_road')
-        #this_node.uav_state.pubdiag_loginfo("Cone is on asphalt")
-    rospy.set_param('cone_finder/min_throttle', min_throttle)
-
     sub_touch = rospy.Subscriber('/touch', Bool, touched_cb)
 
     sub_location = rospy.Subscriber('/cone_finder/locations', Locations, drive_to, queue_size=1)
@@ -141,7 +128,7 @@ def state_start():
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
     old_timeout_secs = 0
 
-    rate = rospy.Rate(10) # 10 hz
+    rate = rospy.Rate(50) # 10 hz
     while not rospy.is_shutdown():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:
@@ -153,13 +140,14 @@ def state_start():
         old_timeout_secs = timeout_secs
         if touched:
             touched_cone = True # Signal we touched a cone
-            #this_node.uav_state.pubdiag_loginfo("Cone touched")
+            this_node.uav_state.pubdiag_loginfo("Cone touched")
             this_node.uav_control.set_throttle_servo(throttle_limits[1], steering_limits[1])
             time.sleep(0.1)
             # As soon as we touch cone, reverse for 2s
             backup_throttle = (throttle_limits[0] + throttle_limits[1])/2
             this_node.uav_control.set_throttle_servo(backup_throttle, steering_limits[1])
-            time.sleep(0.5)
+            time.sleep(0.7)
+            this_node.uav_state.pubdiag_loginfo("Cone touch breaking complete")
             break
         if this_node.exec_comm.cmd != MSG_TO_STATE.START.name:
             # TODO What if any transition?
@@ -224,7 +212,8 @@ def drive_to(loc):
     """Driving to cone logic"""
     global touched
     if args.cs is None:
-        args.cs = ConeSeeker()
+        onGrass = rospy.get_param("/CONE_ON_GRASS")
+        args.cs = ConeSeeker(onGrass=onGrass)
         
     # Once the cone is touched, don't do anything
     if touched:
