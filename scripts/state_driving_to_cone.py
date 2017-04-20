@@ -128,7 +128,7 @@ def state_start():
     timeout = rospy.Time.now() + rospy.Duration(segment_duration_sec)
     old_timeout_secs = 0
 
-    rate = rospy.Rate(50) # 10 hz
+    rate = rospy.Rate(10) # 10 hz
     while not rospy.is_shutdown():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
         if timeout_secs <> old_timeout_secs:

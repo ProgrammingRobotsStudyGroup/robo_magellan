@@ -27,10 +27,18 @@ import RPi.GPIO as GPIO
 import time
 import rospy
 from std_msgs.msg import Bool
+from std_msgs.msg import String
 
 def kill_sw_mon():
     rospy.init_node('kill_sw_mon', anonymous=True)
     pub = rospy.Publisher('kill_sw_enabled', Bool, queue_size=10)
+
+    # first push of kill switch is going to start the state machine
+    global pub_exec_simple
+    pub_exec_simple = rospy.Publisher("exec_cmd_simple", String, queue_size = 10)
+    global once
+    once = False
+
     rate = rospy.Rate(20) 
 
     gpio_pin = 7
@@ -80,6 +88,11 @@ def kill_sw_mon():
                     kill_sw_ok = True
                     pub.publish(kill_sw_ok)
                     rospy.loginfo(kill_sw_ok)
+                    # if this is first press of kill sw, start the state machine
+                    if not once:
+                        pub_exec_simple.publish("START_EXEC")
+                        once = True
+                        rospy.loginfo("kill_sw_mon: Pubishing START_EXEC")
             else:
                 GPIO.wait_for_edge(gpio_pin, GPIO.RISING)
                 time.sleep(0.1)  # wait for sw bounce
