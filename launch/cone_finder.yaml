@@ -20,12 +20,14 @@
 #Min throttle value during cone seek - actually just the min value
 #that Victoria can drive at. For road - 30, small grass - 40 and 
 #tall grass - 50 or more
-min_throttle_on_grass: 0.4
-min_throttle_on_road: 0.2
+#min_throttle_on_grass: 0.4
+min_throttle_on_grass: 0.55
+min_throttle_on_road: 0.15
 #min_throttle will be set as parameter in code from one of these
 
 #Max throttle needs to be higher on grass than on road
-max_throttle_on_grass: 0.8
+#max_throttle_on_grass: 0.8
+max_throttle_on_grass: 1.0
 max_throttle_on_road: 0.6
 #max_throttle will be set as parameter in code from one of these
 
@@ -36,7 +38,7 @@ max_throttle_on_road: 0.6
 # Range1 [1]-[0] => use min throttle
 # Range0    <[0] => cut the throttle
 throttle_distances_on_grass: [0.7, 6, 12, 20]
-throttle_distances_on_road: [1, 8, 16, 25]
+throttle_distances_on_road: [1, 12, 20, 25]
 #throttle_distances will be set as parameter in code from one of these
 
 # Minimum confidence for cone seeker to assume we have a cone
@@ -67,7 +69,8 @@ tc_timeout: 2                    # Cut throttle after this timeout
 
 #Settings when searching for cone
 search_period: 8
-search_throttle_on_grass: 0.6
-search_throttle_on_road:  0.4
+#search_throttle_on_grass: 0.6
+search_throttle_on_grass: 0.7
+search_throttle_on_road:  0.3
 #search_throttle will be set as parameter in code from one of these
 
