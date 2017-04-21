@@ -26,9 +26,7 @@ def callback(msg):
     if msg.msgid == 180:
         rospy.loginfo(rospy.get_caller_id() + ' msgid %s detected', msg.msgid)
         pubTouch.publish(True)
-        if not UAV.set_mode("HOLD"):
-            rospy.logwarn(rospy.get_caller_id() + ' set_mode(HOLD) FAILED')
-        
+
 
 def touch_detector():
     rospy.init_node('touch_detector', anonymous=True)
@@ -36,10 +34,6 @@ def touch_detector():
     global pubTouch
     pubTouch  = rospy.Publisher('touch', Bool, queue_size=10)
     rate = rospy.Rate(20)  # hz
-
-    global UAV  # must be a better way
-    UAV = uav_state.UAV_State()  
-
     while not rospy.is_shutdown():
         rate.sleep()
 
