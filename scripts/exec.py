@@ -69,7 +69,7 @@ def mod_state(the_state):
 #
 def wait_on_state_node(state_name):
     """Wait for the state node to complete"""
-    rate = rospy.Rate(1) # 2 hz
+    rate = rospy.Rate(10) # 2 hz
 
     # Calculate time out
     segment_sec = rospy.get_param("/SEGMENT_DURATION_SEC") + rospy.get_param("/SEGMENT_EXTRA_SEC")

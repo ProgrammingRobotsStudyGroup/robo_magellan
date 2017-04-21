@@ -28,7 +28,7 @@ min_throttle_on_road: 0.15
 #Max throttle needs to be higher on grass than on road
 #max_throttle_on_grass: 0.8
 max_throttle_on_grass: 1.0
-max_throttle_on_road: 0.6
+max_throttle_on_road: 0.5
 #max_throttle will be set as parameter in code from one of these
 
 #These distances (in ft) are used to control the throttle when approaching cones

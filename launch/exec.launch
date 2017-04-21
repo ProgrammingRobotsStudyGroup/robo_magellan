@@ -41,5 +41,7 @@
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+
+  <node name="vicky_bag" pkg="rosbag" type="record" args="-o vicky_bag /vicky/diagnostic" />
   
 </launch>
