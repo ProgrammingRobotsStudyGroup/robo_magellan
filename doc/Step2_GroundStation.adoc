@@ -1,0 +1,65 @@
+:imagesdir: ./images
+:toc: macro
+
+= RC2Robot - Ground Station
+
+image::20170116_061126.jpg[]
+
+toc::[]
+
+== Abstract
+This objective is to install the ground station software.
+
+image::20170116_061245.jpg[]
+
+== Install Ground Station Software
+This software is needed to program and control the rover. It typically is run on mainly on a laptop or PC. You will need this installed in order to work on your PixHawk.
+
+ArduPilot has a web page to help you
+http://ardupilot.org/rover/docs/common-choosing-a-ground-station.html?highlight=ground%20control%20station[choose a Ground Station].
+
+Ground Station
+
+* Software
+* Communicates to your Pixhawk wirelessly
+* Updates firmware
+* Plan missions
+
+
+== Test Assembly of Electronics
+In order to completely configure your rover software, you need http://ardupilot.org/rover/docs/common-pixhawk-wiring-and-quick-start.html[several pieces of gear attached to your Pixhawk]. Is there a current load issue? 
+
+THE PIXHAWK CONNECTORS ARE EXTREMELY EASY TO DAMAGE.
+
+* Buzzer
+* GPS
+* Safety Switch
+* Telemetry Radio - Optional
+
+image::Pixhawk_BuzzerCable.jpg[]
+image::PixHawkAndBuzzerCable.jpg[]
+
+
+Notes
+
+----
+
+  Your radio may not come with the correct wiring harness attached. Check to ensure that it has 6 pins to connect to the PixHawk. If not, you should have a replacement wiring harness. 
+
+  You must pry open the telemetry radio case. CAREFULLY open the case. As has been said the connectors are surface mounted and so easy to damage. Use the USB method to remove (add link).
+----
+image::3DR_2Cables.jpg[]
+image::3DRConnectorCaseClosed.jpg[]
+image::3DRCasePryPoint.jpg[]
+image::3DROpenCase.jpg[]
+image::3DR_ConnectorView.jpg[]
+
+
+
+== Install Ground Station Software
+
+=== Download and install
+
+=== Flash Firmware
+
+== Configure your Rover

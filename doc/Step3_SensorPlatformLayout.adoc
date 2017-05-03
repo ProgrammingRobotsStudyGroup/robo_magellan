@@ -1,0 +1,152 @@
+:imagesdir: ./images
+:toc: macro
+
+= RC2Robot - Sensor Platform
+
+image::StampedeWithoutBody.jpg[]
+
+toc::[]
+
+== Abstract
+This objective is to make the sensor platform or base.
+
+== Layout PixHawk and Electronics
+Placement of electronics on the Sensor Platform is important. Reliability, performance, functionality, safety and protection of delicate instruments are impacted by placement.
+
+== Placement Rules
+* Place RF sensitive electronics away from the motor 
+  and antennas.
+* If you have a camera, where does it go?the Camera and other sensors
+* Other sensors
+* Antenna placement
+* Battery placement
+* Payload and other placement
+
+
+== Layers
+- PixHawk 
+- Foam 
+- Mounting Board
+
+
+
+== Mission Planner
+If full parameter tree is not available, open Mission Planner and without connecting go to config/tuning and check the layout/advanced from the dropdown and see if it now lets you get to the advanced areas such as full param list and tree view
+
+== RC and Pixhawk Cabling and Pinblock
+
+.Radio, Servo and ESC wiring
+[width="80%",options="header,footer"]
+|=======================================
+| From | To
+| RC Ch1 | ppm in 1
+| RC Ch2 | ppm in 3
+| PH Main 1 | Servo
+| PH Main 3 | ESC
+|=======================================
+
+
+== Serial Communications Cable
+image::Telem_UART_lowres.jpg[]
+.Telem 2 to Up/Pi
+[width="80%",options="header,footer"]
+|=======================================
+|PH | Val | Wire   | Up/Pi | Meaning 
+|1  | vcc |        |       | 
+|2  | tx  | Green  | 10    | rx
+|3  | rx  | Yellow | 8     | tx
+|4  | cts | Red    |       |
+|5  | rts |        |       |
+|6  | gnd | Black  | 6     | gnd
+|=======================================
+
+
+== Build RPi/Up-Board Shutdown Switch
+image::CPUShutdown_20170222_080357.jpg[]
+
+You will need:
+
+* Momentary switch
+* Small resistor (say 220 ohm or so) in series
+* Add a 10k pull up resistor from pin 17 (3.3 V) to pin 18 (GPIO). Other side of board is solder connections (red - pin 18 - to one side of sw; black - pin 20 - to other side of sw; resistor to red)
+
+== Install the software
+
+* Install Ubuntu, ROS, etc.
+* See 1st page for now.
+* Install Robot Software
+* Set repo to onnly check in current branch
+
+ git config --global push.default simple
+ 
+
+== Configure Up/Pi
+Make the serial port accessible to MAVROS
+
+ $ ls -l /dev/ttyS1
+ crw-rw---- 1 root dialout 4, 65 Feb  9 14:00 /dev/ttyS1
+ $ sudo chmod 666 /dev/ttyS1
+ ls -l /dev/ttyS1
+ crw-rw-rw- 1 root dialout 4, 65 Feb  9 14:00 /dev/ttyS1
+
+Add user to dialout group
+
+ $ fgrep dialout /etc/group
+ dialout:x:20:
+ $ usermod -a -G dialout robo
+ $ fgrep dialout /etc/group
+ dialout:x:20:robot
+
+
+To start the software, type:
+
+ roslaunch robo_magellan pr_launch1.launch
+
+Identify the Device
+
+ rosrun mavros mavparam set SYSID_MYGCS 1
+
+
+== Develop Software
+Scenario:
+
+- Dev (laptop/desktop) machine has keyboard/monitor/mouse
+- Target machine has NO keyboard/monitor/mouse
+- Target machine on network or direct connected via ethernet
+
+You can either:
+
+1) edit on dev machine and test on target machine, requiring that you constantly copy your software
+
+2) edit on target machine using character based editor
+
+3) If you’d prefer to use an IDE, such as Eclipse, you can use sshfs to make it happen. Eclipse has integrated editing, version control, etc. You can edit code right on the bot to decrease code, test cycle time.
+
+Install sshfs on the bot's Pi/Up board.
+
+ apt-get install sshfs
+
+On the desktop/latop
+
+ mkdir ~/Documents/mntssh
+ sshfs robot@robot.local:/home/robot/catkin_ws/src/ ~/Documents/mntssh
+
+
+== Diff tools are your friend
+
+== Developing in an IDE like Eclipse
+- git support, version history, 
+- search
+- Multiple source windows
+- Eclipse cloud?
+
+
+== Export X!
+
+ $ ssh -X robot@robot.local
+ robot@robot.local's password: 
+ Welcome to Ubuntu 16.04.2 LTS (GNU/Linux 4.4.0-2-upboard x86_64)
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+ $ rosrun rqt_image_view rqt_image_view
