@@ -11,10 +11,16 @@
         
   -->
 
-  <include file="$(find mavros)/launch/apm.launch">
-    <!-- this must match the UP port-baud rate connected to Pixhawk -->
-    <arg name="fcu_url" value="/dev/ttyS1:115200" />
-  </include>
+  <!-- Start mavros only if installed.
+       Permits use on machine without pixhawk/mavros.
+  -->
+  <arg name="is_mavros" default="$(find mavros)" />
+  <group unless="($(arg is_mavros)=='')">
+    <include file="$(find mavros)/launch/apm.launch">
+      <!-- this must match the UP port-baud rate connected to Pixhawk -->
+      <arg name="fcu_url" value="/dev/ttyS1:115200" />
+    </include>
+  </group>
 
   <arg name="vid" default="false" />
   <group if="$(arg vid)">
