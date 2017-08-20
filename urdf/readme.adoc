@@ -1,0 +1,47 @@
+:imagesdir: ../doc/images
+:toc: macro
+
+= Robot Models
+Contains Robot models
+
+* URDF using Xacro.
+
+== stampede.xacro
+Crude Traxxas Stampede robot definition file.
+
+== xmaxx.xacro (planned)
+Traxxas XMaxx robot definition file. 
+
+== _macros.xacro
+* Macro definitions
+* Files with leading '_' are intended to be reusable.
+
+== _materials.xacro
+* Material color definitions
+
+== \_rc_parts.xacro
+* Reusable RC part macro definitions
+
+== simulate.launch
+Launch file to display a model with RViz. 
+
+*Parameters*
+* model: Select the model to display in RViz. Default set to stampede.xacro.
+* gui: default set to False. 
+* rvizconfig:  'RViz configuration file. Default set to False$(find robo_magellan)/rviz/urdf.rviz'.
+
+
+== urdf.rviz
+RViz configuration file.
+
+= To use
+* From a command line run:
+
+----
+$ roslaunch robo_magellan simulate.launch
+-or-
+$ roslaunch robo_magellan simulate.launch model:='$(find robo_magellan)/urdf/stampede.xacro'
+-or-
+$ roslaunch robo_magellan simulate.launch model:='$(find prsg2_robot)/urdf/prsg2_description.xacro'
+----
+

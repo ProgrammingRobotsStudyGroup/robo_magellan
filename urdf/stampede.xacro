@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<robot 
+  name="stampede"
+  xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--  -->
+  <xacro:include filename="$(find robo_magellan)/urdf/_materials.xacro" />
+  <xacro:include filename="$(find robo_magellan)/urdf/_macros.xacro" />
+  <xacro:include filename="$(find robo_magellan)/urdf/_rc_parts.xacro" />
+
+  <!-- Parameterized robot dimensions -->
+  <xacro:property name="wheel_radius" value="0.060" />
+  <xacro:property name="wheel_width" value="0.065" />
+  <xacro:property name="wheel_base" value="0.270" />
+
+  <xacro:property name="chassis_width" value="0.270" />
+  <xacro:property name="chassis_length" value="0.380" />
+  <xacro:property name="chassis_height" value="0.160" />
+  <xacro:property name="chassis_clearance" value="0.120" />
+  <xacro:property name="chassis_mass" value="1.85" />
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${chassis_clearance}" rpy="0 0 0" />
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="Black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="${chassis_mass}"/>
+  </link>
+
+
+  <xacro:wheel prefix="left"  suffix="front" reflect="1" mirror="1"/>
+  <xacro:wheel prefix="right" suffix="front" reflect="-1" mirror="1"/>
+  <xacro:wheel prefix="left"  suffix="rear"  reflect="1" mirror="-1"/>
+  <xacro:wheel prefix="right" suffix="rear"  reflect="-1" mirror="-1"/>
+
+  <link name="camera_link">
+    <visual>
+      <origin xyz="-0.005 0 0" />
+      <geometry>
+        <box size="0.01 0.03 0.03" />
+      </geometry>
+      <material name="Yellow"/>
+    </visual>
+  </link>
+
+  <joint name="base_to_camera" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="${chassis_length/2} 0 ${chassis_clearance+chassis_height/2+0.015}" />
+  </joint>
+
+</robot>
