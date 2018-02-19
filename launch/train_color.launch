@@ -1,0 +1,11 @@
+<launch>
+
+  <node name="trainer" pkg="robo_magellan" type="train_color_binned">
+    <param name="~bins" value="16" />
+	<param name="~threshold" value="0.6" />
+	<param name="~images" value="$(find robo_magellan)/data/cone*_image.jpg" />
+	<param name="~masks" value="$(find robo_magellan)/data/cone*_mask.png" />
+    <param name="~output" value="$(find robo_magellan)/bins.json" />
+  </node>
+
+</launch>

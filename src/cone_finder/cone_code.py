@@ -28,6 +28,22 @@ def check_opencv_version(major):
 class ConeFinder:
     """ ConeFinder class """
     codec = 'XVID'
+    # These values from train_color_binned with threshold 0.6
+    numBins = 16
+    maskBins = [2576, 2832, 2848, 2885, 2886, 3104, 3120, 3121, 3137, 3138,
+                3139, 3140, 3141, 3360, 3376, 3377, 3392, 3393, 3394, 3395,
+                3396, 3397, 3410, 3411, 3412, 3413, 3632, 3633, 3648, 3649,
+                3650, 3651, 3652, 3664, 3665, 3666, 3667, 3668, 3682, 3683,
+                3770, 3872, 3888, 3904, 3905, 3906, 3907, 3920, 3921, 3922,
+                3923, 3924, 3936, 3937, 3938, 3939, 3940, 3941, 3952, 3953,
+                3954, 3955, 3956, 3957, 3958, 3959, 3968, 3969, 3970, 3971,
+                3972, 3973, 3974, 3975, 3976, 3977, 3985, 3986, 3987, 3988,
+                3989, 3990, 3991, 3992, 3993, 3994, 4003, 4004, 4005, 4006,
+                4007, 4008, 4009, 4010, 4011, 4020, 4021, 4022, 4023, 4024,
+                4025, 4026, 4027, 4041, 4042, 4043, 4044, 4045, 4058, 4059,
+                4060, 4061, 4062, 4076, 4077, 4078]
+    bins = np.zeros(numBins**3, np.uint8)
+    bins[maskBins] = 255
 
     # On a 640x480 size image, cone area is ~300 sq pixels @25ft
     def __init__(self, min_area=300):
@@ -35,6 +51,7 @@ class ConeFinder:
         self.rgbOut = None
         self.depthOut = None
         self.min_area = min_area
+        self._thresholdImage = self._bin_threshold
 
     def _initCapture(self, frame, outFile):
         (h, w) = frame.shape[:2]
@@ -157,6 +174,21 @@ class ConeFinder:
         # combine low range red thresh and high range red thresh
         return cv2.bitwise_or(imgThreshLow, imgThreshHigh)
 
+    def _bin_threshold(self, img):
+        h, w = img.shape[0:2]
+        scale = np.array([1, self.numBins, self.numBins**2], np.int32)
+        binIndices = np.matmul(img.reshape((h*w, 3)) / (256/self.numBins), scale)
+        return self.bins[binIndices].reshape((h, w))
+
+    def setThresholdAlgorithm(self, algorithm):
+        if algorithm == 'hsv':
+            self._thresholdImage = self._process_orange_color
+        elif algorithm == 'bin':
+            self._thresholdImage = self._bin_threshold
+        else:
+            # Default is HSV
+            self._thresholdImage = self._process_orange_color
+
     def captureFrames(self, cvRGB, cvDepth):
         if self.firstTime:
             # Initialize capture devices
@@ -187,10 +219,11 @@ class ConeFinder:
         image_centerY = h  # y goes down from top
 
         # Process orange color and convert to gray image
-        imgThresh = self._process_orange_color(img)
+        imgThresh = self._thresholdImage(img)
         #imgThresh = cv2.GaussianBlur(imgThresh, (3, 3), 0)
         #imgThresh = cv2.medianBlur(imgThresh, 5)
-        imgThresh = cv2.bilateralFilter(imgThresh, 5, 20, 20)
+        #imgThresh = cv2.bilateralFilter(imgThresh, 5, 20, 20)
+        imgThresh = cv2.dilate(imgThresh, cv2.getStructuringElement(1, (3,3)))
 
         if is_cv2():
             contours, hierarchy = cv2.findContours(imgThresh, cv2.RETR_EXTERNAL,

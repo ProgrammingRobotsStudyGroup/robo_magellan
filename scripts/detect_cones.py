@@ -33,7 +33,6 @@ class RosColorDepth:
 
     def __init__(self):
         rospy.init_node('cone_finder')
-
         self.started = True
         self.colorCamInfo = None
         self.depthCamInfo = None
@@ -42,6 +41,9 @@ class RosColorDepth:
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
         self.depthImage = None
         rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
+        self.thresholdAlgorithm = rospy.get_param('~thresholdAlgorithm', 'bin')
+        self.cf.setThresholdAlgorithm(self.thresholdAlgorithm)
+        rospy.loginfo('Threshold algorithm %s' % self.thresholdAlgorithm)
         rospy.loginfo("[%s] Initialized." %(self.node_name))
         rospy.spin()
 
@@ -87,6 +89,7 @@ class RosColorDepth:
         msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
         cv2.putText(imghull, msg_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(imghull, 'alg:' + self.thresholdAlgorithm, (300, 460), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
 
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
