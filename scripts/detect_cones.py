@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from robo_magellan.msg import pose_data
 from robo_magellan.msg import location_msgs as location_data
 from cv_bridge import CvBridge, CvBridgeError
-from cone_code import ConeFinder, ConeSeeker
+from cone_finder import ConeFinder, ConeSeeker
 
 class Args(object):
     publish_images = False
