@@ -38,7 +38,7 @@ from state_and_transition import TRANSITION
 from mavros_msgs.msg import OverrideRCIn
 from robo_magellan.msg import location_msgs as Locations
 
-from cone_code import ConeSeeker
+from cone_finder import ConeSeeker
 
 # Globals
 this_node = None
