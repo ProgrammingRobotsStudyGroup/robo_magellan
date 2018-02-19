@@ -2,7 +2,7 @@
 
 """ This file contains code for detecting cones """
 import numpy as np, cv2, argparse, time, sys
-import rospy, message_filters, threading
+import rospy, threading
 
 # Needed for publishing the messages
 from sensor_msgs.msg import Image, CameraInfo
@@ -35,25 +35,29 @@ class RosColorDepth:
         rospy.init_node('cone_finder')
 
         self.started = True
-        colorCamInfo = message_filters.Subscriber("/camera/color/camera_info", CameraInfo)
-        depthCamInfo = message_filters.Subscriber("/camera/depth/camera_info", CameraInfo)
-        ts = message_filters.TimeSynchronizer([colorCamInfo, depthCamInfo], 10)
-        ts.registerCallback(self.camInfoCallback)
-        colorImage = message_filters.Subscriber("/camera/color/image_raw", Image)
-        depthImage = message_filters.Subscriber("/camera/depth/image_raw", Image)
-        ts = message_filters.TimeSynchronizer([colorImage, depthImage], 10)
-        ts.registerCallback(self.imageCallback)
+        self.colorCamInfo = None
+        self.depthCamInfo = None
+        rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.colorCamInfoCallback)
+        rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.depthCamInfoCallback)
+        rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
+        self.depthImage = None
+        rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
         rospy.loginfo("[%s] Initialized." %(self.node_name))
         rospy.spin()
 
-    def camInfoCallback(self, colorCamInfo, depthCamInfo):
+    def colorCamInfoCallback(self, colorCamInfo):
         self.colorCamInfo = colorCamInfo
+
+    def depthCamInfoCallback(self, depthCamInfo):
         self.depthCamInfo = depthCamInfo
 
-    def imageCallback(self, colorImage, depthImage):
-        thread = threading.Thread(target=self.processImage, args=(colorImage, depthImage))
+    def imageCallback(self, colorImage):
+        thread = threading.Thread(target=self.processImage, args=(colorImage, self.depthImage))
         thread.setDaemon(True)
         thread.start()
+
+    def depthCallback(self, depthImage):
+        self.depthImage = depthImage
 
     def start(self):
         self.started = True
@@ -87,17 +91,19 @@ class RosColorDepth:
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
         self.colorCamInfo.header.stamp = ts
-        self.depthCamInfo.header.stamp = ts
         self.colorCIPub.publish(self.colorCamInfo)
-        self.depthCIPub.publish(self.depthCamInfo)
+        if self.depthCamInfo is not None:
+            self.depthCamInfo.header.stamp = ts
+            self.depthCIPub.publish(self.depthCamInfo)
         colorMsg = self.bridge.cv2_to_imgmsg(imghull, "bgr8")
         colorMsg.header.stamp = ts
         colorMsg.header.frame_id = colorImage.header.frame_id
         self.colorPub.publish(colorMsg)
-        depthMsg = depthImage
-        depthMsg.header.stamp = ts
-        #depthMsg.header.frame_id = 'camera_link'
-        self.depthPub.publish(depthMsg)
+        if depthImage is not None:
+            depthMsg = depthImage
+            depthMsg.header.stamp = ts
+            #depthMsg.header.frame_id = 'camera_link'
+            self.depthPub.publish(depthMsg)
 
     def processImage(self, colorImage, depthImage):
         if not self.thread_lock.acquire(False):
@@ -108,17 +114,24 @@ class RosColorDepth:
 
         #print(colorImage.encoding, depthImage.encoding)
         cvRGB = self.bridge.imgmsg_to_cv2(colorImage, "bgr8")
-        cvDepth = self.bridge.imgmsg_to_cv2(depthImage)
-
-        dh, dw = cvDepth.shape[:2]
         ch, cw = cvRGB.shape[:2]
+
+        if depthImage is not None:
+            cvDepth = self.bridge.imgmsg_to_cv2(depthImage)
+            dh, dw = cvDepth.shape[:2]
+            ch, cw = dh, dw
+        else:
+            cvDepth = None
+            dh, dw = ch, cw
+
         if (ch != dh) and (cw != dw):
             cvRGB = cv2.resize(cvRGB, (dw, dh))
 
-        self.colorCamInfo.width = dw
-        self.colorCamInfo.height = dh
-        self.depthCamInfo.width = dw
-        self.depthCamInfo.height = dh
+        self.colorCamInfo.width = cw
+        self.colorCamInfo.height = ch
+        if self.depthCamInfo is not None:
+            self.depthCamInfo.width = dw
+            self.depthCamInfo.height = dh
 
         try:
             self.lc = self.lc + 1
