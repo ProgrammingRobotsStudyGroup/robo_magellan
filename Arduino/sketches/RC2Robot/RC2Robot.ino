@@ -35,26 +35,52 @@ void setup() {
   //
   initBumper();
 }
-unsigned long timer = 0;
-#define _delay 1000
+/**
+ * 
+ */
+void dispPinVal() {
+    // Display pin vals
+    int pinVal;
+    pinVal = digitalRead(LEFT_ENC_PIN_A);
+    Serial.print(pinVal);
+    //
+    Serial.print("-");
+    pinVal = digitalRead(LEFT_ENC_PIN_B);
+    Serial.print(pinVal);
+    //
+    Serial.print("-");
+    pinVal = digitalRead(RIGHT_ENC_PIN_A);
+    Serial.print(pinVal);
+    //
+    Serial.print("-");
+    pinVal = digitalRead(RIGHT_ENC_PIN_B);
+    Serial.print(pinVal);
+    //
+    Serial.println();
+}
 
 /**
  * 
  */
+unsigned long timer = 0;
+#define _delay 1000
+
 void loop() {
   // Process input
   int newtime = millis();
   processCommandChar();
   if (newtime>(timer+_delay)) {
     timer = newtime;
-    // Do something
-    int pinVal;
-    pinVal = digitalRead(hallPin1a);
-    Serial.print(pinVal);
-    Serial.print("-");
-    pinVal = digitalRead(digitalPinToInterrupt(hallPin1b));
-    Serial.print(pinVal);
-    Serial.println();
+    //
+//    dispPinVal();
+    //
+    double vel;
+    vel = readSpeed(LEFT);
+    Serial.print("L:");
+    Serial.print(vel);
+    Serial.print(" R:");
+    vel = readSpeed(RIGHT);
+    Serial.println(vel);
   }
 }
 
