@@ -22,7 +22,7 @@ class RosColorDepth:
     bridge = CvBridge()
     thread_lock = threading.Lock()
     ts = time.clock()
-    cf = ConeFinder()
+    cf = None
     cs = None
     lc = 0
     pub = rospy.Publisher('cone_finder/locations', location_data, queue_size=10)
@@ -36,13 +36,22 @@ class RosColorDepth:
         self.started = True
         self.colorCamInfo = None
         self.depthCamInfo = None
+
+        minArea = rospy.get_param("~minConeArea", 300)
+        self.cf = ConeFinder(minArea)
+
         rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.colorCamInfoCallback)
         rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.depthCamInfoCallback)
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
         self.depthImage = None
         rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
+
         self.thresholdAlgorithm = rospy.get_param('~thresholdAlgorithm', 'bin')
         self.cf.setThresholdAlgorithm(self.thresholdAlgorithm)
+
+        self.contourFilterAlgorithm = rospy.get_param('~contourFilterAlgorithm', 'convexNull')
+        self.cf.setContourFilterAlgorithm(self.contourFilterAlgorithm)
+
         rospy.loginfo('Threshold algorithm %s' % self.thresholdAlgorithm)
         rospy.loginfo("[%s] Initialized." %(self.node_name))
         rospy.spin()

@@ -10,20 +10,13 @@ from threading import Timer
 from robo_magellan.msg import pose_data
 from robo_magellan.msg import drive_params
 
+isCv3 = cv2.__version__.startswith("3.")
+
 def is_cv2():
-    # if we are using OpenCV 2, then our cv2.__version__ will start
-    # with '2.'
-    return check_opencv_version("2.")
+    return not(isCv3)
 
 def is_cv3():
-    # if we are using OpenCV 3.X, then our cv2.__version__ will start
-    # with '3.'
-    return check_opencv_version("3.")
-
-def check_opencv_version(major):
-    # return whether or not the current OpenCV version matches the
-    # major version number
-    return cv2.__version__.startswith(major)
+    return isCv3
 
 class ConeFinder:
     """ ConeFinder class """
@@ -45,13 +38,29 @@ class ConeFinder:
     bins = np.zeros(numBins**3, np.uint8)
     bins[maskBins] = 255
 
+    coneShapes = []
+
     # On a 640x480 size image, cone area is ~300 sq pixels @25ft
     def __init__(self, min_area=300):
+        self.min_area = min_area
         self.firstTime = True
         self.rgbOut = None
         self.depthOut = None
         self.min_area = min_area
         self._thresholdImage = self._bin_threshold
+        self._filterContours = self._convexHullConeFinder
+
+        # Create cone shapes of various aspect ratios.
+        for i in range(175, 280, 50):
+            aspect = i / 100.0
+            base = 8
+            height = int(8*aspect)
+            top = 2
+            middle = base/2
+            if isCv3:
+                self.coneShapes.append({'aspect': aspect, 'shape': np.array([[0, 0], [base, 0], [middle+top/2, height], [middle-top/2, height]], np.int32)})
+            else:
+                self.coneShapes.append({'aspect': aspect, 'shape': np.array([[[0, 0]], [[base, 0]], [[middle+top/2, height]], [[middle-top/2, height]]], np.int32)})
 
     def _initCapture(self, frame, outFile):
         (h, w) = frame.shape[:2]
@@ -189,6 +198,15 @@ class ConeFinder:
             # Default is HSV
             self._thresholdImage = self._process_orange_color
 
+    def setContourFilterAlgorithm(self, algorithm):
+        if algorithm == 'convexHull':
+            self._filterContours = self._convexHullConeFinder
+        elif algorithm == 'huMoments':
+            self._filterContours = self._huMomentsConeFinder
+        else:
+            # Default is convex hull approach
+            self._filterContours = self._convexHullConeFinder
+
     def captureFrames(self, cvRGB, cvDepth):
         if self.firstTime:
             # Initialize capture devices
@@ -213,16 +231,9 @@ class ConeFinder:
             self.depthOut.release()
         
     def find_cones(self, img, depthImg=None):
-        h, w = img.shape[:2]
-
-        image_centerX = w/2
-        image_centerY = h  # y goes down from top
-
         # Process orange color and convert to gray image
         imgThresh = self._thresholdImage(img)
-        #imgThresh = cv2.GaussianBlur(imgThresh, (3, 3), 0)
-        #imgThresh = cv2.medianBlur(imgThresh, 5)
-        #imgThresh = cv2.bilateralFilter(imgThresh, 5, 20, 20)
+        # Dilate the thresholded B/W image a bit to fill in holes.
         imgThresh = cv2.dilate(imgThresh, cv2.getStructuringElement(1, (3,3)))
 
         if is_cv2():
@@ -231,6 +242,14 @@ class ConeFinder:
         else:
             image, contours, hierarchy = cv2.findContours(imgThresh, cv2.RETR_EXTERNAL,
                                                           cv2.CHAIN_APPROX_SIMPLE)
+
+        return self._filterContours(contours, img, depthImg)
+
+    def _convexHullConeFinder(self, contours, img, depthImg):
+        h, w = img.shape[:2]
+
+        image_centerX = w/2
+        image_centerY = h  # y goes down from top
 
         listOfHullsAndArea = []
         if len(contours) != 0:
@@ -268,6 +287,49 @@ class ConeFinder:
                 poses.append(pose)
 
         return (poses, listOfCones)
+
+    def _huMomentsConeFinder(self, contours, img, depthImg):
+        h, w = img.shape[:2]
+
+        centerX = w/2
+        centerY = h  # y goes down from top
+
+        poses = []
+        regions = []
+
+        for c in contours:
+            if len(c) < 3:
+                continue
+
+            area = cv2.contourArea(c)
+            if area < self.min_area:
+                continue
+
+            for shape in self.coneShapes:
+                v = cv2.matchShapes(c, shape['shape'], 3, 0)
+                if (v <= 0.25):
+                    m = cv2.moments(c)
+                    centroidY = int(m['m01'] / m['m00'])
+                    x,y,w,h = cv2.boundingRect(c)
+                    midY = y + h/2
+                    centroidFraction = float(centroidY - midY)/h
+                    print("Rect:", (w,h), "midY:", midY, "centroidY:", centroidY, "fraction:", centroidFraction)
+                    # If the centroid is below the rectangle middle, it's a match.
+                    if centroidFraction >= 0.05:
+                        regions.append(c)
+
+                        pose = pose_data()
+                        pose.x = x + w/2 - centerX
+                        pose.y = centerY - (y+h)
+                        pose.w = w
+                        pose.h = h
+                        pose.z = 0
+                        pose.d = 0
+                        pose.area = area
+                        poses.append(pose)
+                        break
+
+        return (poses, regions)
 
 class ConeSeeker:
     """ ConeSeeker class
