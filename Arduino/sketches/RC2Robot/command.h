@@ -38,10 +38,9 @@ void processCommandChar();
 #define SERVO_WRITE    's'
 #define SERVO_READ     't'
 #define UPDATE_PID     'u'
+#define VELOCITY       'v'
 #define DIGITAL_WRITE  'w'
 #define ANALOG_WRITE   'x'
-#define LEFT            0
-#define RIGHT           1
 
 #endif
 

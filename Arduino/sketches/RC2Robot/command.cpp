@@ -22,7 +22,7 @@
 #endif
 
 #include "command.h"
-
+#include "wheelencoder.h"
 
 #define SERIAL_STREAM Serial
 #define DEBUG_SERIAL_STREAM Serial
@@ -184,6 +184,11 @@ int executeCommand(int cmd, int arg1, int arg2) {
 //    SERIAL_STREAM.println(STR_OK);
 //    break;
 //#endif
+  case VELOCITY:
+    double vel;
+    vel = readSpeed(arg2);
+    SERIAL_STREAM.println(vel);
+    break;
   default:
     SERIAL_STREAM.println("Bad command");
     break;
