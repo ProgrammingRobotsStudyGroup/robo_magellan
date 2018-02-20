@@ -23,10 +23,11 @@
   <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-c -p">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
 	<!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
+    <param name="~minConeArea" value="300" />
 	<param name="~thresholdAlgorithm" value="bin" />
+    <param name="~contourFilterAlgorithm" value="convexHull" />
     <remap from="/camera/color/camera_info" to="/webcam/camera_info" />
 	<remap from="/camera/color/image_raw" to="/webcam/image_raw" />
   </node>
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>
-
