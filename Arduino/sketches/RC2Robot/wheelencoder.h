@@ -25,17 +25,24 @@
 #include "WProgram.h"
 #endif
 
-#define hallPin1a 0
-#define hallPin1b 1
-#define hallPin2a 3
-#define hallPin2b 4
+// The following pin deffinitions can be changed.
+// If changed, additional changes in the code are required
 
-extern "C" {
-void initWheelEncoder();
-void processWheelEncoder();
-double readSpeed(int i);
-}
+#define LEFT_ENC_PIN_A PB4
+#define LEFT_ENC_PIN_B PB5
+
+#define RIGHT_ENC_PIN_A PB6
+#define RIGHT_ENC_PIN_B PB7
+
+// Left/right encoder
 #define LEFT 0
 #define RIGHT 1
+
+// Specify linkage
+extern "C" {
+void initWheelEncoder();
+void resetEncoders();
+double readSpeed(int i);
+}
 
 #endif
