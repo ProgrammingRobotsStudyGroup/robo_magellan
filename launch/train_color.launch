@@ -2,20 +2,20 @@
 
   <!-- To use this node, you need a set of pairs of images and masks. The
        image should be RGB (.jpg or .png, for example) and the mask should
-	   be black-and-white (usually a .png, but often in RGB format with just
-	   black and white pixels). The training algorithm will read each pair
-	   of images and convert each RGB value to a bin, based on the number
-	   of bins along each axis ("bins" parameter). At the end, for each
-	   bin that has a proportion of cone pixels (those with mask pixel value
-	   of white) at least equal to a threshold ("threshold" parameter),
-	   the bin index is printed into the output file ("output" parameter").
+       be black-and-white (usually a .png, but often in RGB format with just
+       black and white pixels). The training algorithm will read each pair
+       of images and convert each RGB value to a bin, based on the number
+       of bins along each axis ("bins" parameter). At the end, for each
+       bin that has a proportion of cone pixels (those with mask pixel value
+       of white) at least equal to a threshold ("threshold" parameter),
+       the bin index is printed into the output file ("output" parameter").
        You then need to copy the output variables into the binning code. -->
 
   <node name="trainer" pkg="robo_magellan" type="train_color_binned">
     <param name="~bins" value="16" />
-	<param name="~threshold" value="0.6" />
-	<param name="~images" value="$(find robo_magellan)/data/cone*_image.jpg" />
-	<param name="~masks" value="$(find robo_magellan)/data/cone*_mask.png" />
+    <param name="~threshold" value="0.6" />
+    <param name="~images" value="$(find robo_magellan)/data/cone*_image.jpg" />
+    <param name="~masks" value="$(find robo_magellan)/data/cone*_mask.png" />
     <param name="~output" value="$(find robo_magellan)/bins.json" />
   </node>
 
