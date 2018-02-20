@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   message_generation
-  genmsg
   mavros_msgs
   cv_bridge
   image_transport
@@ -135,29 +134,6 @@ find_package(OpenCV)
 
 
 ## Declare a C++ executable(s)
-add_executable(talker src/talker.cpp)
-target_link_libraries(talker ${catkin_LIBRARIES})
-include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(talker ${OpenCV_LIBRARIES})
-add_dependencies(talker robo_magellan_generate_messages_cpp)
-
-add_executable(listener src/listener.cpp)
-target_link_libraries(listener ${catkin_LIBRARIES})
-include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(listener ${OpenCV_LIBRARIES})
-add_dependencies(listener robo_magellan_generate_messages_cpp)
-
-add_executable(add_two_ints_server src/add_two_ints_server.cpp)
-target_link_libraries(add_two_ints_server ${catkin_LIBRARIES})
-include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(add_two_ints_server ${OpenCV_LIBRARIES})
-add_dependencies(add_two_ints_server robo_magellan_gencpp)
-
-add_executable(add_two_ints_client src/add_two_ints_client.cpp)
-target_link_libraries(add_two_ints_client ${catkin_LIBRARIES})
-include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(add_two_ints_client ${OpenCV_LIBRARIES})
-add_dependencies(add_two_ints_client robo_magellan_gencpp)
 
 add_executable(video_publish src/video_publish.cpp)
 target_link_libraries(video_publish ${catkin_LIBRARIES})
