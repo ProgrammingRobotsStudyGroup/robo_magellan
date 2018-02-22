@@ -23,7 +23,12 @@
   <!-- Run a static transform between /base_link and /base_footprint needed for SLAM -->
   <node pkg="tf" type="static_transform_publisher" name="base_footprint_broadcaster" args="0 0 0 0 0 0 /_base_link /base_footprint 100" />
 
+  <!-- create transform for laser (should be moved to the URDF) -->
+  <node name="laser_to_base" pkg="tf2_ros" type="static_transform_publisher"  args="0.370 0.0 0.037 0 0 0 1 base_link laser" />
+
+  <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+
   <!-- Rviz displays model  -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+  <!-- node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" / -->
   
 </launch>

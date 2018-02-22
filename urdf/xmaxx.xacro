@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
 <robot 
-  name="stampede"
+  name="xmaxx"
   xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!--  -->
@@ -10,16 +10,16 @@
   <xacro:include filename="$(find robo_magellan)/urdf/_rc_parts.xacro" />
 
   <!-- Parameterized robot dimensions -->
-  <xacro:property name="wheel_radius" value="0.060" />
-  <xacro:property name="wheel_width" value="0.065" />
-  <xacro:property name="wheel_base" value="0.270" />
-  <xacro:property name="spur_width" value="0.1015" />
+  <xacro:property name="wheel_radius" value="0.104" />
+  <xacro:property name="wheel_width" value="0.110" />
+  <xacro:property name="wheel_base" value="0.485" />
+  <xacro:property name="spur_width" value="0.225" />
 
-  <xacro:property name="chassis_width" value="0.270" />
-  <xacro:property name="chassis_length" value="0.380" />
-  <xacro:property name="chassis_height" value="0.160" />
+  <xacro:property name="chassis_width" value="0.325" />
+  <xacro:property name="chassis_length" value="0.735" />
+  <xacro:property name="chassis_height" value="0.250" />
   <xacro:property name="chassis_clearance" value="0.120" />
-  <xacro:property name="chassis_mass" value="1.85" />
+  <xacro:property name="chassis_mass" value="5.85" />
 
   <link name="base_link">
     <visual>
@@ -52,7 +52,6 @@
     <xacro:default_inertial mass="${chassis_mass}"/>
   </link>
 
-
   <xacro:wheel prefix="left"  suffix="front" reflect="1" mirror="1"/>
   <xacro:wheel prefix="right" suffix="front" reflect="-1" mirror="1"/>
   <xacro:wheel prefix="left"  suffix="rear"  reflect="1" mirror="-1"/>
@@ -75,17 +74,17 @@
   </joint>
 
   <link name="_base_link">
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <box size="0.05 0.05 0.001" />
-      </geometry>
-      <material name="LightGreen" />
-    </visual>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.5 0.5 0.001" />
+        </geometry>
+        <material name="LightGreen" />
+      </visual>
     <collision>
       <geometry>
-        <box size="0.05 0.05 0.001" />
-      </geometry>
+          <box size="0.5 0.5 0.001" />
+        </geometry>
     </collision>
   </link>
 
@@ -100,4 +99,5 @@
     <child link="chassis" />
     <origin xyz="0 0 ${chassis_height/2}"/>
   </joint>
+
 </robot>

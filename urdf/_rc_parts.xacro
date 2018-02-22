@@ -3,12 +3,15 @@
   xmlns:xacro="http://www.ros.org/wiki/xacro"
   >
   <!--
-    Wheel definition.  
+    Wheel definition.
     Parameters:
     prefix suffix reflect mirror
     Properties:
     wheel_width
     wheel_radius
+    wheel_base
+    spur_width
+    chassis_clearance
    -->
   <xacro:macro name="wheel" params="prefix suffix reflect mirror">
     <link name="${prefix}_${suffix}_wheel_link">
@@ -21,6 +24,7 @@
         <material name="LightBlue"/>
       </visual>
       <collision>
+        <origin xyz="0 0 0" rpy="0 ${pi/2} 0" />
         <geometry>
           <cylinder length="${wheel_width}" radius="${wheel_radius}" />
         </geometry>
@@ -29,7 +33,7 @@
     <joint name="base_to_${prefix}_${suffix}_wheel" type="fixed">
       <parent link="base_link" />
       <child link="${prefix}_${suffix}_wheel_link" />
-      <origin xyz="${wheel_base/2*mirror}  ${0.1015*reflect} 0.030" rpy="0 0 ${(pi/2)*reflect}" />
+      <origin xyz="${wheel_base/2*mirror}  ${spur_width*reflect} ${wheel_radius-chassis_clearance}" rpy="0 0 ${(pi/2)*reflect}" />
     </joint>
   </xacro:macro>
 
