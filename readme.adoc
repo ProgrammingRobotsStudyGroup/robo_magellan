@@ -42,6 +42,26 @@ $ catkin_init_workspace
 $ cd ~/catkin_ws/
 $ catkin_make
 ----
+
+Resolve the opencv dependency by installing:
+----
+sudo apt-get install ros-kinetic-video-stream-opencv
+----
+
+Resolve the python smbus dependency by installing:
+----
+sudo apt-get install python-smbus
+----
+
+Optional. Lidar support with rpilidar:
+* The mw.launch file references the rpilidar project. You can comment out the include or install the code. Follow installation instructions found on https://github.com/robopeak/rplidar_ros
+
+
+Optional. Generate messages for java platform:
+----
+genjava_message_artifacts --verbose
+----
+
 Finally add
 ----
 source ~/catkin_ws/devel/setup.bash
