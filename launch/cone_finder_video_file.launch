@@ -4,7 +4,7 @@
         <!-- node name and ros graph name -->
         <arg name="camera_name" value="webcam" />
         <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="$(find robo_magellan)/data/videos/excerpt-20170421-1108.avi" />
+        <arg name="video_stream_provider" value="/home/pi/data/videos/excerpt-20170421-1108.avi" />
         <!-- throttling the querying of frames to -->
         <arg name="fps" value="8" />
         <!-- setting frame_id -->
