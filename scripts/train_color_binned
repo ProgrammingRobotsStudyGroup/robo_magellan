@@ -61,6 +61,7 @@ class ColorTrainer:
         sys.exit(0)
 
     def processImage(self, imgFile, maskFile):
+        print('Processing', imgFile)
         im = cv2.imread(imgFile)
         mask = cv2.cvtColor(cv2.imread(maskFile), cv2.COLOR_BGR2GRAY)
 

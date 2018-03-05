@@ -34,8 +34,8 @@ class RosColorDepth:
     def __init__(self):
         rospy.init_node('cone_finder')
         self.started = True
-        self.colorCamInfo = None
-        self.depthCamInfo = None
+        self.colorCamInfo = CameraInfo()
+        self.depthCamInfo = CameraInfo()
 
         minArea = rospy.get_param("~minConeArea", 300)
         self.cf = ConeFinder(minArea)
@@ -51,6 +51,11 @@ class RosColorDepth:
 
         self.contourFilterAlgorithm = rospy.get_param('~contourFilterAlgorithm', 'convexNull')
         self.cf.setContourFilterAlgorithm(self.contourFilterAlgorithm)
+
+        if rospy.has_param('~binConfig'):
+            binConfig = rospy.get_param('~binConfig')
+            rospy.loginfo('Using bin configuration from %s' % binConfig)
+            self.cf.setBinConfiguration(binConfig)
 
         rospy.loginfo('Threshold algorithm %s' % self.thresholdAlgorithm)
         rospy.loginfo("[%s] Initialized." %(self.node_name))

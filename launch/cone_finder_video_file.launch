@@ -1,12 +1,12 @@
 <launch>
-  <!-- launch video stream -->
+  <!-- launch video stream, just for camera info -->
   <include file="$(find video_stream_opencv)/launch/camera.launch" >
         <!-- node name and ros graph name -->
         <arg name="camera_name" value="webcam" />
         <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="0" />
+        <arg name="video_stream_provider" value="$(find robo_magellan)/data/videos/excerpt-20170421-1108.avi" />
         <!-- throttling the querying of frames to -->
-        <arg name="fps" value="30" />
+        <arg name="fps" value="8" />
         <!-- setting frame_id -->
         <arg name="frame_id" value="webcam" />
         <!-- camera info loading, take care as it needs the "file:///" at the start , e.g.:
@@ -23,9 +23,10 @@
   <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-c -p">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
 	<!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
-    <param name="~minConeArea" value="300" />
+    <param name="~minConeArea" value="75" />
 	<param name="~thresholdAlgorithm" value="bin" />
 	<param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
+    <!-- Use 'convexHull' or 'huMoments' for filter algorithm. -->
     <param name="~contourFilterAlgorithm" value="convexHull" />
     <remap from="/camera/color/camera_info" to="/webcam/camera_info" />
 	<remap from="/camera/color/image_raw" to="/webcam/image_raw" />

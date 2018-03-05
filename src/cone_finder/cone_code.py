@@ -5,6 +5,7 @@
 import cv2, time, rospy
 import numpy as np
 from threading import Timer
+import json
 
 # Needed for publishing the messages
 from robo_magellan.msg import pose_data
@@ -21,22 +22,6 @@ def is_cv3():
 class ConeFinder:
     """ ConeFinder class """
     codec = 'XVID'
-    # These values from train_color_binned with threshold 0.6
-    numBins = 16
-    maskBins = [2576, 2832, 2848, 2885, 2886, 3104, 3120, 3121, 3137, 3138,
-                3139, 3140, 3141, 3360, 3376, 3377, 3392, 3393, 3394, 3395,
-                3396, 3397, 3410, 3411, 3412, 3413, 3632, 3633, 3648, 3649,
-                3650, 3651, 3652, 3664, 3665, 3666, 3667, 3668, 3682, 3683,
-                3770, 3872, 3888, 3904, 3905, 3906, 3907, 3920, 3921, 3922,
-                3923, 3924, 3936, 3937, 3938, 3939, 3940, 3941, 3952, 3953,
-                3954, 3955, 3956, 3957, 3958, 3959, 3968, 3969, 3970, 3971,
-                3972, 3973, 3974, 3975, 3976, 3977, 3985, 3986, 3987, 3988,
-                3989, 3990, 3991, 3992, 3993, 3994, 4003, 4004, 4005, 4006,
-                4007, 4008, 4009, 4010, 4011, 4020, 4021, 4022, 4023, 4024,
-                4025, 4026, 4027, 4041, 4042, 4043, 4044, 4045, 4058, 4059,
-                4060, 4061, 4062, 4076, 4077, 4078]
-    bins = np.zeros(numBins**3, np.uint8)
-    bins[maskBins] = 255
 
     coneShapes = []
 
@@ -62,6 +47,28 @@ class ConeFinder:
             else:
                 self.coneShapes.append({'aspect': aspect, 'shape': np.array([[[0, 0]], [[base, 0]], [[middle+top/2, height]], [[middle-top/2, height]]], np.int32)})
 
+            # These values from train_color_binned with threshold 0.6
+            self._setBinConfiguration({
+                'numBins': 16,
+                'maskBins': [
+                    2576, 2832, 2848, 2885, 2886, 3104, 3120, 3121, 3137, 3138,
+                    3139, 3140, 3141, 3360, 3376, 3377, 3392, 3393, 3394, 3395,
+                    3396, 3397, 3410, 3411, 3412, 3413, 3632, 3633, 3648, 3649,
+                    3650, 3651, 3652, 3664, 3665, 3666, 3667, 3668, 3682, 3683,
+                    3770, 3872, 3888, 3904, 3905, 3906, 3907, 3920, 3921, 3922,
+                    3923, 3924, 3936, 3937, 3938, 3939, 3940, 3941, 3952, 3953,
+                    3954, 3955, 3956, 3957, 3958, 3959, 3968, 3969, 3970, 3971,
+                    3972, 3973, 3974, 3975, 3976, 3977, 3985, 3986, 3987, 3988,
+                    3989, 3990, 3991, 3992, 3993, 3994, 4003, 4004, 4005, 4006,
+                    4007, 4008, 4009, 4010, 4011, 4020, 4021, 4022, 4023, 4024,
+                    4025, 4026, 4027, 4041, 4042, 4043, 4044, 4045, 4058, 4059,
+                    4060, 4061, 4062, 4076, 4077, 4078]})
+                
+    def _setBinConfiguration(self, binConfig):
+        self.numBins = binConfig['numBins']
+        self.bins = np.zeros(self.numBins**3, np.uint8)
+        self.bins[binConfig['maskBins']] = 255
+        
     def _initCapture(self, frame, outFile):
         (h, w) = frame.shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*self.codec)
@@ -197,6 +204,10 @@ class ConeFinder:
         else:
             # Default is HSV
             self._thresholdImage = self._process_orange_color
+
+    def setBinConfiguration(self, jsonFile):
+        with open(jsonFile, 'r') as f:
+            self._setBinConfiguration(json.load(f))
 
     def setContourFilterAlgorithm(self, algorithm):
         if algorithm == 'convexHull':
