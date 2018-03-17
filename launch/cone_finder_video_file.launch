@@ -4,7 +4,7 @@
         <!-- node name and ros graph name -->
         <arg name="camera_name" value="webcam" />
         <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="/home/pi/data/videos/excerpt-20170421-1108.avi" />
+        <arg name="video_stream_provider" value="/home/merose/data/2017-video-excerpts/excerpt-20170421-1108.avi" />
         <!-- throttling the querying of frames to -->
         <arg name="fps" value="8" />
         <!-- setting frame_id -->
@@ -16,20 +16,26 @@
         <arg name="flip_horizontal" value="false" />
         <!-- flip the image vertically -->
         <arg name="flip_vertical" value="false" />
-        <!-- visualize on an image_view window the stream generated -->
-        <arg name="visualize" value="true" />
+        <!-- true, to show image_view window the stream generated -->
+        <arg name="visualize" value="false" />
   </include>
 
-  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-c -p">
+  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
-	<!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
-    <param name="~minConeArea" value="75" />
-	<param name="~thresholdAlgorithm" value="bin" />
-	<param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
+    <param name="~captureVideo" value="False" />
+    <param name="~publishImages" value="True" />
+    <param name="~ignorePriorDetections" value="True" />
+
+    <param name="~minConeArea" value="30" />
+    <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
+    <param name="~thresholdAlgorithm" value="bin" />
+    <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
+
     <!-- Use 'convexHull' or 'huMoments' for filter algorithm. -->
     <param name="~contourFilterAlgorithm" value="convexHull" />
+
     <remap from="/camera/color/camera_info" to="/webcam/camera_info" />
-	<remap from="/camera/color/image_raw" to="/webcam/image_raw" />
+    <remap from="/camera/color/image_raw" to="/webcam/image_raw" />
   </node>
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>

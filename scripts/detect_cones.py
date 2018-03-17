@@ -11,12 +11,6 @@ from robo_magellan.msg import location_msgs as location_data
 from cv_bridge import CvBridge, CvBridgeError
 from cone_finder import ConeFinder, ConeSeeker
 
-class Args(object):
-    publish_images = False
-    capture_video = False
-
-args = Args()
-
 class RosColorDepth:
     node_name = "cone_finder"
     bridge = CvBridge()
@@ -39,12 +33,16 @@ class RosColorDepth:
 
         minArea = rospy.get_param("~minConeArea", 300)
         self.cf = ConeFinder(minArea)
+        self.cs = ConeSeeker()
 
         rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.colorCamInfoCallback)
         rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.depthCamInfoCallback)
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
         self.depthImage = None
         rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
+
+        self.capture_video = rospy.get_param("~captureVideo", False)
+        self.publish_images = rospy.get_param("~publishImages", False)
 
         self.thresholdAlgorithm = rospy.get_param('~thresholdAlgorithm', 'bin')
         self.cf.setThresholdAlgorithm(self.thresholdAlgorithm)
@@ -56,6 +54,8 @@ class RosColorDepth:
             binConfig = rospy.get_param('~binConfig')
             rospy.loginfo('Using bin configuration from %s' % binConfig)
             self.cf.setBinConfiguration(binConfig)
+
+        self.cs.setIgnorePriorDetections(rospy.get_param('~ignorePriorDetections', True))
 
         rospy.loginfo('Threshold algorithm %s' % self.thresholdAlgorithm)
         rospy.loginfo("[%s] Initialized." %(self.node_name))
@@ -85,10 +85,6 @@ class RosColorDepth:
         self.started = False
 
     def markVideo(self, imghull, poses):
-        if self.cs is None:
-            # ConeSeeker only used to mark cone confidence, default throttle is good
-            self.cs = ConeSeeker()
-
         (cl, conf, sadj, tadj) = self.cs.seek_cone(poses)
         if conf > 0.1:
             #frame could be non zero
@@ -107,11 +103,19 @@ class RosColorDepth:
 
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
+
+        # Why are we republishing the camera info? Can't other nodes
+        # subscribe to the same topic we're subscribing to?
         self.colorCamInfo.header.stamp = ts
         self.colorCIPub.publish(self.colorCamInfo)
         if self.depthCamInfo is not None:
             self.depthCamInfo.header.stamp = ts
             self.depthCIPub.publish(self.depthCamInfo)
+
+        # Convert from the OpenCV images to ROS image messages and
+        # publish the marked-up images.
+        # (Why are we publishing the depth image when we haven't
+        # added any information to it?)
         colorMsg = self.bridge.cv2_to_imgmsg(imghull, "bgr8")
         colorMsg.header.stamp = ts
         colorMsg.header.frame_id = colorImage.header.frame_id
@@ -123,26 +127,41 @@ class RosColorDepth:
             self.depthPub.publish(depthMsg)
 
     def processImage(self, colorImage, depthImage):
+        # Skip this image if we're already processing an image.
+        # That is, if we cannot acquire the thread lock with no
+        # delay, then another thread has the lock and is processing
+        # an image. This reduces our effective frame rate to what
+        # we can process.
         if not self.thread_lock.acquire(False):
             return
 
         if not self.started:
             return
 
-        #print(colorImage.encoding, depthImage.encoding)
+        # Convert from a ROS image message to an OpenCV image.
         cvRGB = self.bridge.imgmsg_to_cv2(colorImage, "bgr8")
         ch, cw = cvRGB.shape[:2]
 
+        # Convert the depth image, if we have one.
         if depthImage is not None:
             cvDepth = self.bridge.imgmsg_to_cv2(depthImage)
             dh, dw = cvDepth.shape[:2]
-            ch, cw = dh, dw
         else:
             cvDepth = None
             dh, dw = ch, cw
 
+        # If the depth image is a different size then the color image,
+        # resize the color image to match. (This assumes that the
+        # field of view of the two cameras is the same. Is this true?
+        # It seems better to convert the coordinates of the color
+        # image to world coordinates and then to depth image coordinates
+        # to find what portion of the depth image can be correlated to
+        # the RGB image, then either padding the depth image with zeros,
+        # if smaller than the RGB, or cropping to match the RGB field
+        # of view, if larger than the RGB.)
         if (ch != dh) and (cw != dw):
             cvRGB = cv2.resize(cvRGB, (dw, dh))
+            ch, cw = dh, dw
 
         self.colorCamInfo.width = cw
         self.colorCamInfo.height = ch
@@ -154,7 +173,7 @@ class RosColorDepth:
             self.lc = self.lc + 1
             poses, listOfCones = self.cf.find_cones(cvRGB, cvDepth)
             # Use this function to capture video - here unmodified video
-            if args.capture_video:
+            if self.capture_video:
                 self.cf.captureFrames(cvRGB, cvDepth)
 
             imghull = cvRGB.copy()
@@ -162,16 +181,16 @@ class RosColorDepth:
             loc.poses = poses
             loc.header.stamp = rospy.Time.now()
             self.pub.publish(loc)
-            if len(poses):
-                # Frame big 3 cones - they are sorted by area
-                cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
 
-            if args.publish_images:
+            if self.publish_images:
+                if len(poses):
+                    # Frame big 3 cones - they are sorted by area
+                    cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
                 self.markVideo(imghull, poses)
                 self.publishImages(imghull, colorImage, depthImage)
 
-            if self.lc == 100:
-                msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
+            if self.lc % 100 == 0:
+                msg_str = 'Frames: {0:d} time per frame: {1:.3f}s'.format(self.lc, (time.clock() - self.ts)/self.lc)
                 rospy.loginfo(msg_str)
                 self.lc = 0
                 self.ts = time.clock()
@@ -185,10 +204,6 @@ def find_cones_main():
     r = RosColorDepth()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Find cones in published video feeds')
-    parser.add_argument('--capture_video', '-c', action='store_true', help='Capture videos')
-    parser.add_argument('--publish_images', '-p', action='store_true', help='Publish marked images')
-    parser.parse_args(rospy.myargv(sys.argv[1:]), args)
     try:
         find_cones_main()
 

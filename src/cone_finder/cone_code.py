@@ -284,8 +284,12 @@ class ConeFinder:
         for (hull, area, (dMin, dMax)) in listOfHullsAndArea:
             # print 'convexHull',len(temp)
             if len(hull) >= 3 and self._convexHullIsPointingUp(hull):
-                listOfCones.append(hull)
                 x, y, w, h = cv2.boundingRect(hull)
+                # Ignore cones that aren't taller than wide.
+                if h <= w:
+                    continue
+
+                listOfCones.append(hull)
                 pose = pose_data()
                 pose.x = x + w/2 - image_centerX
                 pose.w = w
@@ -351,6 +355,7 @@ class ConeSeeker:
     conf_decay_rate = 0.8
     nItems = 16
     def __init__(self, onGrass=True, debug=False):
+        self.ignore_prior_detections = False
         self.prev_pos_confs = []
         self.seek_started = False
         self.timer = None
@@ -364,6 +369,9 @@ class ConeSeeker:
         self.cf_params = rospy.get_param('cone_finder')
         if debug:
             self.dpPub = rospy.Publisher('cone_finder/drive_params', drive_params, queue_size=10)
+
+    def setIgnorePriorDetections(self, ignore):
+        self.ignore_prior_detections = ignore
 
     def _set_drive_conditions(self, onGrass):
         if onGrass:
@@ -492,6 +500,13 @@ class ConeSeeker:
         # Compute confidence for each hull by area and h distance
         confidence = 0.
         if len(poses):
+            if self.ignore_prior_detections:
+                # Return the first cone as 100% confidence.
+                cone_loc = poses[0]
+                (sd, td) = self._get_drive_deltas(cone_loc)
+                self.last_sd = sd
+                return (cone_loc, 1.0, sd, td)
+
             maxArea = max(pose.area for pose in poses)
 
             all_matches = []
