@@ -22,8 +22,6 @@ class RosColorDepth:
     pub = rospy.Publisher('cone_finder/locations', location_data, queue_size=10)
     colorPub = rospy.Publisher("cone_finder/colorImage", Image, queue_size=10)
     depthPub = rospy.Publisher("cone_finder/depthImage", Image, queue_size=10)
-    colorCIPub = rospy.Publisher("cone_finder/colorCamInfo", CameraInfo, queue_size=2)
-    depthCIPub = rospy.Publisher("cone_finder/depthCamInfo", CameraInfo, queue_size=2)
 
     def __init__(self):
         rospy.init_node('cone_finder')
@@ -103,14 +101,6 @@ class RosColorDepth:
 
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
-
-        # Why are we republishing the camera info? Can't other nodes
-        # subscribe to the same topic we're subscribing to?
-        self.colorCamInfo.header.stamp = ts
-        self.colorCIPub.publish(self.colorCamInfo)
-        if self.depthCamInfo is not None:
-            self.depthCamInfo.header.stamp = ts
-            self.depthCIPub.publish(self.depthCamInfo)
 
         # Convert from the OpenCV images to ROS image messages and
         # publish the marked-up images.
