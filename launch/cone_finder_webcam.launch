@@ -20,8 +20,12 @@
         <arg name="visualize" value="true" />
   </include>
 
-  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-c -p">
+  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
+    <param name="~captureVideo" value="False" />
+    <param name="~publishImages" value="True" />
+    <param name="~ignorePriorDetections" value="True" />
+
 	<!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~minConeArea" value="300" />
 	<param name="~thresholdAlgorithm" value="bin" />
