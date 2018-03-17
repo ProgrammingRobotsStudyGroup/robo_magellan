@@ -4,8 +4,17 @@
     <arg name="depth_height" value="480"/>
     <arg name="rgb" default="color"/>
   </include>
-  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py" args="-c -p">
+  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
+    <param name="~captureVideo" value="False" />
+    <param name="~publishImages" value="True" />
+    <param name="~ignorePriorDetections" value="True" />
+
+    <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
+    <param name="~minConeArea" value="300" />
+    <param name="~thresholdAlgorithm" value="bin" />
+    <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
+    <param name="~contourFilterAlgorithm" value="convexHull" />
   </node>
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>
