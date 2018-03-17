@@ -1,12 +1,17 @@
 <launch>
+  <!-- The video file to stream -->
+  <arg name="file" />
+  <!-- The frame rate-->
+  <arg name="fps" default="15" />
+
   <!-- launch video stream, just for camera info -->
   <include file="$(find video_stream_opencv)/launch/camera.launch" >
         <!-- node name and ros graph name -->
         <arg name="camera_name" value="webcam" />
         <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="/home/merose/data/2017-video-excerpts/excerpt-20170421-1108.avi" />
+        <arg name="video_stream_provider" value="$(arg file)" />
         <!-- throttling the querying of frames to -->
-        <arg name="fps" value="8" />
+        <arg name="fps" value="$(arg fps)" />
         <!-- setting frame_id -->
         <arg name="frame_id" value="webcam" />
         <!-- camera info loading, take care as it needs the "file:///" at the start , e.g.:
