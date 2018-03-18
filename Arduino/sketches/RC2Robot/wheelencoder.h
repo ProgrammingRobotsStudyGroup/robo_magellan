@@ -28,21 +28,24 @@
 // The following pin deffinitions can be changed.
 // If changed, additional changes in the code are required
 
+#define LEFT_ENCODER_PIN_A 8
 #define LEFT_ENC_PIN_A PB4
+#define LEFT_ENCODER_PIN_B 9
 #define LEFT_ENC_PIN_B PB5
 
+#define RIGHT_ENCODER_PIN_A 10
 #define RIGHT_ENC_PIN_A PB6
+#define RIGHT_ENCODER_PIN_B 11
 #define RIGHT_ENC_PIN_B PB7
 
 // Left/right encoder
-#define LEFT 0
-#define RIGHT 1
+enum {
+  LEFT_ENCODER,
+  RIGHT_ENCODER
+};
 
-// Specify linkage
-extern "C" {
 void initWheelEncoder();
 void resetEncoders();
-double readSpeed(int i);
-}
+double readTicks(int i);
 
 #endif

@@ -30,57 +30,40 @@
 void setup() {
   Serial.begin(115200);
   initCommand();
-  //
+
   initWheelEncoder();
-  //
+
   initBumper();
-}
-/**
- * 
- */
-void dispPinVal() {
-    // Display pin vals
-    int pinVal;
-    pinVal = digitalRead(LEFT_ENC_PIN_A);
-    Serial.print(pinVal);
-    //
-    Serial.print("-");
-    pinVal = digitalRead(LEFT_ENC_PIN_B);
-    Serial.print(pinVal);
-    //
-    Serial.print("-");
-    pinVal = digitalRead(RIGHT_ENC_PIN_A);
-    Serial.print(pinVal);
-    //
-    Serial.print("-");
-    pinVal = digitalRead(RIGHT_ENC_PIN_B);
-    Serial.print(pinVal);
-    //
-    Serial.println();
 }
 
 /**
  * 
  */
 unsigned long timer = 0;
-#define _delay 1000
+const unsigned long _delay = 100;
 
 void loop() {
   // Process input
-  int newtime = millis();
+  unsigned long newtime = millis();
+  unsigned long elapsed = newtime - timer;
+
   processCommandChar();
-  if (newtime>(timer+_delay)) {
+  if (elapsed > _delay) {
     timer = newtime;
-    //
-//    dispPinVal();
-    //
-    double vel;
-    vel = readSpeed(LEFT);
-    Serial.print("L:");
-    Serial.print(vel);
-    Serial.print(" R:");
-    vel = readSpeed(RIGHT);
-    Serial.println(vel);
+
+    // Show left encoder ticks.
+    Serial.print("E ");
+    Serial.print(readTicks(LEFT_ENCODER));
+    Serial.print(' ');
+    Serial.print(elapsed);
+    Serial.println();
+
+    // Show right encoder ticks.
+    Serial.print("E2 ");
+    Serial.print(readTicks(RIGHT_ENCODER));
+    Serial.print(' ');
+    Serial.print(elapsed);
+    Serial.println();
   }
 }
 

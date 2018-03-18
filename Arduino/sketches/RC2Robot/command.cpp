@@ -186,7 +186,7 @@ int executeCommand(int cmd, int arg1, int arg2) {
 //#endif
   case VELOCITY:
     double vel;
-    vel = readSpeed(arg2);
+    vel = readTicks(arg2);
     SERIAL_STREAM.println(vel);
     break;
   default:

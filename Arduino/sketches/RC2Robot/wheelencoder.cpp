@@ -16,128 +16,108 @@
  */
 
 #include "wheelencoder.h"
+#include <FastGPIO.h>
+#include <EnableInterrupt.h>
 
-volatile double left_speed = 0.0;
-volatile double right_speed = 0.0;
+static const long MIN_CHANGE_TIME = 1000; // 1000us = 1ms is minimum time between ticks.
 
-static const signed char ENC_STATES [] = {0,1,-1,0, -1,0,0,1, 1,0,0,-1, 0,-1,1,0};
+static volatile long left_ticks = 0;
+static volatile long right_ticks = 0;
 
-#ifndef opt0
-/* Interrupt routine for LEFT encoder, taking care of actual counting */
-ISR (PCINT0_vect) {
-  static unsigned long last_time = 0;
-  static long last_dt = 0;
-  static unsigned char last_enc = 0;
+static volatile int last_left_state;
+static volatile long last_left_time;
 
-  // Shift previous state two places
-  last_enc <<= 2;
+static volatile int last_right_state;
+static volatile long last_right_time;
 
-  // Read the current state into lowest 2 bits
-  last_enc |= (PINB & (3 << 4)) >> 4;
+static const signed char ENC_STATES [] = {
+  0,  // 00 -> 00
+  1,  // 00 -> 01
+  -1, // 00 -> 10
+  0,  // 00 -> 11 (shouldn't happen)
+  -1, // 01 -> 00
+  0,  // 01 -> 01
+  0,  // 01 -> 10 (shouldn't happen)
+  1,  // 01 -> 11
+  1,  // 10 -> 00
+  0,  // 10 -> 01 (shouldn't happen)
+  0,  // 10 -> 10
+  -1, // 10 -> 11
+  0,  // 11 -> 00 (shouldn't happen)
+  -1, // 11 -> 01
+  1,  // 11 -> 10
+  0   // 11 -> 11
+};
 
-  signed char stat = ENC_STATES[(last_enc & 0x0f)];
+static void updateTicks(volatile long &ticks, volatile int &last_state, volatile long &last_time,
+  int new_state) {
 
-  if (stat != 0) {
-    unsigned long t = micros();
-    long dt = t - last_time;
-
-    last_time = t;
-
-    if (1000 < dt && dt < 150000) {
-      dt *= stat;
-
-      if (last_dt < 0 && dt > 0 || last_dt > 0 && dt < 0) {
-        last_dt = 0;
-      }
-
-      last_dt = ((last_dt * 4) + dt) / 5;
-
-      left_speed = 25000.0 / (double)last_dt;
-    }
+  long new_time = micros();
+  if (new_time-last_time > MIN_CHANGE_TIME) {
+    ticks += ENC_STATES[last_state<<2 | new_state];
+    last_state = new_state;
+    last_time = new_time;
   }
 }
-#endif
 
-/* Interrupt routine for RIGHT encoder, taking care of actual counting */
-// ISR (PCINT1_vect){
-//   static unsigned long last_time = 0;
-//   static long last_dt = 0;
-//   static unsigned char last_enc = 0;
-//
-//   last_enc <<= 2; //shift previous state two places
-//
-//   last_enc |= (PINC & (3 << 4)) >> 4; //read the current state into lowest 2 bits
-//
-//   signed char stat = ENC_STATES[(last_enc & 0x0f)];
-//
-//   if (stat != 0) {
-//     unsigned long t = micros();
-//     long dt = t - last_time;
-//
-//     last_time = t;
-//
-//     if (1000 < dt && dt < 150000) {
-//       dt *= stat;
-//
-//       if (last_dt < 0 && dt > 0 || last_dt > 0 && dt < 0) {
-//         last_dt = 0;
-//       }
-//
-//       last_dt = ((last_dt * 4) + dt) / 5;
-//
-//       right_speed = 25000.0 / (double)last_dt;
-//     }
-//   }
-// }
+// Update the left encoder when either encoder pin changes.
+static void leftISR() {
+  int new_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()<<1
+     | FastGPIO::Pin<LEFT_ENCODER_PIN_B>::isInputHigh();
+  updateTicks(left_ticks, last_left_state, last_left_time, new_state);
+}
+
+// Update the encoder when the right A pin changes.
+static void rightISR() {
+  int new_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()<<1
+     | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh();
+  updateTicks(right_ticks, last_right_state, last_right_time, new_state);
+}
 
 /**
  * 
  */
 void initWheelEncoder() {
-  //set as inputs
-  DDRB &= ~(1 << LEFT_ENC_PIN_A);
-  DDRB &= ~(1 << LEFT_ENC_PIN_B);
-  DDRB &= ~(1 << RIGHT_ENC_PIN_A);
-  DDRB &= ~(1 << RIGHT_ENC_PIN_B);
-  //enable pull up resistors
-  PORTB |= (1 << LEFT_ENC_PIN_A);
-  PORTB |= (1 << LEFT_ENC_PIN_B);
-  PORTB |= (1 << RIGHT_ENC_PIN_A);
-  PORTB |= (1 << RIGHT_ENC_PIN_B);
-  // tell pin change mask to listen to left encoder pins
-  PCMSK0 |= (1 << LEFT_ENC_PIN_A) | (1 << LEFT_ENC_PIN_B);
-  // tell pin change mask to listen to right encoder pins
-  PCMSK0 |= (1 << RIGHT_ENC_PIN_A) | (1 << RIGHT_ENC_PIN_B);
+  FastGPIO::Pin<LEFT_ENCODER_PIN_A>::setInputPulledUp();
+  FastGPIO::Pin<LEFT_ENCODER_PIN_B>::setInputPulledUp();
 
-  // enable PCINT0 interrupt in the general interrupt mask
-  PCICR |= 1 << PCIE0;
+  FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::setInputPulledUp();
+  FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::setInputPulledUp();
+
+  enableInterrupt(LEFT_ENCODER_PIN_A, leftISR, CHANGE);
+  enableInterrupt(LEFT_ENCODER_PIN_B, leftISR, CHANGE);
+  enableInterrupt(RIGHT_ENCODER_PIN_A, rightISR, CHANGE);
+  enableInterrupt(RIGHT_ENCODER_PIN_B, rightISR, CHANGE);
+
   resetEncoders();
 }
 
 /* Wrap the encoder reading function */
-double readSpeed(int i) {
-  if (i == LEFT) {
-    return left_speed;
-  }
-  else {
-    return right_speed;
+double readTicks(int i) {
+  if (i == LEFT_ENCODER) {
+    return left_ticks;
+  } else {
+    return right_ticks;
   }
 }
 
 /* Wrap the encoder reset function */
 void resetEncoder(int i) {
-  if (i == LEFT) {
-    left_speed = 0.0;
-    return;
-  }
-  else {
-    right_speed = 0.0;
-    return;
+  if (i == LEFT_ENCODER) {
+    left_ticks = 0;
+    last_left_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()<<1
+      | FastGPIO::Pin<LEFT_ENCODER_PIN_B>::isInputHigh();
+    last_left_time = micros();
+  } else {
+    right_ticks = 0;
+    last_right_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()<<1
+      | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh();
+    last_right_time = micros();
   }
 }
 
 void resetEncoders() {
-  resetEncoder(LEFT);
-  resetEncoder(RIGHT);
+  resetEncoder(LEFT_ENCODER);
+  resetEncoder(RIGHT_ENCODER);
 }
 
