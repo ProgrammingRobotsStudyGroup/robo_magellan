@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+
+import rospy
+import os
+import re
+import serial
+import subprocess
+import sys
+import threading
+import time
+from math import pi
+from std_msgs.msg import Bool, Float32, Int8, Int16
+
+nodeLock = threading.Lock()
+
+class Receiver():
+    def __init__(self):
+        self.node_name = 'arduino_receiver'
+
+        rospy.init_node(self.node_name)
+
+        self.publish_touch = rospy.get_param('~publish_touch', False)
+        self.wheel_diameter = rospy.get_param('~wheel_diameter')
+        self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution')
+        port = rospy.get_param('~serial_device', '/dev/ttyACM99')
+        baud = rospy.get_param('~serial_rate', 115200)
+
+        self.serial_port = serial.Serial(port, baud)
+        if self.publish_touch:
+            self.touch_pub = rospy.Publisher("/robo_magellan/touch", Int8, queue_size = 1)
+        self.speed_pub = rospy.Publisher("/robo_magellan/speed", Float32, queue_size = 1)
+        self.enc_pub = rospy.Publisher("/robo_magellan/encoder_distance", Float32, queue_size = 1)
+        
+        self.last_display_update = 0.0
+        self.fix = 0
+        self.last_ticks = None
+
+        rospy.loginfo('{0}: Ready.'.format(self.node_name))
+
+    def run(self):
+        while not rospy.is_shutdown():
+            t = time.time()
+
+            if t - self.last_display_update > 1.0:
+                self.last_display_update = t
+
+                led_string = "l "
+
+                if self.fix == 0:
+                    led_string += "255 0 0\n"
+                elif self.fix == 1:
+                    led_string += "0 90 90\n"
+                elif self.fix == 2:
+                    led_string += "0 140 0\n"
+                elif self.fix == 3 or self.fix == 4:
+                    led_string += "225 200 15\n"
+                elif self.fix == 5:
+                    led_string += "210 121 34\n"
+                else:
+                    led_string += "255 0 0\n"
+
+                self.serial_port.write(led_string)
+
+            try:
+                l = self.serial_port.readline()
+                if l:
+                    l = l.rstrip()
+                    # rospy.loginfo("%s: line=%s" % (self.node_name, l))
+
+                    m = re.match('^([-0-9]+)$', l)
+                    if m:
+                        value = int(m.group(1))
+                        # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
+                        if self.publish_touch:
+                            self.touch_pub.publish(value)
+
+                    m = re.match('^E ([-0-9]+)( ([-0-9]+))?( ([-0-9]+))?$', l)
+                    if m:
+                        value = int(m.group(1))
+                        # rospy.loginfo("%s: Receiver E got %d" % (self.node_name, value))
+                        # Speed in m/s is:
+                        #   pi*diameter*dticks/ticks_per_revolution / period
+                        # Default period is 0.1 seconds.
+                        if len(m.groups()) >= 4 and len(m.group(3)) > 0:
+                            period = 0.001 * int(m.group(3))
+                        else:
+                            period = 0.1
+
+                        if self.last_ticks is not None:
+                            delta = value - self.last_ticks
+                            s = pi*self.wheel_diameter * (float(delta) / self.ticks_per_revolution) / period
+                            # rospy.loginfo("%s: Receiver E value= %d period= %f s= %f" % (self.node_name, value, period, s))
+                            self.speed_pub.publish(s)
+                        self.last_ticks = value
+
+                        if len(m.groups()) >= 6 and len(m.group(5)) > 0:
+                            e = int(m.group(5))
+
+                            # distance (increment/decrement)
+                            # 80 ticks/wheel rotation,
+                            # circumfence 0.638m
+                            d = 0.638 * (float(e) / 80)
+                            self.enc_pub.publish(d)
+            except serial.serialutil.SerialException:
+                rospy.loginfo("close serial")
+
+        rospy.loginfo("%s: Done." % self.node_name)
+        self.serial_port.close()
+
+def main(args):
+    try:
+        Receiver().run()
+
+    except KeyboardInterrupt:
+        rospy.loginfo("close")
+
+if __name__ == '__main__':
+    main(sys.argv)

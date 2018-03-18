@@ -40,7 +40,7 @@ void setup() {
  * 
  */
 unsigned long timer = 0;
-const unsigned long _delay = 100;
+const unsigned long _delay = 50;
 
 void loop() {
   // Process input

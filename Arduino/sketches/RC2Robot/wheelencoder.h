@@ -46,6 +46,6 @@ enum {
 
 void initWheelEncoder();
 void resetEncoders();
-double readTicks(int i);
+long readTicks(int i);
 
 #endif

@@ -25,10 +25,10 @@ static volatile long left_ticks = 0;
 static volatile long right_ticks = 0;
 
 static volatile int last_left_state;
-static volatile long last_left_time;
+static volatile unsigned long last_left_time;
 
 static volatile int last_right_state;
-static volatile long last_right_time;
+static volatile unsigned long last_right_time;
 
 // Encodes how much to increment the ticks based on the last state and the new state.
 // The states are encoded as "B<<1 | A" for the A & B interrupt pins.
@@ -54,10 +54,10 @@ static const signed char ENC_STATES [] = {
   0   // 11 -> 11
 };
 
-static void updateTicks(volatile long &ticks, volatile int &last_state, volatile long &last_time,
-  int new_state) {
+static void updateTicks(volatile long &ticks, volatile int &last_state,
+  volatile unsigned long &last_time, int new_state) {
 
-  long new_time = micros();
+  unsigned long new_time = micros();
   if (new_time-last_time > MIN_CHANGE_TIME) {
     ticks += ENC_STATES[last_state<<2 | new_state];
     last_state = new_state;
@@ -98,7 +98,7 @@ void initWheelEncoder() {
 }
 
 /* Wrap the encoder reading function */
-double readTicks(int i) {
+long readTicks(int i) {
   if (i == LEFT_ENCODER) {
     return left_ticks;
   } else {
