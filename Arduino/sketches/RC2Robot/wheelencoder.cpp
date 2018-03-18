@@ -30,6 +30,11 @@ static volatile long last_left_time;
 static volatile int last_right_state;
 static volatile long last_right_time;
 
+// Encodes how much to increment the ticks based on the last state and the new state.
+// The states are encoded as "B<<1 | A" for the A & B interrupt pins.
+// Indices into the array are:
+//   last_state<<2 | new_state
+// The commend next to each value shows "last_state -> new_state".
 static const signed char ENC_STATES [] = {
   0,  // 00 -> 00
   1,  // 00 -> 01
@@ -62,15 +67,15 @@ static void updateTicks(volatile long &ticks, volatile int &last_state, volatile
 
 // Update the left encoder when either encoder pin changes.
 static void leftISR() {
-  int new_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()<<1
-     | FastGPIO::Pin<LEFT_ENCODER_PIN_B>::isInputHigh();
+  int new_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()
+     | FastGPIO::Pin<LEFT_ENCODER_PIN_B>::isInputHigh()<<1;
   updateTicks(left_ticks, last_left_state, last_left_time, new_state);
 }
 
 // Update the encoder when the right A pin changes.
 static void rightISR() {
-  int new_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()<<1
-     | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh();
+  int new_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()
+     | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh()<<1;
   updateTicks(right_ticks, last_right_state, last_right_time, new_state);
 }
 
