@@ -3,27 +3,20 @@
   <arg name="file" />
   <!-- The frame rate-->
   <arg name="fps" default="15" />
+  <!-- The starting video frame number" -->
+  <arg name="start_frame" default="1" />
+  <!-- If True, single-step through video -->
+  <arg name="single_frame" default="False" />
+  <!-- The video frame ID -->
+  <arg name="frame_id" default="camera" />
 
-  <!-- launch video stream, just for camera info -->
-  <include file="$(find video_stream_opencv)/launch/camera.launch" >
-        <!-- node name and ros graph name -->
-        <arg name="camera_name" value="webcam" />
-        <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="$(arg file)" />
-        <!-- throttling the querying of frames to -->
-        <arg name="fps" value="$(arg fps)" />
-        <!-- setting frame_id -->
-        <arg name="frame_id" value="webcam" />
-        <!-- camera info loading, take care as it needs the "file:///" at the start , e.g.:
-        "file:///$(find your_camera_package)/config/your_camera.yaml" -->
-        <arg name="camera_info_url" value="file:///$(find robo_magellan)/config/logitech-C270.yaml" />
-        <!-- flip the image horizontally (mirror it) -->
-        <arg name="flip_horizontal" value="false" />
-        <!-- flip the image vertically -->
-        <arg name="flip_vertical" value="false" />
-        <!-- true, to show image_view window the stream generated -->
-        <arg name="visualize" value="false" />
-  </include>
+  <node name="video_publish" pkg="robo_magellan" type="video_publish">
+    <param name="~single_frame" value="$(arg single_frame)" />
+    <param name="~start_frame" value="$(arg start_frame)" />
+    <param name="~fps" value="$(arg fps)" />
+    <param name="~video_source" value="$(arg file)" />
+    <param name="~frame_id" value="$(arg frame_id)" />
+  </node>
 
   <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
@@ -31,16 +24,16 @@
     <param name="~publishImages" value="True" />
     <param name="~ignorePriorDetections" value="True" />
 
-    <param name="~minConeArea" value="30" />
+    <param name="~minConeArea" value="400" />
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />
     <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
 
-    <!-- Use 'convexHull' or 'huMoments' for filter algorithm. -->
-    <param name="~contourFilterAlgorithm" value="convexHull" />
+    <!-- Use 'convexHull', 'relaxed' or 'huMoments' for filter algorithm. -->
+    <param name="~contourFilterAlgorithm" value="relaxed" />
 
-    <remap from="/camera/color/camera_info" to="/webcam/camera_info" />
-    <remap from="/camera/color/image_raw" to="/webcam/image_raw" />
+    <remap from="/camera/color/image_raw" to="/color/image_raw" />
   </node>
+
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>

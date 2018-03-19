@@ -214,6 +214,8 @@ class ConeFinder:
             self._filterContours = self._convexHullConeFinder
         elif algorithm == 'huMoments':
             self._filterContours = self._huMomentsConeFinder
+        elif algorithm == 'relaxed':
+            self._filterContours = self._relaxedConeFinder
         else:
             # Default is convex hull approach
             self._filterContours = self._convexHullConeFinder
@@ -301,7 +303,63 @@ class ConeFinder:
                 pose.area = area
                 poses.append(pose)
 
-        return (poses, listOfCones)
+        return (contours, poses, listOfCones)
+
+    def _relaxedConeFinder(self, contours, img, depthImg):
+        list_of_cones = []
+        poses = []
+        image_height = img.shape[0]
+        image_centerX = img.shape[1] / 2
+
+        contours_and_area = []
+        for c in contours:
+            if len(c) >= 3:
+                epsilon = 0.02 * cv2.arcLength(c, True)
+                c = cv2.approxPolyDP(c, epsilon, True)
+                area = cv2.contourArea(c)
+                if area >= 3:
+                    contours_and_area.append((c, cv2.contourArea(c)))
+
+        filtered_contours = []
+        contours_and_area.sort(key=lambda (c, area): area, reverse=True)
+        for (c, area) in contours_and_area:
+            x, y, w, h = cv2.boundingRect(c)
+
+            # Ignore contours where the area is smaller than the minimum.
+            if area < self.min_area:
+                continue
+
+            filtered_contours.append(c)
+
+            # Ignore contours that aren't a bit taller than wide, unless
+            # they are really big.
+            if h < w*1.1 and area < 30000:
+                continue
+
+            # Ignore contours where the centroid isn't in the bottom half.
+            ## But don't do this right now, because grass can obscure the
+            ## base of the cone and make the cone not look cone-shaped.
+#            cx, cy = self._contour_centroid(c)
+#            if cy <= y + h/2:
+#                continue
+
+            list_of_cones.append(c)
+
+            pose = pose_data()
+            pose.x = x + w/2 - image_centerX
+            pose.y = image_height - y - h
+            pose.w = w
+            pose.h = h
+            pose.area = area
+            poses.append(pose)
+
+        return (filtered_contours, poses, list_of_cones)
+
+    def _contour_centroid(self, contour):
+        M = cv2.moments(contour)
+        cx = int(M['m10']/M['m00'])
+        cy = int(M['m01']/M['m00'])
+        return (cx, cy)
 
     def _huMomentsConeFinder(self, contours, img, depthImg):
         h, w = img.shape[:2]
@@ -344,7 +402,7 @@ class ConeFinder:
                         poses.append(pose)
                         break
 
-        return (poses, regions)
+        return (contours, poses, regions)
 
 class ConeSeeker:
     """ ConeSeeker class

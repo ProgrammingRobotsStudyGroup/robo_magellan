@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import time
+import sys
+import cv2
+import numpy as np
+import rospy
+
+# Needed for publishing the messages
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
+class VideoPublish:
+
+    def __init__(self):
+        rospy.init_node('video_publish')
+
+        single_frame = rospy.get_param('~single_frame', False)
+        show_image = single_frame
+        start_frame = rospy.get_param('~start_frame', 1)
+        rate = rospy.Rate(rospy.get_param('~fps', 15))
+        video_source = rospy.get_param('~video_source')
+        frame_id = rospy.get_param('~frame_id', 'camera')
+
+        pub = rospy.Publisher('/color/image_raw', Image, queue_size=1000)
+        cap = cv2.VideoCapture(video_source)
+        bridge = CvBridge()
+
+        frame_number = 0
+        while frame_number+1 < start_frame:
+            ret, im = cap.read()
+            if not ret:
+                break
+            frame_number += 1
+
+        while not rospy.is_shutdown():
+            ret, im = cap.read()
+            if not ret:
+                break
+            frame_number += 1
+
+            msg = bridge.cv2_to_imgmsg(im, 'bgr8')
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = frame_id
+            pub.publish(msg)
+            # Let ROS have control for a moment to send the message.
+            rospy.sleep(-1)
+
+            im_copy = im.copy()
+            msg = 'Frame: {0:d}'.format(frame_number)
+            cv2.putText(im_copy, msg, (10,40), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (255,0,0), 2, cv2.LINE_AA)
+            cv2.imshow('image', im_copy)
+
+            if not single_frame:
+                rate.sleep()
+                if show_image:
+                    cv2.waitKey(1)
+            else:
+                key = cv2.waitKey(0)
+                if key == 27:
+                    break
+                elif key == ord(']'):
+                    frame_number += self.skip_frames(cap, 9)
+                elif key == ord('='):
+                    frame_number += self.skip_frames(cap, 99)
+                elif key == ord('/'):
+                    single_frame = False
+
+    def skip_frames(self, cap, n):
+        skipped = 0
+        for i in range(n):
+            ret, im = cap.read()
+            if not ret:
+                break
+            skipped += 1
+        return skipped
+
+if __name__ == '__main__':
+    try:
+        VideoPublish()
+    except rospy.ROSInterruptException:
+        pass

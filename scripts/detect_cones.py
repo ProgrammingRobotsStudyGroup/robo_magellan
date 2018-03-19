@@ -72,22 +72,34 @@ class RosColorDepth:
     def stop(self):
         self.started = False
 
-    def markVideo(self, imghull, poses):
+    def markVideo(self, imghull, contours, poses):
         (cl, conf, sadj, tadj) = self.cs.seek_cone(poses)
+        for c in contours:
+            if len(c) >= 3:
+                cv2.polylines(imghull, [c], True, (0,255,255), 1)
+                x,y,w,h = cv2.boundingRect(c)
+                area = cv2.contourArea(c)
+                msg_str = '{0:.0f}'.format(area)
+                cv2.putText(imghull, msg_str, (x+w, y+h),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
         if conf > 0.1:
             #frame could be non zero
             (ih, iw) = imghull.shape[:2]
             pt1 = (iw/2 + cl.x - cl.w/2, ih - cl.y - cl.h)
             pt2 = (iw/2 + cl.x + cl.w/2, ih - cl.y)
             cv2.rectangle(imghull, pt1, pt2, (0, 0, 255), 3)
-            msg_str = '%.2f' % conf
-            cv2.putText(imghull, msg_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
+            conf_str = '{0:.2f}'.format(conf)
+            cv2.putText(imghull, conf_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
                         1, (0, 0, 255), 2, cv2.LINE_AA)
 
-        msg_str = 'FS = %.3f' % ((time.clock() - self.ts)/self.lc)
+        msg_str = 'time:{0:.3f}'.format((time.clock() - self.ts)/self.lc)
         cv2.putText(imghull, msg_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (255, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(imghull, 'alg:' + self.thresholdAlgorithm, (300, 460), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+        alg_str = 'alg:{0}/{1}'.format(self.thresholdAlgorithm,
+                                       self.contourFilterAlgorithm)
+        cv2.putText(imghull, alg_str, (300, 460), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, (0,0,255), 2, cv2.LINE_AA)
 
     def publishImages(self, imghull, colorImage, depthImage):
         ts = rospy.Time.now()
@@ -145,7 +157,7 @@ class RosColorDepth:
 
         try:
             self.lc = self.lc + 1
-            poses, listOfCones = self.cf.find_cones(cvRGB, cvDepth)
+            contours, poses, listOfCones = self.cf.find_cones(cvRGB, cvDepth)
             # Use this function to capture video - here unmodified video
             if self.capture_video:
                 self.cf.captureFrames(cvRGB, cvDepth)
@@ -160,7 +172,7 @@ class RosColorDepth:
                 if len(poses):
                     # Frame big 3 cones - they are sorted by area
                     cv2.drawContours(imghull, listOfCones[0:2], -1, (0, 255, 0), 3)
-                self.markVideo(imghull, poses)
+                self.markVideo(imghull, contours, poses)
                 self.publishImages(imghull, colorImage, depthImage)
 
             if self.lc % 100 == 0:

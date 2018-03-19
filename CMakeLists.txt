@@ -135,12 +135,6 @@ find_package(OpenCV)
 
 ## Declare a C++ executable(s)
 
-add_executable(video_publish src/video_publish.cpp)
-target_link_libraries(video_publish ${catkin_LIBRARIES})
-include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(video_publish ${OpenCV_LIBRARIES})
-add_dependencies(video_publish robo_magellan_generate_messages_cpp)
-
 add_executable(video_odometry src/video_odometry.cpp)
 target_link_libraries(video_odometry ${catkin_LIBRARIES})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -158,7 +152,10 @@ add_dependencies(video_odometry robo_magellan_generate_messages_cpp)
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
   scripts/detect_cones.py
+  scripts/arduino_receiver
   scripts/seek_cone.py
+  scripts/train_color_binned
+  scripts/video_publish
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
