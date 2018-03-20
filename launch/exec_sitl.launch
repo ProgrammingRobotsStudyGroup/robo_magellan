@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch
+  xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Competition launch file for RoboMagellan
+       Parameters:
+         vid: display video debug
+       Example:
+         roslaunch robo_magellan exec.launch vid:=true
+         Remember to use -X if you are using ssh
+        vs
+         roslaunch robo_magellan exec.launch
+        
+  -->
+
+  <!-- Start mavros only if installed.
+       Permits use on machine without pixhawk/mavros.
+  -->
+
+  <arg name="fcu_url" default="udp://127.0.0.1:14551@" />
+
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="$(arg fcu_url)" />
+  </include>
+
+  <include file="$(find robo_magellan)/launch/cone_finder_webcam.launch" />
+
+  <!--
+  <arg name="vid" default="false" />
+  <group if="$(arg vid)">
+    <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
+  </group>
+  <group unless="$(arg vid)" >
+    <include file="$(find robo_magellan)/launch/cone_finder.launch" />
+  </group> -->
+
+  <!-- Executive and state nodes -->
+  <rosparam command="load" file="$(find robo_magellan)/launch/exec.yaml" />
+  <node name="exec" pkg="robo_magellan" type="exec.py" /> -->
+  <node name="state_follow_waypoint" pkg="robo_magellan" type="state_follow_waypoint.py" />
+  <node name="state_driving_to_cone" pkg="robo_magellan" type="state_driving_to_cone.py" />
+  <node name="state_driving_away" pkg="robo_magellan" type="state_driving_away.py" />
+  <node name="state_avoiding_obstacle" pkg="robo_magellan" type="state_avoiding_obstacle.py" />
+
+  <!--  <include file="$(find robo_magellan)/launch/cone_seeker.launch" />  -->
+
+  <!--  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" /> -->
+
+  <!-- <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" /> -->
+
+  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
+
+  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+  
+</launch>
