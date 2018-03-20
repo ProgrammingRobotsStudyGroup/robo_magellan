@@ -10,11 +10,13 @@
     <param name="~publishImages" value="True" />
     <param name="~ignorePriorDetections" value="True" />
 
+    <param name="~minConeArea" value="400" />
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
-    <param name="~minConeArea" value="300" />
     <param name="~thresholdAlgorithm" value="bin" />
     <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
-    <param name="~contourFilterAlgorithm" value="convexHull" />
+
+    <!-- Use 'convexHull', 'relaxed' or 'huMoments' for filter algorithm. -->
+    <param name="~contourFilterAlgorithm" value="relaxed" />
   </node>
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>
