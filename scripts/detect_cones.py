@@ -74,15 +74,16 @@ class RosColorDepth:
 
     def markVideo(self, imghull, contours, poses):
         (cl, conf, sadj, tadj) = self.cs.seek_cone(poses)
-        for c in contours:
-            if len(c) >= 3:
-                cv2.polylines(imghull, [c], True, (0,255,255), 1)
-                x,y,w,h = cv2.boundingRect(c)
-                area = cv2.contourArea(c)
-                msg_str = '{0:.0f}'.format(area)
-                cv2.putText(imghull, msg_str, (x+w, y+h),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1, (0, 0, 255), 2, cv2.LINE_AA)
+        if False:
+            for c in contours:
+                if len(c) >= 3:
+                    cv2.polylines(imghull, [c], True, (0,255,255), 1)
+                    x,y,w,h = cv2.boundingRect(c)
+                    area = cv2.contourArea(c)
+                    msg_str = '{0:.0f}'.format(area)
+                    cv2.putText(imghull, msg_str, (x+w, y+h),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1, (0, 0, 255), 2, cv2.LINE_AA)
         if conf > 0.1:
             #frame could be non zero
             (ih, iw) = imghull.shape[:2]
