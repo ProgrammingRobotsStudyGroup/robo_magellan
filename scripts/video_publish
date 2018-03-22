@@ -16,15 +16,25 @@ class VideoPublish:
     def __init__(self):
         rospy.init_node('video_publish')
 
-        single_frame = rospy.get_param('~single_frame', False)
-        show_image = single_frame
         start_frame = rospy.get_param('~start_frame', 1)
-        rate = rospy.Rate(rospy.get_param('~fps', 15))
+        fps = rospy.get_param('~fps', 15)
+        rate = rospy.Rate(fps)
         video_source = rospy.get_param('~video_source')
         frame_id = rospy.get_param('~frame_id', 'camera')
+        height = rospy.get_param('~height', -1)
+        width = rospy.get_param('~width', -1)
 
+        single_frame = rospy.get_param('~single_frame', False)
+        preview = single_frame or rospy.get_param('~preview', False)
+
+        print('single_frame:', single_frame)
+        print('preview:', preview)
         pub = rospy.Publisher('/color/image_raw', Image, queue_size=1000)
         cap = cv2.VideoCapture(video_source)
+        if height > 0 and width > 0:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            cap.set(cv2.CAP_PROP_FPS, fps)
         bridge = CvBridge()
 
         frame_number = 0
@@ -44,19 +54,20 @@ class VideoPublish:
             msg.header.stamp = rospy.Time.now()
             msg.header.frame_id = frame_id
             pub.publish(msg)
-            # Let ROS have control for a moment to send the message.
-            rospy.sleep(-1)
 
-            im_copy = im.copy()
-            msg = 'Frame: {0:d}'.format(frame_number)
-            cv2.putText(im_copy, msg, (10,40), cv2.FONT_HERSHEY_SIMPLEX,
-                        1, (255,0,0), 2, cv2.LINE_AA)
-            cv2.imshow('image', im_copy)
+            if preview or single_frame:
+                im_copy = im.copy()
+                msg = 'Frame: {0:d}'.format(frame_number)
+                cv2.putText(im_copy, msg, (10,40), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (255,0,0), 2, cv2.LINE_AA)
+                cv2.imshow('image', im_copy)
 
             if not single_frame:
+                if preview:
+                    key = cv2.waitKey(1)
+                    if key == 27:
+                        break
                 rate.sleep()
-                if show_image:
-                    cv2.waitKey(1)
             else:
                 key = cv2.waitKey(0)
                 if key == 27:
@@ -67,6 +78,7 @@ class VideoPublish:
                     frame_number += self.skip_frames(cap, 99)
                 elif key == ord('/'):
                     single_frame = False
+                    preview = True
 
     def skip_frames(self, cap, n):
         skipped = 0
