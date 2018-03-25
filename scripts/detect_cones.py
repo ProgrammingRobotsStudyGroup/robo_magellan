@@ -93,13 +93,20 @@ class RosColorDepth:
             conf_str = '{0:.2f}'.format(conf)
             cv2.putText(imghull, conf_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
                         1, (0, 0, 255), 2, cv2.LINE_AA)
+            x,y,w,h = cv2.boundingRect(contours[0])
+            area = cv2.contourArea(contours[0])
+            msg_str = '{0:.0f}'.format(area)
+            cv2.putText(imghull, msg_str, (x+w, y+h),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (0, 0, 255), 2, cv2.LINE_AA)
 
         msg_str = 'time:{0:.3f}'.format((time.clock() - self.ts)/self.lc)
-        cv2.putText(imghull, msg_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX,
+        msgY = imghull.shape[1] - 80
+        cv2.putText(imghull, msg_str, (10, msgY), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (255, 0, 0), 2, cv2.LINE_AA)
         alg_str = 'alg:{0}/{1}'.format(self.thresholdAlgorithm,
                                        self.contourFilterAlgorithm)
-        cv2.putText(imghull, alg_str, (300, 460), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(imghull, alg_str, (250, msgY), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (0,0,255), 2, cv2.LINE_AA)
 
     def publishImages(self, imghull, colorImage, depthImage):
