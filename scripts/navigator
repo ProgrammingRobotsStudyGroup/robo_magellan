@@ -1,0 +1,121 @@
+#! /usr/bin/env python
+
+"""Implements a ROS node for interfacing to the rover through mavros."""
+
+import time
+import rospy
+from geometry_msgs.msg import Twist
+from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
+from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
+
+class MavrosModes:
+    MANUAL = 0
+    ACRO = 1
+    STEERING = 3
+    HOLD = 4
+    AUTO = 10
+    RTL = 11
+    GUIDED = 15
+
+class MavrosParameters:
+    SYSID_MYGCS = 123456789
+
+class MavrosTopics:
+    WAYPOINTS = '/mavros/mission/waypoints'
+    RC_OVERRIDE = '/mavros/rc/override'
+    GET_PARAM = '/mavros/param/get'
+    SET_PARAM = '/mavros/param/set'
+    ARMING = '/mavros/cmd/arming'
+    SET_MODE = '/mavros/set_mode'
+
+class RCChannels:
+    SPEED = 2
+    TURNING = 0
+
+class Navigator:
+
+    def run(self):
+        self.last_waypoint_index = 0
+        self.last_wp_speed = None
+        self.last_mode = None
+
+        rospy.init_node("rover_control")
+
+        self.rc_pub = rospy.Publisher(MavrosTopics.RC_OVERRIDE, OverrideRCIn,
+                                      queue_size=1)
+
+        rospy.Subscriber('/mavros/state', State, self.on_state)
+
+        rospy.Subscriber(MavrosTopics.WAYPOINTS, WaypointList,
+                         self.on_waypoints_changed)
+
+        rospy.wait_for_service(MavrosTopics.SET_MODE)
+        self._set_mode = rospy.ServiceProxy(MavrosTopics.SET_MODE, SetMode)
+
+        rospy.wait_for_service(MavrosTopics.GET_PARAM)
+        self._param_get = rospy.ServiceProxy(MavrosTopics.GET_PARAM, ParamGet)
+
+        rospy.wait_for_service(MavrosTopics.SET_PARAM)
+        self._param_set = rospy.ServiceProxy(MavrosTopics.SET_PARAM, ParamSet)
+
+        rospy.wait_for_service(MavrosTopics.ARMING)
+        self._mavros_arming = rospy.ServiceProxy(MavrosTopics.ARMING,
+                                                 CommandBool)
+
+        self.last_wp_speed = self._param_get('WP_SPEED')
+
+        #self.max_forward_speed = rospy.get_param("~max_forward_velocity", 5.0)
+        #self.neutral_speed_pwm = rospy.get_param("~neutral_speed_pwm", 1500)
+        #self.max_speed_pwm = rospy.get_param("~max_speed_pwm", 2000)
+        #self.max_rotation_speed = rospy.get_param("~max_rotation_speed")
+        #self.neutral_turning_pwm = rospy.get_param("~neutral_turning_pwm", 1500)
+        #self.max_turning_pwm = rospy.get_param("~max_turning_pwm")
+
+        # If gcs_id is set, set SYSID_MYGCS parameter.
+        if rospy.has_param("~gcs_id"):
+            gcs_id = int(rospy.get_param("~gcs_id"))
+            param = ParamValue()
+            param.integer = gcs_id
+            self.mavparam_set(SYSID_MYGCS, param)
+
+        rospy.spin()
+
+    def on_state(self, state):
+        rospy.loginfo('Mode is ' + str(state.mode))
+        self.last_mode = state.mode
+
+    def on_waypoints_changed(self, waypoint_list):
+        current_index = waypoint_list.current_seq
+        rospy.loginfo('Waypoints changed, index=' + str(current_index))
+        if self.last_mode == 'AUTO':
+            rospy.loginfo('In AUTO mode')
+            if current_index != self.last_waypoint_index:
+                rospy.loginfo('New waypoint')
+                wp = waypoint_list.waypoints[current_index]
+                desired_speed = 2.0
+                if wp.z_alt >= 1000:
+                    rospy.loginfo('Slow speed')
+                    self.set_speed(1.0)
+                else:
+                    rospy.loginfo('Normal speed')
+                    self.set_speed(3.0)
+        self.last_waypoint_index = current_index
+
+    def set_speed(self, speed):
+        if speed != self.last_wp_speed:
+            value = ParamValue()
+            value.real = speed
+            self.last_wp_speed = speed
+            self.set_mode('HOLD')
+            self._param_set('WP_SPEED', value)
+            self.set_mode('AUTO')
+        
+    def set_mode(self, mode):
+        self._set_mode(0, mode)
+
+if __name__ == "__main__":
+    try:
+        Navigator().run()
+
+    except rospy.ROSInterruptException:
+        pass
