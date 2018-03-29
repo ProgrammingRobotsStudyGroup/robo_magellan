@@ -38,6 +38,8 @@ class Navigator:
         self.last_waypoint_index = 0
         self.last_wp_speed = None
         self.last_mode = None
+        self.slow_speed = 2.0
+        self.fast_speed = 5.0
 
         rospy.init_node("rover_control")
 
@@ -92,13 +94,12 @@ class Navigator:
             if current_index != self.last_waypoint_index:
                 rospy.loginfo('New waypoint')
                 wp = waypoint_list.waypoints[current_index]
-                desired_speed = 2.0
                 if wp.z_alt >= 1000:
                     rospy.loginfo('Slow speed')
-                    self.set_speed(1.0)
+                    self.set_speed(self.slow_speed)
                 else:
                     rospy.loginfo('Normal speed')
-                    self.set_speed(3.0)
+                    self.set_speed(self.fast_speed)
         self.last_waypoint_index = current_index
 
     def set_speed(self, speed):
