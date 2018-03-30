@@ -28,8 +28,10 @@ class ShowMarkers:
                          PoseStamped, self.on_xyz_position)
         rospy.Subscriber('/mavros/mission/waypoints', WaypointList,
                          self.on_waypoints_changed)
-        self.pub = rospy.Publisher('/visualization_marker_array', MarkerArray,
-                                   queue_size=1)
+        self.robot_pub = rospy.Publisher('/visualization_marker_array',
+                                         MarkerArray, queue_size=1)
+        self.wp_pub = rospy.Publisher('/visualization_marker_array',
+                                      MarkerArray, latch=True, queue_size=1)
 
         rospy.wait_for_service('/mavros/mission/pull')
         self.svc_pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
@@ -38,7 +40,7 @@ class ShowMarkers:
         # rviz is restarted.
         rate = rospy.Rate(0.5)
         while not rospy.is_shutdown():
-            self.svc_pull_waypoints()
+            #self.svc_pull_waypoints()
             rate.sleep()
 
     def on_gps_position(self, position):
@@ -101,7 +103,7 @@ class ShowMarkers:
             markers.append(marker)
         msg = MarkerArray()
         msg.markers = markers
-        self.pub.publish(msg)
+        self.wp_pub.publish(msg)
             
     def set_utm_transform(self):
         rospy.loginfo('Setting UTM transform')
@@ -111,7 +113,10 @@ class ShowMarkers:
                                                    self.gps_position[1])
         
         self.utm_tf = np.eye(4, dtype=np.float32)
-        # We only need X,Y transform, we ignore Z.
+        # We only need X,Y transform, we ignore Z. Reason: Apparently, East
+        # is always associated with the X axis in both the local frame (map)
+        # and the GPS coordinate frame. This is independent of the initial
+        # robot orientation.
         self.utm_tf[0,3] = self.xyz_position.position.x - utm_x
         self.utm_tf[1,3] = self.xyz_position.position.y - utm_y
         rospy.loginfo('self.utm_position:' + str((utm_x, utm_y)))
@@ -134,7 +139,7 @@ class ShowMarkers:
                                    yaw, r=1, g=0.5, ns='robot')
         msg = MarkerArray()
         msg.markers = [rover, arrow]
-        self.pub.publish(msg)
+        self.robot_pub.publish(msg)
 
     def create_marker(self, id, type, x, y, z, l=0.5, w=0.5, h=0.01,
                       angle=0, ns='waypoints', r=1, b=0, g=0, a=1, text='',

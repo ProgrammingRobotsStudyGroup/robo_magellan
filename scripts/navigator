@@ -83,7 +83,7 @@ class Navigator:
         rospy.spin()
 
     def on_state(self, state):
-        rospy.loginfo('Mode is ' + str(state.mode))
+        #rospy.loginfo('Mode is ' + str(state.mode))
         self.last_mode = state.mode
 
     def on_waypoints_changed(self, waypoint_list):
