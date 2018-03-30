@@ -4,25 +4,14 @@
 
 import time
 import rospy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
-
-class MavrosModes:
-    MANUAL = 0
-    ACRO = 1
-    STEERING = 3
-    HOLD = 4
-    AUTO = 10
-    RTL = 11
-    GUIDED = 15
-
-class MavrosParameters:
-    SYSID_MYGCS = 123456789
 
 class MavrosTopics:
     WAYPOINTS = '/mavros/mission/waypoints'
     RC_OVERRIDE = '/mavros/rc/override'
+    SETPOINT_VELOCITY = '/mavros/setpoint_velocity/cmd_vel'
     GET_PARAM = '/mavros/param/get'
     SET_PARAM = '/mavros/param/set'
     ARMING = '/mavros/cmd/arming'
@@ -40,16 +29,23 @@ class Navigator:
         self.last_mode = None
         self.slow_speed = 2.0
         self.fast_speed = 5.0
+        self.state_timer = None
 
         rospy.init_node("rover_control")
 
         self.rc_pub = rospy.Publisher(MavrosTopics.RC_OVERRIDE, OverrideRCIn,
                                       queue_size=1)
 
+        self.vel_pub = rospy.Publisher(MavrosTopics.SETPOINT_VELOCITY,
+                                       TwistStamped, queue_size=1)
+
         rospy.Subscriber('/mavros/state', State, self.on_state)
 
         rospy.Subscriber(MavrosTopics.WAYPOINTS, WaypointList,
                          self.on_waypoints_changed)
+
+        rospy.Subscriber('/mavros/local_position/pose',
+                         PoseStamped, self.on_xyz_position)
 
         rospy.wait_for_service(MavrosTopics.SET_MODE)
         self._set_mode = rospy.ServiceProxy(MavrosTopics.SET_MODE, SetMode)
@@ -78,13 +74,27 @@ class Navigator:
             gcs_id = int(rospy.get_param("~gcs_id"))
             param = ParamValue()
             param.integer = gcs_id
-            self.mavparam_set(SYSID_MYGCS, param)
+            self._param_set('SYSID_MYGCS', param)
 
         rospy.spin()
 
     def on_state(self, state):
         #rospy.loginfo('Mode is ' + str(state.mode))
+        if state.mode!=self.last_mode and state.mode=='GUIDED':
+            self.state_timer = rospy.Timer(rospy.Duration(4),
+                                           self.on_cone_timeout, oneshot=True)
         self.last_mode = state.mode
+
+    def on_xyz_position(self, position):
+        if self.last_mode == 'GUIDED':
+            # Driving to cone.
+            rospy.loginfo('Driving to cone')
+            self.drive_to_cone(position, self.cone_wp)
+
+    def on_cone_timeout(self, event):
+        self.set_mode('AUTO')
+        self.state_timer = None
+        rospy.loginfo('Timed out driving to cone')
 
     def on_waypoints_changed(self, waypoint_list):
         current_index = waypoint_list.current_seq
@@ -94,13 +104,23 @@ class Navigator:
             if current_index != self.last_waypoint_index:
                 rospy.loginfo('New waypoint')
                 wp = waypoint_list.waypoints[current_index]
-                if wp.z_alt >= 1000:
+                if wp.z_alt >= 2000:
+                    # A cone. Drive to cone.
+                    self.cone_wp = wp
+                    self.set_mode('GUIDED')
+                    rospy.loginfo('Starting to drive to cone')
+                elif wp.z_alt >= 1000:
                     rospy.loginfo('Slow speed')
                     self.set_speed(self.slow_speed)
                 else:
                     rospy.loginfo('Normal speed')
                     self.set_speed(self.fast_speed)
         self.last_waypoint_index = current_index
+
+    def drive_to_cone(self, pose, wp):
+        twist = TwistStamped()
+        twist.twist.linear.x = 0.25
+        self.vel_pub.publish(twist)
 
     def set_speed(self, speed):
         if speed != self.last_wp_speed:
