@@ -8,6 +8,10 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 
+class MavrosCmds:
+    MAV_CMD_DO_CHANGE_SPEED = 178
+    MAV_CMD_DO_SET_HOME = 179
+
 class MavrosTopics:
     WAYPOINTS = '/mavros/mission/waypoints'
     RC_OVERRIDE = '/mavros/rc/override'
@@ -27,8 +31,8 @@ class Navigator:
         self.last_waypoint_index = 0
         self.last_wp_speed = None
         self.last_mode = None
-        self.slow_speed = 2.0
-        self.fast_speed = 5.0
+        self.slow_speed = 1.5
+        self.fast_speed = 3.0
         self.state_timer = None
 
         rospy.init_node("rover_control")
@@ -81,7 +85,7 @@ class Navigator:
     def on_state(self, state):
         #rospy.loginfo('Mode is ' + str(state.mode))
         if state.mode!=self.last_mode and state.mode=='GUIDED':
-            self.state_timer = rospy.Timer(rospy.Duration(4),
+            self.state_timer = rospy.Timer(rospy.Duration(10),
                                            self.on_cone_timeout, oneshot=True)
         self.last_mode = state.mode
 
@@ -119,7 +123,7 @@ class Navigator:
 
     def drive_to_cone(self, pose, wp):
         twist = TwistStamped()
-        twist.twist.linear.x = 0.25
+        twist.twist.linear.x = 0.5
         self.vel_pub.publish(twist)
 
     def set_speed(self, speed):
