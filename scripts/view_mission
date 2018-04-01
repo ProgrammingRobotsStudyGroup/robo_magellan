@@ -36,12 +36,12 @@ class ShowMarkers:
         rospy.wait_for_service('/mavros/mission/pull')
         self.svc_pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
 
-        # Update waypoints once ever second, if no change, in case
-        # rviz is restarted.
-        rate = rospy.Rate(0.5)
-        while not rospy.is_shutdown():
-            #self.svc_pull_waypoints()
-            rate.sleep()
+        # After a small delay, force a pull of waypoints so that the
+        # visualization is refreshed.
+        rospy.sleep(rospy.Duration(1))
+        self.svc_pull_waypoints()
+
+        rospy.spin()
 
     def on_gps_position(self, position):
         first_time = (self.gps_position is None)
@@ -131,12 +131,16 @@ class ShowMarkers:
                       self.xyz_position.orientation.z, \
                       self.xyz_position.orientation.w]
         roll, pitch, yaw = euler_from_quaternion(quaternion)
+        length = 0.680
+        width = 0.540
         rover = self.create_marker(1, Marker.CUBE, x, y, 0.350,
-                                   0.680, 0.540, 0.05,
+                                   length, width, 0.05,
                                    yaw, r=1, g=1, ns='robot')
-        arrow = self.create_marker(2, Marker.ARROW, x, y, 0.350,
-                                   1.0, 0.3, 0.3,
-                                   yaw, r=1, g=0.5, ns='robot')
+        arrow = self.create_marker(2, Marker.CYLINDER,
+                                   x + length/2*cos(yaw), y + length/2*sin(yaw),
+                                   0.350,
+                                   width, width, 0.045,
+                                   yaw, r=0.5, g=0.7, b=1, ns='robot')
         msg = MarkerArray()
         msg.markers = [rover, arrow]
         self.robot_pub.publish(msg)
