@@ -10,10 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   geometry_msgs
+  tf
+  tf2_ros
   message_generation
+  mavros
   mavros_msgs
   cv_bridge
   image_transport
+  geodesy
 )
 
 ## System dependencies are found with CMake's conventions
@@ -156,6 +160,9 @@ install(PROGRAMS
   scripts/seek_cone.py
   scripts/train_color_binned
   scripts/video_publish
+  scripts/view_mission
+  scripts/navigator
+  scripts/utm_transform_publisher
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
