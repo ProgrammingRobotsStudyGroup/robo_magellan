@@ -1,0 +1,60 @@
+#! /usr/bin/env python
+
+"""Publishes the transform from UTM coordinates to ROS map coordinates."""
+
+import rospy
+import message_filters
+import tf
+import tf2_ros
+from tf.transformations import quaternion_from_euler
+from geometry_msgs.msg import PoseStamped, TransformStamped
+from sensor_msgs.msg import NavSatFix
+import utm
+
+class MavrosTopics:
+    GPS_POSITION = '/mavros/global_position/global'
+    LOCAL_POSITION = '/mavros/local_position/pose'
+
+class UTMPublisher:
+
+    def run(self):
+        rospy.init_node("utm_transform_publisher")
+
+        # Synchronize pairs of global and local position messages so that
+        # we publish the transform for associated UTM and local positions.
+        gps_sub = message_filters.Subscriber(MavrosTopics.GPS_POSITION,
+                                             NavSatFix)
+        local_sub = message_filters.Subscriber(MavrosTopics.LOCAL_POSITION,
+                                               PoseStamped)
+        ts = message_filters.ApproximateTimeSynchronizer([gps_sub, local_sub],
+                                                         3, 0.01)
+        ts.registerCallback(self.on_position_change)
+
+        self.transform_broadcaster = tf2_ros.TransformBroadcaster()
+
+        rospy.spin()
+
+    def on_position_change(self, gps_position, local_position):
+        utm_x, utm_y, zone, band = utm.from_latlon(gps_position.latitude,
+                                                   gps_position.longitude)
+
+        t = TransformStamped()
+        t.header.stamp = rospy.Time.now()
+        t.header.frame_id = 'utm'
+        t.child_frame_id = 'map'
+        t.transform.translation.x = local_position.pose.position.x - utm_x
+        t.transform.translation.y = local_position.pose.position.y - utm_y
+        q = quaternion_from_euler(0, 0, 0)
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
+
+        self.transform_broadcaster.sendTransform(t)
+
+if __name__ == "__main__":
+    try:
+        UTMPublisher().run()
+
+    except rospy.ROSInterruptException:
+        pass
