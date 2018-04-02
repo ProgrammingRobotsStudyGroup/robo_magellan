@@ -63,6 +63,8 @@ add_message_files(
   location_msgs.msg
   to_exec.msg
   to_state.msg
+  LocalWaypointList.msg
+  LocalWaypoint.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -163,6 +165,7 @@ install(PROGRAMS
   scripts/view_mission
   scripts/navigator
   scripts/utm_transform_publisher
+  scripts/waypoint_transformer
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
