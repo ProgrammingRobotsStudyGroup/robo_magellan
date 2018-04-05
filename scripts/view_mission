@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+"""Sends information to rviz topics to create a visualization."""
+
 from __future__ import print_function
 import numpy as np
 from math import sin, cos, pi
@@ -21,7 +23,7 @@ class ShowMarkers:
         self.xyz_position = None
         self.utm_tf = None
 
-        rospy.init_node("show_markers")
+        rospy.init_node('view_mission')
         rospy.Subscriber('/mavros/global_position/global',
                          NavSatFix, self.on_gps_position)
         rospy.Subscriber('/mavros/local_position/pose',
