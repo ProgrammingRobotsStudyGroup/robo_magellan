@@ -12,7 +12,7 @@ followingWaypoints --> expectingCone : [/mavros/mission/waypoints]\nnew waypoint
 state "EXPECTING_CONE" as expectingCone
 expectingCone --> expectingCone : [/robo_magellan/cone_finder/locations]\ncone not seen
 expectingCone --> drivingToCone : [/robo_magellan/cone_finder/locations]\ncone seen /\ncancel timeout\ndetermine cone position\nset GUIDED mode\ndrive to cone position\nset new timeout
-expectingCone --> failed : [/mavros/state]\nHOLD mode /\ndo nothing
+expectingCone --> failed : [/mavros/state]\nHOLD mode /\ncancel timeout
 expectingCone --> followingWaypoints : timeout, not last cone/\nadjust speed\nset next wp
 expectingCone --> failed : timeout, last cone /\nset HOLD mode
 
@@ -28,9 +28,9 @@ escapingCone --> escapingCone : [/mavros/local_position/pose]\nheading not yet a
 escapingCone --> followingWaypoints : [/mavros/local_position/pose]\nheading achieved /\nset next wp index\nadjust speed\nset AUTO mode
 
 state "FINISHED" as finished
-finished --> [*]
+finished --> waitingForStart : [/robo_magellan/start]\nreset message
 
 state "FAILED" as failed
-failed --> [*]
+failed --> waitingForStart : [/robo_magellan/start]\nreset message
 
 @enduml
