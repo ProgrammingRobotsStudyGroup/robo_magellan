@@ -11,7 +11,9 @@ map around.
 
     $ roslaunch robo_magellan mock_mission.launch
 
-3. In MavProxy, load the waypoint sample.
+3. In MavProxy, load the waypoint sample. You should then see the robot and the waypoints
+in rviz. If you don't, try it again after a few seconds. (MavProxy can still be waiting
+for SITL to start up.)
 
     rosrun mavros mavwp load data/sample.qgc-wpl.txt
 
