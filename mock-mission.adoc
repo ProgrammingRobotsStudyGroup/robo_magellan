@@ -1,16 +1,22 @@
 = How to Run a Mock Mission
 
 1. Start MavProxy at the location of the first sample waypoint.
-    cd ...path-to-ardupilot.../APMrover2
+
+    cd <path-to-ardupilot>/APMrover2
     sim_vehicle.py -l 37.659984,-121.8874624,0,45
 
 2. In MavProxy, load the waypoint sample.
-    MANUAL> wp load ...path-to-robo_magellan.../data/sample.qgc-wpl.txt
+
+    MANUAL> wp load <path-to-robo_magellan>/data/sample.qgc-wpl.txt
 
 3. Start the simulation. Zoom and center the waypoints, if you like.
+Mouse wheel or 2-finger scroll zooms, control-shift-drag moves the
+map around.
+
     roslaunch robo_magellan mock_mission.launch
 
 4. Start the mission by going into AUTO mode within MavProxy.
+
     MANUAL> mode auto
 
 In rviz, you should see the rover follow the waypoints. When a cone is visible,
