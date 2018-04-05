@@ -13,7 +13,8 @@
   <node name="rviz" pkg="rviz" type="rviz"
         args="--display-config $(find robo_magellan)/config/view_mission.rviz" />
 
-  <node name="navigator" pkg="robo_magellan" type="navigator" />
+  <node name="navigator" pkg="robo_magellan" type="navigator"
+        output="$(arg log_output)" />
 
   <node name="utm_transform_publisher" pkg="robo_magellan"
         type="utm_transform_publisher" />
