@@ -1,0 +1,31 @@
+@startuml
+
+[*] --> waitingForStart
+
+state "WAITING_FOR_START" as waitingForStart
+waitingForStart --> followingWaypoints : [/robo_magellan/start]\nstart message /\nadjust waypoints\narm throttle\nset speed\nAUTO mode
+
+state "FOLLOWING_WAYPOINTS" as followingWaypoints
+followingWaypoints --> followingWaypoints : [/mavros/mission/waypoints]\nwaypoint changed, not cone /\nadjust speed
+followingWaypoints --> expectingCone : [/mavros/mission/waypoints]\nwaypoint changed, cone /\nadjust speed\nset timeout
+
+state "EXPECTING_CONE" as expectingCone
+expectingCone --> expectingCone : [/robo_magellan/cone_finder/locations]\ncone not seen
+expectingCone --> drivingToCone : [/robo_magellan/cone_finder/locations]\ncone seen /\ncancel timeout\nGUIDED mode\ndrive toward cone\nset new timeout
+expectingCone --> followingWaypoints : timeout, not last cone/\nadjust speed\nset next wp
+expectingCone --> finished : timeout, last cone /\nHOLD mode
+
+state "DRIVING_TO_CONE" as drivingToCone
+drivingToCone --> drivingToCone : [/robo_magellan/cone_finder/locations] /\ndrive to cone or last cone heading
+drivingToCone --> escapingCone : [/robo_magellan/touch]\ncone touched /\ncancel timeout\nstop\nfind heading to next wp
+drivingToCone --> followingWaypoints : timeout, not last cone /\nset next wp\nadjust speed\nAUTO mode
+drivingToCone --> finished : timeout, last cone /\nHOLD mode
+drivingToCone --> finished : [/robo_magellan/touch]\nlast cone touched /\ncancel timeout\nHOLD mode
+
+state "ESCAPING_CONE" as escapingCone
+escapingCone --> escapingCone : [/mavros/local_position/pose]\nheading not yet achieved /\nback away toward next waypoint
+escapingCone --> followingWaypoints : [/mavros/local_position/pose]\nheading achieved /\nset next wp\nadjust speed\nAUTO mode
+
+finished --> [*]
+
+@enduml
