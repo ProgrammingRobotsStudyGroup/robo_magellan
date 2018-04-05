@@ -95,7 +95,7 @@ class MockConeDetector:
         self.cone_pub.publish(msg)
 
     def get_cone_area(self, d):
-        # w, h, and area should be proportional to distance.
+        # Area should be proportional to the square of distance.
         # Assume approx. 3900 pixels at 3 meters and a 2.0
         # aspect ratio.
         ratio = 3.0**2 / d**2
@@ -108,10 +108,16 @@ class MockConeDetector:
     def normalize_angle(self, theta):
         """Gets an equivalent angle to a specified angle within the
            range plus pi to minus pi."""
-        if theta >= 0:
-            return theta % pi
+        while theta >= 2*pi:
+            theta -= 2*pi
+        while theta < 0:
+            theta += 2*pi
+
+        # Now 0 <= theta < 2*pi. Convert to -pi < theta <= pi
+        if theta > pi:
+            return theta - 2*pi
         else:
-            return - (-theta % pi)
+            return theta
 
 if __name__ == "__main__":
     try:
