@@ -28,6 +28,7 @@
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
   </node>
 
-  <node name="view_mission" pkg="robo_magellan" type="view_mission" />
+  <node name="view_mission" pkg="robo_magellan" type="view_mission"
+        output="$(arg log_output)" />
 
 </launch>
