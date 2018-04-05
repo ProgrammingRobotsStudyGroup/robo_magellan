@@ -3,16 +3,18 @@
 """Implements navigation for the Robo Magellan rover."""
 
 import time
+from math import pi, tan, atan2
 import rospy
 from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
+from robo_magellan.msg import location_msgs as location_data
 
 class MavrosCmds:
     MAV_CMD_DO_CHANGE_SPEED = 178
     MAV_CMD_DO_SET_HOME = 179
 
-class MavrosTopics:
+class Topics:
     WAYPOINTS = '/mavros/mission/waypoints'
     RC_OVERRIDE = '/mavros/rc/override'
     SETPOINT_VELOCITY = '/mavros/setpoint_velocity/cmd_vel'
@@ -20,6 +22,8 @@ class MavrosTopics:
     SET_PARAM = '/mavros/param/set'
     ARMING = '/mavros/cmd/arming'
     SET_MODE = '/mavros/set_mode'
+    ROBOT_POSE = '/mavros/local_position/pose'
+    CONE_LOCATIONS = '/robo_magellan/cone_finder/locations'
 
 class RCChannels:
     SPEED = 2
@@ -35,35 +39,40 @@ class Navigator:
         self.fast_speed = 3.0
         self.state_timer = None
         self.cone_wp = None
+        self.cone_locations = None
 
         rospy.init_node('navigator')
 
-        self.rc_pub = rospy.Publisher(MavrosTopics.RC_OVERRIDE, OverrideRCIn,
+        self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
+        self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
+
+        self.rc_pub = rospy.Publisher(Topics.RC_OVERRIDE, OverrideRCIn,
                                       queue_size=1)
 
-        self.vel_pub = rospy.Publisher(MavrosTopics.SETPOINT_VELOCITY,
+        self.vel_pub = rospy.Publisher(Topics.SETPOINT_VELOCITY,
                                        TwistStamped, queue_size=1)
 
         rospy.Subscriber('/mavros/state', State, self.on_state)
 
-        rospy.Subscriber(MavrosTopics.WAYPOINTS, WaypointList,
+        rospy.Subscriber(Topics.WAYPOINTS, WaypointList,
                          self.on_waypoints_changed)
 
-        rospy.Subscriber('/mavros/local_position/pose',
-                         PoseStamped, self.on_xyz_position)
+        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_xyz_position)
 
-        rospy.wait_for_service(MavrosTopics.SET_MODE)
-        self._set_mode = rospy.ServiceProxy(MavrosTopics.SET_MODE, SetMode)
+        rospy.Subscriber(Topics.CONE_LOCATIONS, location_data,
+                         self.on_cone_locations)
 
-        rospy.wait_for_service(MavrosTopics.GET_PARAM)
-        self._param_get = rospy.ServiceProxy(MavrosTopics.GET_PARAM, ParamGet)
+        rospy.wait_for_service(Topics.SET_MODE)
+        self._set_mode = rospy.ServiceProxy(Topics.SET_MODE, SetMode)
 
-        rospy.wait_for_service(MavrosTopics.SET_PARAM)
-        self._param_set = rospy.ServiceProxy(MavrosTopics.SET_PARAM, ParamSet)
+        rospy.wait_for_service(Topics.GET_PARAM)
+        self._param_get = rospy.ServiceProxy(Topics.GET_PARAM, ParamGet)
 
-        rospy.wait_for_service(MavrosTopics.ARMING)
-        self._mavros_arming = rospy.ServiceProxy(MavrosTopics.ARMING,
-                                                 CommandBool)
+        rospy.wait_for_service(Topics.SET_PARAM)
+        self._param_set = rospy.ServiceProxy(Topics.SET_PARAM, ParamSet)
+
+        rospy.wait_for_service(Topics.ARMING)
+        self._mavros_arming = rospy.ServiceProxy(Topics.ARMING, CommandBool)
 
         self.last_wp_speed = self._param_get('WP_SPEED')
 
@@ -93,14 +102,17 @@ class Navigator:
     def on_xyz_position(self, position):
         if self.last_mode == 'GUIDED':
             # Driving to cone.
-            rospy.loginfo('Driving to cone')
             if self.cone_wp is not None:
-                self.drive_to_cone(position, self.cone_wp)
+                rospy.loginfo('Driving to cone')
+                self.drive_to_cone(position.pose, self.cone_wp)
 
     def on_cone_timeout(self, event):
         self.set_mode('AUTO')
         self.state_timer = None
         rospy.loginfo('Timed out driving to cone')
+
+    def on_cone_locations(self, cone_locations):
+        self.cone_locations = cone_locations
 
     def on_waypoints_changed(self, waypoint_list):
         current_index = waypoint_list.current_seq
@@ -124,8 +136,18 @@ class Navigator:
         self.last_waypoint_index = current_index
 
     def drive_to_cone(self, pose, wp):
+        if self.cone_locations is None or len(self.cone_locations.poses)==0:
+            cone_heading = 0.0
+        else:
+            # A pseudo-distance used to determine the pixel width of a cone
+            # heading angle.
+            fov_dist = self.camera_horz_pixels/2 / tan(self.camera_horz_fov/2)
+            cone_pose = self.cone_locations.poses[0]
+            cone_heading = atan2(cone_pose.x, fov_dist)
+
         twist = TwistStamped()
-        twist.twist.linear.x = 0.5
+        twist.twist.linear.x = 1.0
+        twist.twist.angular.z = cone_heading
         self.vel_pub.publish(twist)
 
     def set_speed(self, speed):
