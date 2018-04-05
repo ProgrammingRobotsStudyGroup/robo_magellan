@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch
+  xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="udp://127.0.0.1:14550@14551" />
+    <arg name="log_output" value="$(arg log_output)" />
+  </include>
+
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="--display-config $(find robo_magellan)/config/view_mission.rviz" />
+
+  <node name="navigator" pkg="robo_magellan" type="navigator" />
+
+  <node name="utm_transform_publisher" pkg="robo_magellan"
+        type="utm_transform_publisher" />
+
+  <node name="waypoint_transformer" pkg="robo_magellan"
+        type="waypoint_transformer">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+  <node name="mock_cone_detector" pkg="robo_magellan"
+        type="mock_cone_detector" output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+  <node name="view_mission" pkg="robo_magellan" type="view_mission" />
+
+</launch>
