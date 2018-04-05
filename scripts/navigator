@@ -34,6 +34,7 @@ class Navigator:
         self.slow_speed = 1.5
         self.fast_speed = 3.0
         self.state_timer = None
+        self.cone_wp = None
 
         rospy.init_node('navigator')
 
@@ -93,7 +94,8 @@ class Navigator:
         if self.last_mode == 'GUIDED':
             # Driving to cone.
             rospy.loginfo('Driving to cone')
-            self.drive_to_cone(position, self.cone_wp)
+            if self.cone_wp is not None:
+                self.drive_to_cone(position, self.cone_wp)
 
     def on_cone_timeout(self, event):
         self.set_mode('AUTO')
