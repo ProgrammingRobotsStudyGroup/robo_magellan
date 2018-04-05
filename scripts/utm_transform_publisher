@@ -18,7 +18,7 @@ class MavrosTopics:
 class UTMPublisher:
 
     def run(self):
-        rospy.init_node("utm_transform_publisher")
+        rospy.init_node('utm_transform_publisher')
 
         # Synchronize pairs of global and local position messages so that
         # we publish the transform for associated UTM and local positions.
