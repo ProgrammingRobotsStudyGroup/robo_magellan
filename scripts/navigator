@@ -147,7 +147,7 @@ class Navigator:
 
         twist = TwistStamped()
         twist.twist.linear.x = 1.0
-        twist.twist.angular.z = cone_heading
+        twist.twist.angular.z = 2 * cone_heading
         self.vel_pub.publish(twist)
 
     def set_speed(self, speed):
