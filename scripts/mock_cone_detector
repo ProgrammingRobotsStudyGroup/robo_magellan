@@ -96,10 +96,10 @@ class MockConeDetector:
 
     def get_cone_area(self, d):
         # w, h, and area should be proportional to distance.
-        # Assume approx. 300 pixels at 8 meters, about 12x26 pixels.
-        # At about 0.5 meters assume the cone takes up about 1/4 the
-        # image, about 15,000 pixels.
-        area = (300-15000)/(8-0.5)*(d-0.5) + 15000
+        # Assume approx. 3900 pixels at 3 meters and a 2.0
+        # aspect ratio.
+        ratio = 3.0**2 / d**2
+        area = ratio * 3900
         aspect = 18.0/8.0
         w = int(sqrt(area/aspect))
         h = int(w * aspect)
