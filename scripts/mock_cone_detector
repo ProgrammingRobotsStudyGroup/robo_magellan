@@ -74,18 +74,18 @@ class MockConeDetector:
             if d <= self.detection_distance \
                and abs(heading) <= self.camera_horz_fov/2:
 
-                rospy.loginfo('Distance to cone %d: %f  heading: %f', i, d,
-                              heading*180/pi)
-                
                 # Determine view x, y, w, h, d, area as seen by the camera
                 # on the robot.
                 pose = pose_data()
                 pose.d = d
-                pose.x = fov_dist * tan(heading)
+                pose.x = int(round(fov_dist * tan(heading)))
                 pose.y = 0 # Just put all cones in the middle, vertically.
                 pose.z = 0 # Assume minimum possible depth is not available.
                 pose.w, pose.h, pose.area = self.get_cone_area(d)
                 cone_poses.append(pose)
+
+                rospy.loginfo('[Detector] cone %d: d=%f heading=%f x=%d', i, d,
+                              heading*180/pi, pose.x)
 
             i += 1
 
