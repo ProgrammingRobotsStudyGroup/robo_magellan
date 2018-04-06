@@ -17,19 +17,18 @@ for SITL to start up.)
 
     rosrun mavros mavwp load data/sample.qgc-wpl.txt
 
-4. Start the mission by arming the throttle and going into AUTO mode.
+4. Start the mission by sending the start command as if the kill switch is pressed. You
+can kill `rostopic` with ctrl-C as soon as it starts, because the message is sent
+immediately.
 
-    $ rosservice call /mavros/cmd/arming "value: true"
-    success: True
-    result: 0
-    $ rosservice call /mavros/set_mode "{custom_mode: 'AUTO'}"
-    mode_sent: True
+    $ rostopic pub /exec_cmd_simple d_msgs/String "data: 'START_EXEC'"
 
 In rviz, you should see the rover follow the waypoints. When a cone is visible,
 the heading to the cone is shown with a red arrow.
 
-You can move the robot back to the starting point (approximately) using the command:
+You can reset the navigation code by sending a RESET command like this:
 
-    $ rosservice call /mavros/set_mode "{custom_mode: 'RTL'}"
+    $ rostopic pub /exec_cmd_simple std_msgs/String "data: 'RESET'"
     
-Then you can restart the mock mission by setting the mode to AUTO again, in step 4.
+Then you can start the mission again with the first waypoint by doing step 4
+again.
