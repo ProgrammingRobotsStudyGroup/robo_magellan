@@ -18,7 +18,7 @@ class MockTouchDetector:
     def run(self):
         rospy.init_node('mock_touch_detector')
 
-        self.detection_distance = rospy.get_param('~detection_distance', 0.5)
+        self.detection_distance = rospy.get_param('~detection_distance', 0.2)
         
         self.waypoint_list = LocalWaypointList()
         self.waypoint_list.waypoints = []

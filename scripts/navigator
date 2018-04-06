@@ -92,7 +92,7 @@ class Navigator:
 
         self.fast_speed = rospy.get_param('~fast_speed', 3.0)
         self.slow_speed = rospy.get_param('~slow_speed', 1.5)
-        self.cone_approach_speed = rospy.get_param('~cone_approach_speed', 0.5)
+        self.cone_approach_speed = rospy.get_param('~cone_approach_speed', 0.25)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
