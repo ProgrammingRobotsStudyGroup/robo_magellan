@@ -10,9 +10,6 @@
     <arg name="log_output" value="$(arg log_output)" />
   </include>
 
-  <node name="rviz" pkg="rviz" type="rviz"
-        args="--display-config $(find robo_magellan)/config/view_mission.rviz" />
-
   <node name="navigator" pkg="robo_magellan" type="navigator"
         output="$(arg log_output)" />
 
@@ -28,6 +25,15 @@
         type="mock_cone_detector" output="$(arg log_output)">
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
   </node>
+
+  <node name="mock_touch_detector" pkg="robo_magellan"
+        type="mock_touch_detector" output="$(arg log_output)">
+    <remap from="~touch" to="/robo_magellan/touch" />
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="--display-config $(find robo_magellan)/config/view_mission.rviz" />
 
   <node name="view_mission" pkg="robo_magellan" type="view_mission"
         output="$(arg log_output)" />

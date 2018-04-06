@@ -28,8 +28,7 @@ class MockTouchDetector:
         rospy.Subscriber(Topics.LOCAL_POSITION, PoseStamped,
                          self.on_robot_position_changed)
 
-        self.touch_pub = rospy.Publisher(Topics.TOUCH, std_msgs/Bool,
-                                         queue_size=1)
+        self.touch_pub = rospy.Publisher(Topics.TOUCH, Bool, queue_size=1)
 
         rospy.spin()
 
@@ -53,7 +52,9 @@ class MockTouchDetector:
                 touching = True
                 break
 
-        self.touch_pub.publish(touching)
+        msg = Bool()
+        msg.data = touching
+        self.touch_pub.publish(msg)
 
 if __name__ == "__main__":
     try:
