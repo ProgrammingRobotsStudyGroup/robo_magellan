@@ -12,11 +12,12 @@
   <node name="navigator" pkg="robo_magellan" type="navigator"
         output="$(arg log_output)">
     <rosparam>
-      fast_speed: 4.0
-      slow_speed: 2.0
+      fast_speed: 3.0
+      slow_speed: 1.5
       cone_approach_k_speed: 0.25
       cone_approach_max_speed: 1.0
       cone_approach_min_speed: 0.2
+      cone_approach_k_turning: 0.5
       cone_timeout_seconds: 60
       escaping_cone_speed: 0.25
       escaping_cone_turn_rate: 0.4

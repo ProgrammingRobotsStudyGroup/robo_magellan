@@ -98,8 +98,8 @@ class Navigator:
             '~cone_approach_max_speed', 3.0)
         self.cone_approach_min_speed = rospy.get_param(
             '~cone_approach_min_speed', 0.25)
-        self.cone_approach_k_heading = rospy.get_param(
-            '~cone_approach_k_heading', 2.0)
+        self.cone_approach_k_turning = rospy.get_param(
+            '~cone_approach_k_turning', 0.5)
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
         self.escaping_cone_speed = rospy.get_param(
@@ -297,7 +297,7 @@ class Navigator:
         speed = min(max(self.cone_approach_k_speed*distance,
                         self.cone_approach_min_speed),
                     self.cone_approach_max_speed)
-        turning = self.cone_approach_k_heading * cone_heading
+        turning = cone_heading / self.cone_approach_k_turning
 
         rospy.loginfo('[Navigator] d=%f heading=%f speed=%f turning=%f',
                       distance, cone_heading*180/pi, speed, turning)
