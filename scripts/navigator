@@ -45,9 +45,9 @@ class Topics:
     SET_MODE = '/mavros/set_mode'
     ROBOT_POSE = '/mavros/local_position/pose'
     ROBOT_STATE = '/mavros/state'
-    CONE_LOCATIONS = '/robo_magellan/cone_finder/locations'
-    EXEC_CMD = '/exec_cmd_simple'
-    TOUCH = '/robo_magellan/touch'
+    CONE_LOCATIONS = '~cone_locations'
+    EXEC_CMD = '~exec_cmd'
+    TOUCH = '~touch'
     NAVIGATOR_STATE = '~state'
 
 
