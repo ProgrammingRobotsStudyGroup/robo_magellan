@@ -92,7 +92,10 @@ class Navigator:
 
         self.fast_speed = rospy.get_param('~fast_speed', 3.0)
         self.slow_speed = rospy.get_param('~slow_speed', 1.5)
-        self.cone_approach_speed = rospy.get_param('~cone_approach_speed', 0.25)
+        self.cone_approach_k_speed = rospy.get_param('~cone_approach_k_speed', 0.25)
+        self.cone_approach_min_speed = rospy.get_param('~cone_min_approach_speed', 0.25)
+        self.cone_approach_k_heading = rospy.get_param('~cone_approach_k_heading', 2.0)
+        self.cone_timeout = rospy.get_param('~cone_timeout_seconds', 60)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
@@ -173,112 +176,118 @@ class Navigator:
 
     def on_exec_cmd(self, msg):
         cmd = msg.data
-        self.show_event('on_exec_cmd', cmd)
 
         if self.state is States.WAITING_FOR_START and cmd==ExecCmds.START:
+            self.show_event('on_exec_cmd', cmd)
             # Make sure we have waypoints.
             if len(self.waypoint_list.waypoints) == 0:
                 rospy.logerr('No waypoints loaded')
                 return
-            # Adjust waypoints w/ wp index zero
-            self._mavros_set_current_wp(0) # For now, just set waypoint index
+            # Adjust waypoints w/ wp index zero. Change state first,
+            # because waypoints may come in before the call returns.
+            # (An exception to our usual rule.)
             self.begin_state(States.WAITING_FOR_WAYPOINTS)
+            self._mavros_set_current_wp(0) # For now, just set waypoint index
         elif self.state is States.FINISHED and cmd==ExecCmds.RESET:
+            self.show_event('on_exec_cmd', cmd)
             self.begin_state(States.WAITING_FOR_START)
         elif self.state is States.FAILED and cmd==ExecCmds.RESET:
+            self.show_event('on_exec_cmd', cmd)
             self.begin_state(States.WAITING_FOR_START)
-        else:
-            rospy.loginfo('Received exec cmd %s in state %s',
-                          cmd, self.state.get_name())
-            rospy.loginfo('Is this start state? %s',
-                          self.state is States.WAITING_FOR_START)
-            rospy.loginfo('Do state names match? %s',
-                          self.state.get_name()==States.WAITING_FOR_START.get_name())
-            rospy.loginfo('Cmds match? %s', cmd==ExecCmds.START)
 
     def on_state(self, state):
-        self.show_event('on_state', state.mode)
         if self.state is States.EXPECTING_CONE and state.mode==Modes.HOLD:
+            self.show_event('on_state', state.mode)
             self.cancel_timer()
             self.begin_state(States.FAILED)
 
     def on_xyz_position(self, position):
-        self.show_event('on_xyz_position')
         if self.state is States.ESCAPING_CONE:
+            self.show_event('on_xyz_position')
             # Should check to see if achieved desired heading. For now,
-            # just assume cone is cleared.
-            self._mavros_set_current_wp(self.cone_wp_index + 1)
+            # just assume cone is cleared. Change state first,
+            # because waypoints may come in before the call returns.
+            # (An exception to our usual rule.)
             self.begin_state(States.WAITING_FOR_NEXT_WAYPOINT)
+            self._mavros_set_current_wp(self.cone_wp_index + 1)
 
     def on_waypoints_changed(self, waypoint_list):
-        self.show_event('on_waypoints_changed')
         self.waypoint_list = waypoint_list
         if len(self.waypoint_list.waypoints) == 0:
             rospy.logerr('No waypoints loaded')
             return
 
         if self.state is States.WAITING_FOR_WAYPOINTS:
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
+            self.show_event('on_waypoints_changed')
             self._mavros_arming(True)
             self.set_waypoint_speed()
             self.set_mode(Modes.AUTO)
+            self.begin_state(States.FOLLOWING_WAYPOINTS)
         elif self.state is States.FOLLOWING_WAYPOINTS \
              and self.is_cone_waypoint(self.waypoint_list.current_seq):
-            self.begin_state(States.EXPECTING_CONE)
+            self.show_event('on_waypoints_changed')
             self.cone_wp_index = self.waypoint_list.current_seq
             self.set_waypoint_speed()
-            self.set_timer(30,  self.on_timeout_finding_cone)
+            self.set_timer(self.cone_timeout,  self.on_timeout_finding_cone)
+            self.begin_state(States.EXPECTING_CONE)
         elif self.state is States.FOLLOWING_WAYPOINTS:
+            self.show_event('on_waypoints_changed')
             self.set_waypoint_speed()
         elif self.state is States.WAITING_FOR_NEXT_WAYPOINT:
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
+            self.show_event('on_waypoints_changed')
             self.set_waypoint_speed()
             self.set_mode(Modes.AUTO)
+            self.begin_state(States.FOLLOWING_WAYPOINTS)
         elif self.state is States.UPDATING_WAYPOINTS:
+            self.show_event('on_waypoints_changed')
             self.begin_state(States.ESCAPING_CONE)
-            rospy.loginfo('UPDATING_WAYPOINTS --> ESCAPING_CONE')
 
     def on_touch(self, msg):
         touching = msg.data
-        self.show_event('on_touch', touching)
 
         if self.state is States.DRIVING_TO_CONE and touching:
+            self.show_event('on_touch', touching)
             self.state_timer.shutdown()
             self.state_timer = None
             self.set_mode(Modes.HOLD)
             if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
                 self.begin_state(States.FINISHED)
             else:
-                self.begin_state(States.UPDATING_WAYPOINTS)
                 # Should update waypoints and set index, but for now
-                # just set index.
+                # just set index. Change state first,
+                # because waypoints may come in before the call returns.
+                # (An exception to our usual rule.)
+                self.begin_state(States.UPDATING_WAYPOINTS)
                 self._mavros_set_current_wp(self.cone_wp_index + 1)
 
     def on_timeout_finding_cone(self, event):
-        self.show_event('on_timeout_finding_cone')
         self.state_timer = None
         if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
+            self.show_event('on_timeout_finding_cone')
             # Timeout on last waypoint.
+            self.set_mode(Modes.HOLD)
             self.begin_state(States.FAILED)
-            self.set_mode(Modes.HOLD)
         else:
+            self.show_event('on_timeout_finding_cone')
             # Timeout, not last cone.
-            self.begin_state(States.WAITING_FOR_NEXT_WAYPOINT)
             self.set_mode(Modes.HOLD)
+            # Change state first,
+            # because waypoints may come in before the call returns.
+            # (An exception to our usual rule.)
+            self.begin_state(States.WAITING_FOR_NEXT_WAYPOINT)
             self._mavros_set_current_wp(self.cone_wp_index + 1)
 
     def on_cone_locations(self, cone_locations):
-        self.show_event('on_cone_locations', len(cone_locations.poses))
         if self.state is States.EXPECTING_CONE \
            and len(cone_locations.poses) > 0:
+            self.show_event('on_cone_locations', len(cone_locations.poses))
             # Found the cone.
-            self.cancel_timer()
             self.set_mode(Modes.GUIDED)
-            self.begin_state(States.DRIVING_TO_CONE)
             self.drive_to_cone(cone_locations.poses[0])
-            self.set_timer(30, self.on_timeout_finding_cone)
+            self.begin_state(States.DRIVING_TO_CONE)
         elif self.state is States.DRIVING_TO_CONE \
              and len(cone_locations.poses) > 0:
+            self.show_event('on_cone_locations', len(cone_locations.poses))
             self.drive_to_cone(cone_locations.poses[0])
 
     def drive_to_cone(self, cone_pose):
@@ -286,13 +295,18 @@ class Navigator:
         # heading angle.
         fov_dist = self.camera_horz_pixels/2 / tan(self.camera_horz_fov/2)
         cone_heading = atan2(cone_pose.x, fov_dist)
-        rospy.loginfo('[Navigator] d=%f heading=%f x=%d',
-                      self.get_cone_distance(cone_pose.area),
-                      cone_heading*180/pi, cone_pose.x)
+        distance = self.get_cone_distance(cone_pose.area)
+
+        speed = max(self.cone_approach_k_speed*distance,
+                    self.cone_approach_min_speed)
+        turning = self.cone_approach_k_heading * cone_heading
+
+        rospy.loginfo('[Navigator] d=%f heading=%f speed=%f turning=%f',
+                      distance, cone_heading*180/pi, speed, turning)
 
         twist = TwistStamped()
-        twist.twist.linear.x = self.cone_approach_speed
-        twist.twist.angular.z = 2 * cone_heading
+        twist.twist.linear.x = speed
+        twist.twist.angular.z = turning
         self.vel_pub.publish(twist)
 
     def get_cone_distance(self, area):
@@ -306,8 +320,8 @@ class Navigator:
         self.set_speed(self.get_waypoint_speed(self.waypoint_list.current_seq))
 
     def set_speed(self, speed):
-        # Don't change speed, for now.
-        return
+        ## Don't change speed, for now.
+        #return
 
         if speed != self.last_wp_speed:
             value = ParamValue()
@@ -326,9 +340,7 @@ class Navigator:
 
     def get_waypoint_speed(self, wp_index):
         wp = self.waypoint_list.waypoints[wp_index]
-        if wp.z_alt >= 2000:
-            return self.cone_approach_speed
-        elif wp.z_alt >= 1000:
+        if wp.z_alt >= 1000:
             return self.slow_speed
         else:
             return self.fast_speed
