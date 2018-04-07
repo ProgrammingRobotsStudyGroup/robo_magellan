@@ -188,7 +188,7 @@ class Navigator:
                 return
             # Adjust waypoints w/ wp index zero and start following
             # waypoints.
-            self._mavros_arming(True)
+            self.arm_robot(True)
             self.set_current_waypoint(0)
             self.set_waypoint_speed()
             self.begin_state(States.FOLLOWING_WAYPOINTS)
@@ -304,6 +304,12 @@ class Navigator:
         # aspect ratio.
         ratio = sqrt(3900.0 / area)
         return 3 * ratio
+
+    def arm_robot(self, is_armed):
+        self._mavros_arming(is_armed)
+        # Need to ensure that the command finishes before doing other
+        # mavros calls, or we get an error. 10ms should be enough.
+        rospy.sleep(0.1)
 
     def set_waypoint_speed(self):
         self.set_speed(self.get_waypoint_speed(self.waypoint_list.current_seq))
