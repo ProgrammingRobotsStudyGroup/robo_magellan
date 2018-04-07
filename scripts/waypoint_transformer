@@ -57,7 +57,6 @@ class WaypointTransformer:
                 self.publish_waypoints(t)
 
     def on_waypoints_changed(self, list):
-        rospy.loginfo('Received waypoints from mavros')
         self.waypoint_list = list
 
     def publish_waypoints(self, t):

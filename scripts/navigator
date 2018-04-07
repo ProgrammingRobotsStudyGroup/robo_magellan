@@ -92,12 +92,20 @@ class Navigator:
 
         self.fast_speed = rospy.get_param('~fast_speed', 3.0)
         self.slow_speed = rospy.get_param('~slow_speed', 1.5)
-        self.cone_approach_k_speed = rospy.get_param('~cone_approach_k_speed', 0.25)
-        self.cone_approach_min_speed = rospy.get_param('~cone_min_approach_speed', 0.25)
-        self.cone_approach_k_heading = rospy.get_param('~cone_approach_k_heading', 2.0)
-        self.cone_timeout = rospy.get_param('~cone_timeout_seconds', 60)
-        self.escaping_cone_speed = rospy.get_param('~escaping_cone_speed', -0.25)
-        self.escaping_cone_turning = rospy.get_param('~escaping_cone_turning', pi/8)
+        self.cone_approach_k_speed = rospy.get_param(
+            '~cone_approach_k_speed', 0.25)
+        self.cone_approach_max_speed = rospy.get_param(
+            '~cone_approach_max_speed', 3.0)
+        self.cone_approach_min_speed = rospy.get_param(
+            '~cone_approach_min_speed', 0.25)
+        self.cone_approach_k_heading = rospy.get_param(
+            '~cone_approach_k_heading', 2.0)
+        self.cone_timeout = rospy.get_param(
+            '~cone_timeout_seconds', 60)
+        self.escaping_cone_speed = rospy.get_param(
+            '~escaping_cone_speed', -0.25)
+        self.escaping_cone_turn_rate = rospy.get_param(
+            '~escaping_cone_turn_rate', pi/8)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
@@ -286,8 +294,9 @@ class Navigator:
         cone_heading = atan2(cone_pose.x, fov_dist)
         distance = self.get_cone_distance(cone_pose.area)
 
-        speed = max(self.cone_approach_k_speed*distance,
-                    self.cone_approach_min_speed)
+        speed = min(max(self.cone_approach_k_speed*distance,
+                        self.cone_approach_min_speed),
+                    self.cone_approach_max_speed)
         turning = self.cone_approach_k_heading * cone_heading
 
         rospy.loginfo('[Navigator] d=%f heading=%f speed=%f turning=%f',
@@ -309,7 +318,7 @@ class Navigator:
         self._mavros_arming(is_armed)
         # Need to ensure that the command finishes before doing other
         # mavros calls, or we get an error. 10ms should be enough.
-        rospy.sleep(0.1)
+        rospy.sleep(0.2)
 
     def set_waypoint_speed(self):
         self.set_speed(self.get_waypoint_speed(self.waypoint_list.current_seq))
@@ -323,6 +332,7 @@ class Navigator:
             self.set_mode(Modes.HOLD)
             self.set_parameter('WP_SPEED', speed)
             self.set_mode(Modes.AUTO)
+            rospy.loginfo('Speed %f', speed)
         
     def set_mode(self, mode):
         self._mavros_set_mode(0, mode)
@@ -330,8 +340,8 @@ class Navigator:
     def set_current_waypoint(self, index):
         self._mavros_set_current_wp(index)
         # Need to ensure that the command finishes before doing other
-        # mavros calls, or we get an error. 10ms should be enough.
-        rospy.sleep(0.1)
+        # mavros calls, or we get an error.
+        rospy.sleep(0.2)
 
     def set_parameter(self, param_name, x):
         value = ParamValue()
