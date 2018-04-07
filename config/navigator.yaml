@@ -1,0 +1,40 @@
+# The normal waypoint speed
+fast_speed: 4.0
+
+# The speed to use if the waypoint is marked as nearing a cone
+slow_speed: 2.0
+
+# The constant used to determine the cone approach speed. The
+# speed is this constant times the distance, subject to the
+# limits below.
+
+cone_approach_k_speed: 0.25
+
+# The maximum speed used when approaching a cone.
+cone_approach_max_speed: 1.0
+
+# The minimum speed used when approaching a cone.
+cone_approach_min_speed: 0.2
+
+# The constant used to determine the turn rate when approaching
+# a cone. This represents the number of seconds after which the
+# heading error should become zero, based on the commanded
+# turning. Increase this to turn faster toward the cone.
+cone_approach_k_turning: 0.5
+
+# The number of seconds in which the robot must touch the cone
+# or the attempt will be abandoned.
+cone_timeout_seconds: 60
+
+# The speed at which to move away from the cone after touching it
+escaping_cone_speed: 0.25
+
+# The rate at which to turn toward the next waypoint while moving
+# away from the cone
+escaping_cone_turn_rate: 0.4
+
+# The horizontal field-of-view of the camera, in degrees.
+horz_fov: 70.0
+
+# The horizontal field-of-view of the camera, in pixels.
+horz_pixels: 640
