@@ -67,7 +67,6 @@ class States:
     FOLLOWING_WAYPOINTS = NavigatorState('FOLLOWING_WAYPOINTS')
     EXPECTING_CONE = NavigatorState('EXPECTING_CONE')
     DRIVING_TO_CONE = NavigatorState('DRIVING_TO_CONE')
-    UPDATING_WAYPOINTS = NavigatorState('UPDATING_WAYPOINTS')
     ESCAPING_CONE = NavigatorState('ESCAPING_CONE')
     FINISHED = NavigatorState('FINISHED')
     FAILED = NavigatorState('FAILED')
@@ -230,9 +229,6 @@ class Navigator:
         elif self.state is States.FOLLOWING_WAYPOINTS:
             self.show_event('on_waypoints_changed')
             self.set_waypoint_speed()
-        elif self.state is States.UPDATING_WAYPOINTS:
-            self.show_event('on_waypoints_changed')
-            self.begin_state(States.ESCAPING_CONE)
 
     def on_touch(self, msg):
         touching = msg.data
@@ -246,11 +242,10 @@ class Navigator:
                 self.begin_state(States.FINISHED)
             else:
                 # Should update waypoints and set index, but for now
-                # just set index. Change state first,
-                # because waypoints may come in before the call returns.
-                # (An exception to our usual rule.)
-                self.begin_state(States.UPDATING_WAYPOINTS)
+                # just set index.
                 self._mavros_set_current_wp(self.cone_wp_index + 1)
+                rospy.sleep(1.0)
+                self.begin_state(States.ESCAPING_CONE)
 
     def on_timeout_finding_cone(self, event):
         self.state_timer = None

@@ -19,12 +19,9 @@ expectingCone --> failed : timeout, last cone /\nset HOLD mode
 state "DRIVING_TO_CONE" as drivingToCone
 drivingToCone --> drivingToCone : [/robo_magellan/cone_finder/locations] /\ndetermine new cone position if cone seen\ndrive to cone position
 drivingToCone --> followingWaypoints : timeout, not last cone/\nset HOLD mode\nincrement wp index\nadjust speed\nset AUTO mode
-drivingToCone --> updatingWaypoints : [/robo_magellan/touch]\ncone touched /\ncancel timeout\nstop\nupdate waypoints for cone position
+drivingToCone --> escapingCone : [/robo_magellan/touch]\ncone touched /\ncancel timeout\nstop\nupdate waypoints for cone position\nfind heading to next wp
 drivingToCone --> failed : timeout, last cone /\nset HOLD mode
 drivingToCone --> finished : [/robo_magellan/touch]\nlast cone touched /\ncancel timeout\nset HOLD mode
-
-state "UPDATING_WAYPOINTS" as updatingWaypoints
-updatingWaypoints --> escapingCone : [/mavros/mission/waypoints]\nwaypoints received /\nfind heading to next wp
 
 state "ESCAPING_CONE" as escapingCone
 escapingCone --> escapingCone : [/mavros/local_position/pose]\nheading not yet achieved /\nback away toward next waypoint
