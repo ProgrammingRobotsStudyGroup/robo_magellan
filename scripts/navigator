@@ -6,6 +6,7 @@ import time
 from math import pi, tan, atan2, sqrt
 import rospy
 import tf
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 import tf2_ros
 from geodesy.utm import fromLatLong
 import std_msgs.msg as std_msgs
@@ -15,6 +16,7 @@ from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 from mavros_msgs.srv import WaypointSetCurrent
 from robo_magellan.msg import location_msgs as location_data
+from robo_magellan.msg import LocalWaypointList as LocalWaypointList
 
 
 class Modes:
@@ -48,6 +50,7 @@ class Topics:
     CONE_LOCATIONS = '~cone_locations'
     EXEC_CMD = '~exec_cmd'
     TOUCH = '~touch'
+    LOCAL_WAYPOINTS = '~waypoints/local'
     NAVIGATOR_STATE = '~state'
 
 
@@ -85,6 +88,8 @@ class Navigator:
         self.cone_pose = None
         self.waypoint_list = WaypointList()
         self.waypoint_list.waypoints = []
+        self.map_waypoint_list = None
+        self.escape_wp = None
 
         rospy.init_node('navigator')
 
@@ -102,10 +107,15 @@ class Navigator:
             '~cone_approach_k_turning', 0.5)
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
-        self.escaping_cone_speed = rospy.get_param(
-            '~escaping_cone_speed', -0.25)
-        self.escaping_cone_turn_rate = rospy.get_param(
-            '~escaping_cone_turn_rate', pi/8)
+        self.escape_k_throttle = rospy.get_param('~escape_k_throttle', 90)
+        self.escape_min_throttle = rospy.get_param(
+            '~escape_min_throttle', 35)
+        self.escape_max_throttle = rospy.get_param(
+            '~escape_max_throttle', 70)
+        self.escape_k_turning = rospy.get_param('~escape_k_turning', 500)
+        self.escape_max_turning = rospy.get_param('~escape_max_turning', 400)
+        self.escape_angle_tolerance = rospy.get_param(
+            '~escape_angle_tolerance', 0.15)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
@@ -127,10 +137,12 @@ class Navigator:
         rospy.Subscriber(Topics.ROBOT_STATE, State, self.on_state)
         rospy.Subscriber(Topics.WAYPOINTS, WaypointList,
                          self.on_waypoints_changed)
-        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_xyz_position)
+        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_robot_pose)
         rospy.Subscriber(Topics.CONE_LOCATIONS, location_data,
                          self.on_cone_locations)
         rospy.Subscriber(Topics.TOUCH, Bool, self.on_touch)
+        rospy.Subscriber(Topics.LOCAL_WAYPOINTS, LocalWaypointList,
+                         self.on_map_waypoints_changed)
 
         self._mavros_set_mode = self.get_proxy(Topics.SET_MODE, SetMode)
         self._mavros_param_get = self.get_proxy(Topics.GET_PARAM, ParamGet)
@@ -213,18 +225,21 @@ class Navigator:
             self.cancel_timer()
             self.begin_state(States.FAILED)
 
-    def on_xyz_position(self, position):
+    def on_robot_pose(self, position):
         if self.state is States.ESCAPING_CONE:
-            self.show_event('on_xyz_position')
-
-            # Should check to see if achieved desired heading. For now,
-            # just assume cone is cleared. Change state first,
-            # because waypoints may come in before the call returns.
-            # (An exception to our usual rule.)
-            self.set_mode(Modes.HOLD)
-            self.set_current_waypoint(self.cone_wp_index + 1)
-            self.set_waypoint_speed()
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
+            self.show_event('on_robot_pose')
+            pose = position.pose;
+            robot_heading = self.pose_heading(position.pose)
+            wp_heading = self.angle_to_point(position.pose.position,
+                                             self.escape_wp.point)
+            diff = self.normalize_angle(wp_heading - robot_heading)
+            if abs(diff) > self.escape_angle_tolerance:
+                self.turn_robot(diff)
+            else:
+                self.set_manual_speed(0, 0)
+                self.set_current_waypoint(self.cone_wp_index + 1)
+                self.set_waypoint_speed()
+                self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_waypoints_changed(self, waypoint_list):
         self.waypoint_list = waypoint_list
@@ -243,6 +258,9 @@ class Navigator:
             self.show_event('on_waypoints_changed')
             self.set_waypoint_speed()
 
+    def on_map_waypoints_changed(self, list):
+        self.map_waypoint_list = list
+
     def on_touch(self, msg):
         touching = msg.data
 
@@ -250,13 +268,15 @@ class Navigator:
             self.show_event('on_touch', touching)
             self.state_timer.shutdown()
             self.state_timer = None
-            self.set_mode(Modes.HOLD)
             if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
+                self.set_mode(Modes.HOLD)
                 self.begin_state(States.FINISHED)
             else:
-                # Should update waypoints and set index, but for now
-                # just set index.
-                self.set_current_waypoint(self.cone_wp_index + 1)
+                self.set_mode(Modes.MANUAL)
+                # Should update waypoints for cone location, but skip for now.
+                self.escape_wp \
+                    = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
+                self.set_manual_speed(0, 0)
                 self.begin_state(States.ESCAPING_CONE)
 
     def on_timeout_finding_cone(self, event):
@@ -314,6 +334,49 @@ class Navigator:
         ratio = sqrt(3900.0 / area)
         return 3 * ratio
 
+    def turn_robot(self, heading_diff):
+        speed = max(min(self.escape_k_throttle*abs(heading_diff),
+                        self.escape_max_throttle),
+                    self.escape_min_throttle)
+        turning = min(self.escape_k_turning*abs(heading_diff),
+                      self.escape_max_turning)
+
+        # We are backing up. Positive turning turns the wheels to the right,
+        # negative turning turns the wheels to the left.
+        speed = -speed
+        if heading_diff < 0:
+            turning = -turning
+
+        rospy.loginfo('[Navigator] heading_diff=%f speed=%f turning=%f',
+                      heading_diff*180/pi, speed, turning)
+
+        self.set_manual_speed(speed, turning)
+
+    def angle_to_point(self, from_pt, to_pt):
+        return atan2(to_pt.y - from_pt.y, to_pt.x - from_pt.x)
+
+    def pose_heading(self, pose):
+        q = [pose.orientation.x,
+             pose.orientation.y,
+             pose.orientation.z,
+             pose.orientation.w]
+        roll, pitch, heading = euler_from_quaternion(q)
+        return heading
+
+    def normalize_angle(self, theta):
+        """Gets an equivalent angle to a specified angle within the
+           range plus pi to minus pi."""
+        while theta >= 2*pi:
+            theta -= 2*pi
+        while theta < 0:
+            theta += 2*pi
+
+        # Now 0 <= theta < 2*pi. Convert to -pi < theta <= pi
+        if theta > pi:
+            return theta - 2*pi
+        else:
+            return theta
+
     def arm_robot(self, is_armed):
         self._mavros_arming(is_armed)
         # Need to ensure that the command finishes before doing other
@@ -334,6 +397,25 @@ class Navigator:
             self.set_mode(Modes.AUTO)
             rospy.loginfo('Speed %f', speed)
         
+    def set_manual_speed(self, speed, turning):
+        channels = [OverrideRCIn.CHAN_NOCHANGE, # 0
+                    OverrideRCIn.CHAN_NOCHANGE, # 1
+                    OverrideRCIn.CHAN_NOCHANGE, # 2
+                    OverrideRCIn.CHAN_NOCHANGE, # 3
+                    OverrideRCIn.CHAN_NOCHANGE, # 4
+                    OverrideRCIn.CHAN_NOCHANGE, # 5
+                    OverrideRCIn.CHAN_NOCHANGE, # 6
+                    OverrideRCIn.CHAN_NOCHANGE] # 7
+
+        speed = max(-500, min(500, speed))
+        turning = max(-500, min(500, turning))
+        channels[RCChannels.SPEED] = 1500 + speed
+        channels[RCChannels.TURNING] = 1500 + turning
+
+        msg = OverrideRCIn()
+        msg.channels = channels
+        self.rc_pub.publish(msg)
+
     def set_mode(self, mode):
         self._mavros_set_mode(0, mode)
 

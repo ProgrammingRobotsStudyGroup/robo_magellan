@@ -12,6 +12,7 @@
   <node name="navigator" pkg="robo_magellan" type="navigator"
         output="$(arg log_output)">
     <rosparam file="$(find robo_magellan)/config/navigator.yaml" />
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
     <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
     <remap from="~touch" to="/robo_magellan/touch" />
     <remap from="~exec_cmd" to="/exec_cmd_simple" />
