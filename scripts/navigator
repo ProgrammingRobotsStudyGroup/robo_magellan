@@ -64,11 +64,9 @@ class NavigatorState:
 
 class States:
     WAITING_FOR_START = NavigatorState('WAITING_FOR_START')
-    WAITING_FOR_WAYPOINTS = NavigatorState('WAITING_FOR_WAYPOINTS')
     FOLLOWING_WAYPOINTS = NavigatorState('FOLLOWING_WAYPOINTS')
     EXPECTING_CONE = NavigatorState('EXPECTING_CONE')
     DRIVING_TO_CONE = NavigatorState('DRIVING_TO_CONE')
-    WAITING_FOR_NEXT_WAYPOINT = NavigatorState('WAITING_FOR_NEXT_WAYPOINT')
     UPDATING_WAYPOINTS = NavigatorState('UPDATING_WAYPOINTS')
     ESCAPING_CONE = NavigatorState('ESCAPING_CONE')
     FINISHED = NavigatorState('FINISHED')
@@ -183,11 +181,13 @@ class Navigator:
             if len(self.waypoint_list.waypoints) == 0:
                 rospy.logerr('No waypoints loaded')
                 return
-            # Adjust waypoints w/ wp index zero. Change state first,
-            # because waypoints may come in before the call returns.
-            # (An exception to our usual rule.)
-            self.begin_state(States.WAITING_FOR_WAYPOINTS)
+            # Adjust waypoints w/ wp index zero and start following
+            # waypoints.
             self._mavros_set_current_wp(0) # For now, just set waypoint index
+            self._mavros_arming(True)
+            rospy.sleep(1.0)
+            self.set_waypoint_speed()
+            self.begin_state(States.FOLLOWING_WAYPOINTS)
         elif self.state is States.FINISHED and cmd==ExecCmds.RESET:
             self.show_event('on_exec_cmd', cmd)
             self.begin_state(States.WAITING_FOR_START)
@@ -208,8 +208,11 @@ class Navigator:
             # just assume cone is cleared. Change state first,
             # because waypoints may come in before the call returns.
             # (An exception to our usual rule.)
-            self.begin_state(States.WAITING_FOR_NEXT_WAYPOINT)
+            self.set_mode(Modes.HOLD)
             self._mavros_set_current_wp(self.cone_wp_index + 1)
+            rospy.sleep(1.0)
+            self.set_waypoint_speed()
+            self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_waypoints_changed(self, waypoint_list):
         self.waypoint_list = waypoint_list
@@ -217,13 +220,7 @@ class Navigator:
             rospy.logerr('No waypoints loaded')
             return
 
-        if self.state is States.WAITING_FOR_WAYPOINTS:
-            self.show_event('on_waypoints_changed')
-            self._mavros_arming(True)
-            self.set_waypoint_speed()
-            self.set_mode(Modes.AUTO)
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
-        elif self.state is States.FOLLOWING_WAYPOINTS \
+        if self.state is States.FOLLOWING_WAYPOINTS \
              and self.is_cone_waypoint(self.waypoint_list.current_seq):
             self.show_event('on_waypoints_changed')
             self.cone_wp_index = self.waypoint_list.current_seq
@@ -233,11 +230,6 @@ class Navigator:
         elif self.state is States.FOLLOWING_WAYPOINTS:
             self.show_event('on_waypoints_changed')
             self.set_waypoint_speed()
-        elif self.state is States.WAITING_FOR_NEXT_WAYPOINT:
-            self.show_event('on_waypoints_changed')
-            self.set_waypoint_speed()
-            self.set_mode(Modes.AUTO)
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
         elif self.state is States.UPDATING_WAYPOINTS:
             self.show_event('on_waypoints_changed')
             self.begin_state(States.ESCAPING_CONE)
@@ -271,11 +263,10 @@ class Navigator:
             self.show_event('on_timeout_finding_cone')
             # Timeout, not last cone.
             self.set_mode(Modes.HOLD)
-            # Change state first,
-            # because waypoints may come in before the call returns.
-            # (An exception to our usual rule.)
-            self.begin_state(States.WAITING_FOR_NEXT_WAYPOINT)
             self._mavros_set_current_wp(self.cone_wp_index + 1)
+            rospy.sleep(1.0)
+            self.set_waypoint_speed()
+            self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_cone_locations(self, cone_locations):
         if self.state is States.EXPECTING_CONE \
