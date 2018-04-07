@@ -27,6 +27,7 @@
   <node name="mock_cone_detector" pkg="robo_magellan"
         type="mock_cone_detector" output="$(arg log_output)">
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
   </node>
 
   <node name="mock_touch_detector" pkg="robo_magellan"
@@ -44,6 +45,7 @@
   <node name="view_mission" pkg="robo_magellan" type="view_mission"
         output="$(arg log_output)">
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
   </node>
 
 </launch>

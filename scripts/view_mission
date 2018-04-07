@@ -18,9 +18,9 @@ from robo_magellan.msg import LocalWaypoint as LocalWaypoint
 class Topics:
     ROBOT_POSE = '/mavros/local_position/pose'
     WAYPOINTS = '/mavros/mission/waypoints'
-    LOCAL_WAYPOINTS = '~waypoints/local'
     MARKER_ARRAY = '/visualization_marker_array'
-    CONE_LOCATIONS = '/robo_magellan/cone_finder/locations'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    CONE_LOCATIONS = '~cone_locations'
 
 class ShowMarkers:
 

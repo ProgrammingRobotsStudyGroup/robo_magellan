@@ -14,9 +14,8 @@ from robo_magellan.msg import pose_data as pose_data
 
 class Topics:
     LOCAL_POSITION = '/mavros/local_position/pose'
-    CONE_LOCATIONS = '/robo_magellan/cone_finder/locations'
+    CONE_LOCATIONS = '~cone_locations'
     LOCAL_WAYPOINTS = '~waypoints/local'
-    MAVROS_WAYPOINTS = '/mavros/mission/waypoints'
     
 class MockConeDetector:
 
