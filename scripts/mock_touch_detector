@@ -1,0 +1,64 @@
+#! /usr/bin/env python
+
+"""Sends mock touch detections based on robot location and waypoints."""
+
+from math import sqrt
+import rospy
+from std_msgs.msg import Bool
+from geometry_msgs.msg import PoseStamped
+from robo_magellan.msg import LocalWaypointList as LocalWaypointList
+
+class Topics:
+    LOCAL_POSITION = '/mavros/local_position/pose'
+    TOUCH = '~touch'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    
+class MockTouchDetector:
+
+    def run(self):
+        rospy.init_node('mock_touch_detector')
+
+        self.detection_distance = rospy.get_param('~detection_distance', 0.2)
+        
+        self.waypoint_list = LocalWaypointList()
+        self.waypoint_list.waypoints = []
+
+        rospy.Subscriber(Topics.LOCAL_WAYPOINTS, LocalWaypointList,
+                         self.on_waypoints_changed)
+        rospy.Subscriber(Topics.LOCAL_POSITION, PoseStamped,
+                         self.on_robot_position_changed)
+
+        self.touch_pub = rospy.Publisher(Topics.TOUCH, Bool, queue_size=1)
+
+        rospy.spin()
+
+    def on_waypoints_changed(self, waypoint_list):
+        self.waypoint_list = waypoint_list
+
+    def on_robot_position_changed(self, pose):
+        touching = False
+        xr, yr = pose.pose.position.x, pose.pose.position.y
+
+        for wp in self.waypoint_list.waypoints:
+            # Skip waypoints that are not cones.
+            if wp.point.z < 2000:
+                continue
+            
+            # Cone location.
+            xc, yc = wp.point.x, wp.point.y
+            d = sqrt((xc-xr)**2 + (yc-yr)**2)
+
+            if d <= self.detection_distance:
+                touching = True
+                break
+
+        msg = Bool()
+        msg.data = touching
+        self.touch_pub.publish(msg)
+
+if __name__ == "__main__":
+    try:
+        MockTouchDetector().run()
+
+    except rospy.ROSInterruptException:
+        pass

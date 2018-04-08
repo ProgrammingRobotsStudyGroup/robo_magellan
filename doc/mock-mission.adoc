@@ -1,0 +1,34 @@
+= How to Run a Mock Mission
+
+1. Start MavProxy at the location of the first sample waypoint.
+
+    $ cd <path-to-ardupilot>/APMrover2
+    $ sim_vehicle.py -l 37.659984,-121.8874624,0,45
+
+2. Start the simulation. Zoom and center the waypoints, if you like.
+Mouse wheel or 2-finger scroll zooms, control-shift-drag moves the
+map around.
+
+    $ roslaunch robo_magellan mock_mission.launch
+
+3. In MavProxy, load the waypoint sample. You should then see the robot and the waypoints
+in rviz. If you don't, try it again after a few seconds. (MavProxy can still be waiting
+for SITL to start up.)
+
+    rosrun mavros mavwp load data/sample.qgc-wpl.txt
+
+4. Start the mission by sending the start command as if the kill switch is pressed. You
+can kill `rostopic` with ctrl-C as soon as it starts, because the message is sent
+immediately.
+
+    $ rostopic pub /exec_cmd_simple d_msgs/String "data: 'START_EXEC'"
+
+In rviz, you should see the rover follow the waypoints. When a cone is visible,
+the heading to the cone is shown with a red arrow.
+
+You can reset the navigation code by sending a RESET command like this:
+
+    $ rostopic pub /exec_cmd_simple std_msgs/String "data: 'RESET'"
+    
+Then you can start the mission again with the first waypoint by doing step 4
+again.

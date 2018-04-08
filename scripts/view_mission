@@ -1,69 +1,57 @@
 #! /usr/bin/env python
 
+"""Sends information to rviz topics to create a visualization."""
+
 from __future__ import print_function
 import numpy as np
-from math import sin, cos, pi
+from math import sin, cos, tan, atan2, pi, sqrt
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Pose, PoseStamped
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import NavSatFix
-from mavros_msgs.msg import Waypoint, WaypointList
-from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
-import utm
+from robo_magellan.msg import location_msgs as location_data
+from robo_magellan.msg import LocalWaypointList as LocalWaypointList
+from robo_magellan.msg import LocalWaypoint as LocalWaypoint
+
+class Topics:
+    ROBOT_POSE = '/mavros/local_position/pose'
+    WAYPOINTS = '/mavros/mission/waypoints'
+    MARKER_ARRAY = '/visualization_marker_array'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    CONE_LOCATIONS = '~cone_locations'
 
 class ShowMarkers:
 
     def run(self):
-        self.gps_position = None
-        self.xyz_position = None
-        self.utm_tf = None
+        self.cone_locations = None
 
-        rospy.init_node("show_markers")
-        rospy.Subscriber('/mavros/global_position/global',
-                         NavSatFix, self.on_gps_position)
-        rospy.Subscriber('/mavros/local_position/pose',
-                         PoseStamped, self.on_xyz_position)
-        rospy.Subscriber('/mavros/mission/waypoints', WaypointList,
+        rospy.init_node('view_mission')
+
+        self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
+        self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
+
+        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_xyz_position)
+        rospy.Subscriber(Topics.LOCAL_WAYPOINTS, LocalWaypointList,
                          self.on_waypoints_changed)
-        self.robot_pub = rospy.Publisher('/visualization_marker_array',
-                                         MarkerArray, queue_size=1)
-        self.wp_pub = rospy.Publisher('/visualization_marker_array',
-                                      MarkerArray, latch=True, queue_size=1)
+        rospy.Subscriber(Topics.CONE_LOCATIONS, location_data,
+                         self.on_cone_locations)
 
-        rospy.wait_for_service('/mavros/mission/pull')
-        self.svc_pull_waypoints = rospy.ServiceProxy('/mavros/mission/pull', WaypointPull)
+        self.robot_pub = rospy.Publisher(Topics.MARKER_ARRAY, MarkerArray,
+                                         queue_size=1)
+        self.wp_pub = rospy.Publisher(Topics.MARKER_ARRAY, MarkerArray,
+                                      latch=True, queue_size=1)
 
-        # Update waypoints once ever second, if no change, in case
-        # rviz is restarted.
-        rate = rospy.Rate(0.5)
-        while not rospy.is_shutdown():
-            #self.svc_pull_waypoints()
-            rate.sleep()
-
-    def on_gps_position(self, position):
-        first_time = (self.gps_position is None)
-        #rospy.loginfo('Got GPS position, first_time:' + str(first_time))
-        self.gps_position = (position.latitude, position.longitude)
-        if first_time and (self.xyz_position is not None):
-            self.set_utm_transform()
+        rospy.spin()
 
     def on_xyz_position(self, position):
-        first_time = (self.xyz_position is None)
-        #rospy.loginfo('Got xyx position, first_time:' + str(first_time))
-        self.xyz_position = position.pose
-        self.show_robot()
-        if first_time and (self.gps_position is not None):
-            self.set_utm_transform()
+        self.show_robot(position.pose)
+
+    def on_cone_locations(self, cone_locations):
+        self.cone_locations = cone_locations
 
     def on_waypoints_changed(self, list):
-        if self.utm_tf is None:
-            rospy.loginfo('No UTM transformation')
-            return
-        #else:
-        #    rospy.loginfo('Showing waypoints')
         markers = []
         # Show up to 100 waypoints.
         for i in range(100):
@@ -77,22 +65,15 @@ class ShowMarkers:
                 continue
             
             wp = list.waypoints[i]
-            utm_x, utm_y, zone, band = utm.from_latlon(wp.x_lat, wp.y_long)
-            p_utm = np.array([utm_x, utm_y, 0, 1])
-            p_cart = np.matmul(self.utm_tf, p_utm)
-            #rospy.loginfo('GPS position: ' + str(wp.x_lat)
-            #              + ', ' + str(wp.y_long))
-            #rospy.loginfo('p_utm:' + str(p_utm))
-            #rospy.loginfo('p_cart:' + str(p_cart))
-            x = p_cart[0]
-            y = p_cart[1]
+            x = wp.point.x
+            y = wp.point.y
             h = 0.05
             w = 0.5
             if list.current_seq == i:
                 color = (1, 0, 0)
-            elif wp.z_alt >= 1900:
+            elif wp.point.z >= 1900:
                 color = (1, 0.5, 0)
-            elif wp.z_alt >= 900:
+            elif wp.point.z >= 900:
                 color = (1, 0, 1)
             else:
                 color = (0, 1, 0)
@@ -105,41 +86,54 @@ class ShowMarkers:
         msg.markers = markers
         self.wp_pub.publish(msg)
             
-    def set_utm_transform(self):
-        rospy.loginfo('Setting UTM transform')
-        rospy.loginfo('GPS position: ' + str(self.gps_position[0])
-                      + ', ' + str(self.gps_position[1]))
-        utm_x, utm_y, zone, band = utm.from_latlon(self.gps_position[0],
-                                                   self.gps_position[1])
-        
-        self.utm_tf = np.eye(4, dtype=np.float32)
-        # We only need X,Y transform, we ignore Z. Reason: Apparently, East
-        # is always associated with the X axis in both the local frame (map)
-        # and the GPS coordinate frame. This is independent of the initial
-        # robot orientation.
-        self.utm_tf[0,3] = self.xyz_position.position.x - utm_x
-        self.utm_tf[1,3] = self.xyz_position.position.y - utm_y
-        rospy.loginfo('self.utm_position:' + str((utm_x, utm_y)))
-        rospy.loginfo('self.xyz_position:' + str(self.xyz_position))
-        rospy.loginfo('self.utm_tf:' + str(self.utm_tf))
-
-    def show_robot(self):
-        x = self.xyz_position.position.x
-        y = self.xyz_position.position.y
-        quaternion = [self.xyz_position.orientation.x, \
-                      self.xyz_position.orientation.y, \
-                      self.xyz_position.orientation.z, \
-                      self.xyz_position.orientation.w]
+    def show_robot(self, position):
+        x = position.position.x
+        y = position.position.y
+        quaternion = [position.orientation.x, \
+                      position.orientation.y, \
+                      position.orientation.z, \
+                      position.orientation.w]
         roll, pitch, yaw = euler_from_quaternion(quaternion)
+        length = 0.680
+        width = 0.540
         rover = self.create_marker(1, Marker.CUBE, x, y, 0.350,
-                                   0.680, 0.540, 0.05,
+                                   length, width, 0.05,
                                    yaw, r=1, g=1, ns='robot')
-        arrow = self.create_marker(2, Marker.ARROW, x, y, 0.350,
-                                   1.0, 0.3, 0.3,
-                                   yaw, r=1, g=0.5, ns='robot')
+        front = self.create_marker(2, Marker.CYLINDER,
+                                   x + length/2*cos(yaw), y + length/2*sin(yaw),
+                                   0.350,
+                                   width, width, 0.045,
+                                   yaw, r=0.5, g=0.7, b=1, ns='robot')
+
+        if self.cone_locations is None or len(self.cone_locations.poses)==0:
+            arrow = self.create_marker(3, Marker.DELETE, 0, 0, 0,
+                                       0, 0, 0, 0, ns='robot')
+        else:
+            pose = self.cone_locations.poses[0]
+
+            # A pseudo-distance used to determine the pixel width of a cone
+            # heading angle.
+            fov_dist = self.camera_horz_pixels/2 / tan(self.camera_horz_fov/2)
+            cone_heading = atan2(pose.x, fov_dist)
+            arrow_dir = yaw + cone_heading
+            #rospy.loginfo('Cone heading: %f  arrow dir: %f',
+            #              cone_heading*180/pi, arrow_dir*180/pi)
+
+            arrow = self.create_marker(3, Marker.ARROW, x, y, 0.4,
+                                       self.get_cone_distance(pose.area),
+                                       0.05, 0.05,
+                                       arrow_dir, r=1, ns='robot')
+
         msg = MarkerArray()
-        msg.markers = [rover, arrow]
+        msg.markers = [rover, front, arrow]
         self.robot_pub.publish(msg)
+
+    def get_cone_distance(self, area):
+        # Area should be proportional to the square of distance.
+        # Assume approx. 3900 pixels at 3 meters and a 2.0
+        # aspect ratio.
+        ratio = sqrt(3900.0 / area)
+        return 3 * ratio
 
     def create_marker(self, id, type, x, y, z, l=0.5, w=0.5, h=0.01,
                       angle=0, ns='waypoints', r=1, b=0, g=0, a=1, text='',
