@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="udp://127.0.0.1:14550@14551" />
+    <arg name="log_output" value="$(arg log_output)" />
+  </include>
+
+  <node name="navigator" pkg="robo_magellan" type="navigator"
+        output="$(arg log_output)">
+    <rosparam file="$(find robo_magellan)/config/navigator.yaml" />
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
+    <remap from="~touch" to="/robo_magellan/touch" />
+    <remap from="~exec_cmd" to="/exec_cmd_simple" />
+  </node>
+
+  <node name="utm_transform_publisher" pkg="robo_magellan"
+        type="utm_transform_publisher" />
+
+  <node name="waypoint_transformer" pkg="robo_magellan"
+        type="waypoint_transformer" output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+  <node name="mock_cone_detector" pkg="robo_magellan"
+        type="mock_cone_detector" output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
+  </node>
+
+  <node name="mock_touch_detector" pkg="robo_magellan"
+        type="mock_touch_detector" output="$(arg log_output)">
+    <param name="~detection_distance" value="0.1" />
+    <remap from="~touch" to="/robo_magellan/touch" />
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+<!--
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find robo_magellan)/config/view_mission.rviz" />
+-->
+
+  <node name="view_mission" pkg="robo_magellan" type="view_mission"
+        output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
+  </node>
+
+</launch>

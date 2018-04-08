@@ -1,0 +1,170 @@
+#! /usr/bin/env python
+
+"""Sends information to rviz topics to create a visualization."""
+
+from __future__ import print_function
+import numpy as np
+from math import sin, cos, tan, atan2, pi, sqrt
+import rospy
+import tf
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Pose, PoseStamped
+from nav_msgs.msg import Odometry
+from robo_magellan.msg import location_msgs as location_data
+from robo_magellan.msg import LocalWaypointList as LocalWaypointList
+from robo_magellan.msg import LocalWaypoint as LocalWaypoint
+
+class Topics:
+    ROBOT_POSE = '/mavros/local_position/pose'
+    WAYPOINTS = '/mavros/mission/waypoints'
+    MARKER_ARRAY = '/visualization_marker_array'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    CONE_LOCATIONS = '~cone_locations'
+
+class ShowMarkers:
+
+    def run(self):
+        self.cone_locations = None
+
+        rospy.init_node('view_mission')
+
+        self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
+        self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
+
+        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_xyz_position)
+        rospy.Subscriber(Topics.LOCAL_WAYPOINTS, LocalWaypointList,
+                         self.on_waypoints_changed)
+        rospy.Subscriber(Topics.CONE_LOCATIONS, location_data,
+                         self.on_cone_locations)
+
+        self.robot_pub = rospy.Publisher(Topics.MARKER_ARRAY, MarkerArray,
+                                         queue_size=1)
+        self.wp_pub = rospy.Publisher(Topics.MARKER_ARRAY, MarkerArray,
+                                      latch=True, queue_size=1)
+
+        rospy.spin()
+
+    def on_xyz_position(self, position):
+        self.show_robot(position.pose)
+
+    def on_cone_locations(self, cone_locations):
+        self.cone_locations = cone_locations
+
+    def on_waypoints_changed(self, list):
+        markers = []
+        # Show up to 100 waypoints.
+        for i in range(100):
+            # If fewer waypoints, make sure we delete any extras from
+            # prior waypoint lists.
+            if i >= len(list.waypoints):
+                marker = Marker()
+                marker.id = i
+                marker.action = Marker.DELETE
+                markers.append(marker)
+                continue
+            
+            wp = list.waypoints[i]
+            x = wp.point.x
+            y = wp.point.y
+            h = 0.05
+            w = 0.5
+            if list.current_seq == i:
+                color = (1, 0, 0)
+            elif wp.point.z >= 1900:
+                color = (1, 0.5, 0)
+            elif wp.point.z >= 900:
+                color = (1, 0, 1)
+            else:
+                color = (0, 1, 0)
+            marker = self.create_marker(i, Marker.CYLINDER, x, y, h/2,
+                                        w, w, h, 0,
+                                        r=color[0], g=color[1], b=color[2],
+                                        ns='waypoints')
+            markers.append(marker)
+        msg = MarkerArray()
+        msg.markers = markers
+        self.wp_pub.publish(msg)
+            
+    def show_robot(self, position):
+        x = position.position.x
+        y = position.position.y
+        quaternion = [position.orientation.x, \
+                      position.orientation.y, \
+                      position.orientation.z, \
+                      position.orientation.w]
+        roll, pitch, yaw = euler_from_quaternion(quaternion)
+        length = 0.680
+        width = 0.540
+        rover = self.create_marker(1, Marker.CUBE, x, y, 0.350,
+                                   length, width, 0.05,
+                                   yaw, r=1, g=1, ns='robot')
+        front = self.create_marker(2, Marker.CYLINDER,
+                                   x + length/2*cos(yaw), y + length/2*sin(yaw),
+                                   0.350,
+                                   width, width, 0.045,
+                                   yaw, r=0.5, g=0.7, b=1, ns='robot')
+
+        if self.cone_locations is None or len(self.cone_locations.poses)==0:
+            arrow = self.create_marker(3, Marker.DELETE, 0, 0, 0,
+                                       0, 0, 0, 0, ns='robot')
+        else:
+            pose = self.cone_locations.poses[0]
+
+            # A pseudo-distance used to determine the pixel width of a cone
+            # heading angle.
+            fov_dist = self.camera_horz_pixels/2 / tan(self.camera_horz_fov/2)
+            cone_heading = atan2(pose.x, fov_dist)
+            arrow_dir = yaw + cone_heading
+            #rospy.loginfo('Cone heading: %f  arrow dir: %f',
+            #              cone_heading*180/pi, arrow_dir*180/pi)
+
+            arrow = self.create_marker(3, Marker.ARROW, x, y, 0.4,
+                                       self.get_cone_distance(pose.area),
+                                       0.05, 0.05,
+                                       arrow_dir, r=1, ns='robot')
+
+        msg = MarkerArray()
+        msg.markers = [rover, front, arrow]
+        self.robot_pub.publish(msg)
+
+    def get_cone_distance(self, area):
+        # Area should be proportional to the square of distance.
+        # Assume approx. 3900 pixels at 3 meters and a 2.0
+        # aspect ratio.
+        ratio = sqrt(3900.0 / area)
+        return 3 * ratio
+
+    def create_marker(self, id, type, x, y, z, l=0.5, w=0.5, h=0.01,
+                      angle=0, ns='waypoints', r=1, b=0, g=0, a=1, text='',
+                      action=0):
+        marker = Marker()
+        marker.header.frame_id = 'map'
+        marker.ns = ns
+        marker.id = id
+        marker.type = type
+        marker.action = action
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = z
+        quaternion = quaternion_from_euler(0, 0, angle)
+        marker.pose.orientation.x = quaternion[0]
+        marker.pose.orientation.y = quaternion[1]
+        marker.pose.orientation.z = quaternion[2]
+        marker.pose.orientation.w = quaternion[3]
+        marker.scale.x = l
+        marker.scale.y = w
+        marker.scale.z = h
+        marker.color.r = r
+        marker.color.g = g
+        marker.color.b = b
+        marker.color.a = a
+        marker.text = text
+        return marker
+
+if __name__ == "__main__":
+    try:
+        ShowMarkers().run()
+
+    except rospy.ROSInterruptException:
+        pass

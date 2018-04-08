@@ -1,0 +1,77 @@
+#! /usr/bin/env python
+
+from __future__ import print_function
+import threading
+import gps
+import time
+
+
+class GpsThread(threading.Thread):
+
+    def run(self):
+        self.location = None
+        self.finished = False
+        
+        session = gps.gps()
+        session.stream(gps.WATCH_ENABLE|gps.WATCH_NEWSTYLE)
+
+        while not self.finished:
+            report = session.next()
+            if hasattr(report, 'lat') and hasattr(report, 'lon'):
+                self.location = (report.lat, report.lon)
+
+        session.close()
+
+    def get_location(self):
+        return self.location
+
+    def set_finished(self, value):
+        self.finished = value
+
+
+class GpsCapture:
+    thread = GpsThread()
+    thread.start()
+    waypoints = []
+    while True:
+        print("w=waypoint  e=slow wp  c=cone  l=list  s file=save  d n=delete wp  q=quit")
+        command = raw_input('> ').split()
+        if command[0] == 'q':
+            thread.set_finished(True)
+            thread.join()
+            break
+        elif command[0]=='w' or command[0]=='e' or command[0]=='c':
+            wp = thread.get_location()
+            if command[0] == 'w':
+                altitude = 0.0
+            elif command[0] == 'e':
+                altitude = 1000.0
+            elif command[0] == 'c':
+                altitude = 2000.0
+            waypoints.append((wp[0], wp[1], altitude))
+            index = len(waypoints)
+            print('Added {0}: {1}'.format(index, waypoints[index-1]))
+        elif command[0] == 'w':
+            wp = thread.get_location()
+            waypoints.append((wp[0], wp[1], 0.0))
+            index = len(waypoints)
+            print('Added {0}: {1}'.format(index, waypoints[index-1]))
+        elif command[0] == 'l':
+            for i in range(len(waypoints)):
+                print('{0}: {1}'.format(i+1, waypoints[i]))
+        elif command[0] == 'd':
+            index = int(command[1])
+            waypoints.pop(index - 1)
+            print('Deleted waypoint {0}'.format(index))
+        elif command[0] == 's':
+            with open(command[1], 'w') as f:
+                f.write('QGC WPL 110\n')
+                for i in range(len(waypoints)):
+                    f.write('{0}\t0\t0\t16\t0.000000\t0.000000\t0.000000\t0.000000\t{1}\t{2}\t{3}\t1\n'.format(i, waypoints[i][0], waypoints[i][1], waypoints[i][2]))
+            print('Saved waypoints to {0}'.format(command[1]))
+        else:
+            print('Unknown command: %s'.format(command[0]))
+
+
+if __name__ == 'main':
+    GpsCapture().run()

@@ -10,10 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   geometry_msgs
+  tf
+  tf2_ros
   message_generation
+  mavros
   mavros_msgs
   cv_bridge
   image_transport
+  geodesy
 )
 
 ## System dependencies are found with CMake's conventions
@@ -59,6 +63,8 @@ add_message_files(
   location_msgs.msg
   to_exec.msg
   to_state.msg
+  LocalWaypointList.msg
+  LocalWaypoint.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -156,6 +162,10 @@ install(PROGRAMS
   scripts/seek_cone.py
   scripts/train_color_binned
   scripts/video_publish
+  scripts/view_mission
+  scripts/navigator
+  scripts/utm_transform_publisher
+  scripts/waypoint_transformer
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

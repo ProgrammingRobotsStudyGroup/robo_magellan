@@ -1,0 +1,43 @@
+@startuml
+
+[*] --> waitingForStart : node startup
+
+state "WAITING_FOR_START" as waitingForStart
+waitingForStart : mode: any
+waitingForStart --> followingWaypoints : [/exec_cmd_simple]\n'START_EXEC' message /\nadjust waypoints for wp index 0\narm throttle\nset speed for waypoint 0\nset AUTO mode
+
+state "FOLLOWING_WAYPOINTS" as followingWaypoints
+followingWaypoints: mode: AUTO
+followingWaypoints --> followingWaypoints : [/mavros/mission/waypoints]\nnew waypoint, not cone /\nadjust wp speed
+followingWaypoints --> expectingCone : [/mavros/mission/waypoints]\nnew waypoint, cone /\nsave cone wp index\nadjust wp speed\nset timeout
+
+state "EXPECTING_CONE" as expectingCone
+expectingCone: mode: AUTO
+expectingCone --> expectingCone : [/robo_magellan/cone_finder/locations]\ncone not seen
+expectingCone --> followingWaypoints : timeout, not last cone/\nset HOLD mode\nincrement wp index\nadjust wp speed\nset AUTO mode
+expectingCone --> drivingToCone : [/robo_magellan/cone_finder/locations]\ncone seen /\ndetermine cone position\nset GUIDED mode\ndrive to cone position
+expectingCone --> failed : [/mavros/state]\nHOLD mode /\ncancel timeout
+expectingCone --> failed : timeout, last cone /\nset HOLD mode
+
+state "DRIVING_TO_CONE" as drivingToCone
+drivingToCone: mode: GUIDED
+drivingToCone --> drivingToCone : [/robo_magellan/cone_finder/locations] /\ndetermine new cone position if cone seen\ndrive to cone position
+drivingToCone --> followingWaypoints : timeout, not last cone/\nset HOLD mode\nincrement wp index\nadjust wp speed\nset AUTO mode
+drivingToCone --> escapingCone : [/robo_magellan/touch]\ncone touched /\ncancel timeout\nset MANUAL mode\nupdate waypoints for cone position\nback away toward next wp
+drivingToCone --> failed : timeout, last cone /\nset HOLD mode
+drivingToCone --> finished : [/robo_magellan/touch]\nlast cone touched /\ncancel timeout\nset HOLD mode
+
+state "ESCAPING_CONE" as escapingCone
+escapingCone: mode: MANUAL
+escapingCone --> escapingCone : [/mavros/local_position/pose]\nheading not yet achieved /\nback away toward next waypoint
+escapingCone --> followingWaypoints : [/mavros/local_position/pose]\nheading achieved /\nset manual speed to 0\nincrement wp index\nadjust wp speed\nset AUTO mode
+
+state "FINISHED" as finished
+finished: mode: HOLD
+finished --> waitingForStart : [/exec_cmd_simple]\n'RESET' message
+
+state "FAILED" as failed
+failed: mode: HOLD
+failed --> waitingForStart : [/exec_cmd_simple]\n'RESET' message
+
+@enduml

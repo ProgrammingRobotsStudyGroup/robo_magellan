@@ -1,0 +1,84 @@
+#! /usr/bin/env python
+
+"""Listens for waypoints and republishes waypoints in map coordinates."""
+
+import rospy
+import tf
+import tf2_ros
+from mavros_msgs.msg import WaypointList
+from mavros_msgs.srv import WaypointPull
+from geodesy.utm import fromLatLong
+from robo_magellan.msg import LocalWaypointList as LocalWaypointList
+from robo_magellan.msg import LocalWaypoint as LocalWaypoint
+
+class Topics:
+    MISSION_WAYPOINTS = '/mavros/mission/waypoints'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    PULL_WAYPOINTS = '/mavros/mission/pull'
+
+class WaypointTransformer:
+
+    def run(self):
+        rospy.init_node('waypoint_transformer')
+
+        rate = rospy.Rate(rospy.get_param('~rate', 1.0))
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        # Sleep for a bit so that we (likely) get a valid transform.
+        rospy.sleep(rospy.Duration(1))
+
+        rospy.Subscriber(Topics.MISSION_WAYPOINTS, WaypointList,
+                         self.on_waypoints_changed)
+        self.waypoint_pub = rospy.Publisher(Topics.LOCAL_WAYPOINTS,
+                                            LocalWaypointList, queue_size=1,
+                                            latch=True)
+
+        rospy.wait_for_service('/mavros/mission/pull')
+        self._mavros_pull_waypoints = rospy.ServiceProxy(Topics.PULL_WAYPOINTS,
+                                                         WaypointPull)
+
+        self.waypoint_list = None
+
+        while not rospy.is_shutdown():
+            rate.sleep()
+            try:
+                t = self.tf_buffer.lookup_transform('utm', 'map', rospy.Time(0))
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                    tf2_ros.ExtrapolationException):
+                rospy.loginfo('No UTM transform - cannot publish waypoints')
+                continue
+
+            if self.waypoint_list is None:
+                rospy.loginfo('No waypoints from mavros')
+                self._mavros_pull_waypoints()
+            else:
+                self.publish_waypoints(t)
+
+    def on_waypoints_changed(self, list):
+        self.waypoint_list = list
+
+    def publish_waypoints(self, t):
+        local_waypoints = LocalWaypointList()
+        local_waypoints.current_seq = self.waypoint_list.current_seq
+        local_waypoints.waypoints = []
+
+        for wp in self.waypoint_list.waypoints:
+            utm = fromLatLong(wp.x_lat, wp.y_long)
+            local_wp = LocalWaypoint()
+            local_wp.point.x = utm.easting + t.transform.translation.x
+            local_wp.point.y = utm.northing + t.transform.translation.y
+            # Copy the altitude unchanged.
+            local_wp.point.z = wp.z_alt
+
+            local_waypoints.waypoints.append(local_wp)
+
+        self.waypoint_pub.publish(local_waypoints)
+            
+if __name__ == "__main__":
+    try:
+        WaypointTransformer().run()
+
+    except rospy.ROSInterruptException:
+        pass
