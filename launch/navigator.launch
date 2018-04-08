@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+
+  <!-- Competition launch file for RoboMagellan
+       Parameters:
+         vid: display video debug
+       Example:
+         roslaunch robo_magellan exec.launch vid:=true
+         Remember to use -X if you are using ssh
+        vs
+         roslaunch robo_magellan exec.launch
+        
+  -->
+
+  <!-- Start mavros only if installed.
+       Permits use on machine without pixhawk/mavros.
+  -->
+  <arg name="is_mavros" default="$(find mavros)" />
+  <group if="$(eval is_mavros != '')">
+    <include file="$(find mavros)/launch/apm.launch">
+      <!-- this must match the UP port-baud rate connected to Pixhawk -->
+      <arg name="fcu_url" value="/dev/ttyS1:115200" />
+      <arg name="log_output" value="$(arg log_output)" />
+    </include>
+  </group>
+
+  <arg name="vid" default="false" />
+  <group if="$(arg vid)">
+    <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
+  </group>
+  <group unless="$(arg vid)" >
+    <include file="$(find robo_magellan)/launch/cone_finder.launch" />
+  </group>
+
+  <!-- Navigator and supporting nodes -->
+  <node name="navigator" pkg="robo_magellan" type="navigator"
+        output="$(arg log_output)">
+    <rosparam file="$(find robo_magellan)/config/navigator.yaml" />
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
+    <remap from="~touch" to="/robo_magellan/touch" />
+    <remap from="~exec_cmd" to="/exec_cmd_simple" />
+  </node>
+
+  <node name="utm_transform_publisher" pkg="robo_magellan"
+        type="utm_transform_publisher" />
+
+  <node name="waypoint_transformer" pkg="robo_magellan"
+        type="waypoint_transformer" output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
+
+  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" />
+
+  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
+
+  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+  
+  <!-- Mission viewer - does nothing if rviz not launched -->
+  <node name="view_mission" pkg="robo_magellan" type="view_mission"
+        output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
+  </node>
+
+</launch>
