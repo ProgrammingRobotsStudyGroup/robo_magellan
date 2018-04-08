@@ -271,7 +271,7 @@ class Navigator:
         if self.state is States.DRIVING_TO_CONE and touching:
             self.show_event('on_touch', touching)
             self.state_timer.shutdown()
-            self.state_timer = None
+            self.set_manual_speed(0, 0)
             if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
                 self.set_mode(Modes.HOLD)
                 self.begin_state(States.FINISHED)
@@ -303,7 +303,11 @@ class Navigator:
            and len(cone_locations.poses) > 0:
             self.show_event('on_cone_locations', len(cone_locations.poses))
             # Found the cone.
-            self.set_mode(Modes.GUIDED)
+            self.set_manual_speed(0, 0)
+            if self.cone_approach_use_throttle:
+                self.set_mode(Modes.MANUAL)
+            else:
+                self.set_mode(Modes.GUIDED)
             self.drive_to_cone(cone_locations.poses[0])
             self.begin_state(States.DRIVING_TO_CONE)
         elif self.state is States.DRIVING_TO_CONE \
