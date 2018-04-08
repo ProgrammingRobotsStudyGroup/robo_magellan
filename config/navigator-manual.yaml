@@ -1,0 +1,77 @@
+# The GCS ID, which must match the parameters on the PixHawk.
+gcs_id: 1
+
+# The normal waypoint speed
+fast_speed: 4.0
+
+# The speed to use if the waypoint is marked as nearing a cone
+slow_speed: 2.0
+
+# Sets whether to use commanded velocity under GUIDED mode
+# or throttle control under MANUAL mode. If false, use
+# GUIDED mode, if true, use MANUAL R/C override.
+cone_approach_use_throttle: true
+
+# The constant used to determine the cone approach speed. The
+# speed is this constant times the distance, subject to the
+# limits below.
+cone_approach_k_speed: 15
+
+# The minimum and maximum speeds used when approaching a cone,
+# in m/s. If using the throttle, these are the minimum and
+# maximum throttle deviations from the neutral position, values
+# from 0 to 500.
+cone_approach_min_speed: 15
+cone_approach_max_speed: 70
+
+# The proportional constant used to determine the turn rate
+# when approaching. If not using the throttle, this value
+# represents the inverse of the number of seconds after which
+# the heading error should become zero, based on the commanded
+# turning. Increase this to turn faster toward the cone.
+# E.g., if 2.0, heading will be corrected in 1/2.0 = 0.5 sec
+#
+# If using the throttle, then this proportional constant is
+# used to determine the throttle deviation from the neutral
+# position.
+cone_approach_k_turning: 700
+
+# The maximum turning rate, in radians/sec. If using the
+# throttle, this is a value from 0 to 500 and representes
+# the maximum throttle deviation from the neutral position.
+cone_approach_max_turning: 400
+
+# The number of seconds in which the robot must touch the cone
+# or the attempt will be abandoned.
+cone_timeout_seconds: 60
+
+# The proportional constant used to determine the reverse throttle
+# while moving away from a cone. This times the heading difference
+# to the next waypoint is used as the throttle difference from
+# neutral throttle.
+escape_k_throttle: 90
+
+# The minimum and maximum throttle values, each from 0 to 500,
+# corresponding to R/C PWM values 1500-x to 1500+x.
+escape_min_throttle: 35
+escape_max_throttle: 70
+
+# The maximum turning value, from 0 to 500, corresponding to
+# R/C PWM values 1500-x and 1500+x.
+escape max_turning: 400
+
+# The proportional constant used to set the turning rate while
+# moving away from a cone. This times the heading difference
+# is used as the turning PWM difference from neutral.
+escape_k_turning: 500
+
+# The maximum tolerance in heading error before deciding that
+# the robot has turned sufficiently toward the next cone.
+# A value of 0.1 is about 6 degrees.
+escape_angle_tolerance: 0.15
+
+# The horizontal field-of-view of the camera, in degrees.
+horz_fov: 70.0
+
+# The horizontal field-of-view of the camera, in pixels.
+horz_pixels: 640

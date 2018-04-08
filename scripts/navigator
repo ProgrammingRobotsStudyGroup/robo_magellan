@@ -355,10 +355,10 @@ class Navigator:
         turning = min(self.escape_k_turning*abs(heading_diff),
                       self.escape_max_turning)
 
-        # We are backing up. Positive turning turns the wheels to the right,
-        # negative turning turns the wheels to the left.
+        # We are backing up. Positive turning turns the wheels to the left,
+        # negative turning turns the wheels to the right.
         speed = -speed
-        if heading_diff < 0:
+        if heading_diff >= 0:
             turning = -turning
 
         rospy.loginfo('[Navigator] heading_diff=%f speed=%f turning=%f',
@@ -411,6 +411,9 @@ class Navigator:
             self.set_mode(Modes.AUTO)
             rospy.loginfo('Speed %f', speed)
         
+    # Sets the R/C override speeds. Turning is positive
+    # to the left, while the R/C PWM value for turning
+    # decreases to the left.
     def set_manual_speed(self, speed, turning):
         channels = [OverrideRCIn.CHAN_NOCHANGE, # 0
                     OverrideRCIn.CHAN_NOCHANGE, # 1
@@ -424,7 +427,7 @@ class Navigator:
         speed = max(-500, min(500, speed))
         turning = max(-500, min(500, turning))
         channels[RCChannels.SPEED] = 1500 + speed
-        channels[RCChannels.TURNING] = 1500 + turning
+        channels[RCChannels.TURNING] = 1500 - turning
 
         msg = OverrideRCIn()
         msg.channels = channels
