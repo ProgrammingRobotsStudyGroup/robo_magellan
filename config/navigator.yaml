@@ -7,23 +7,39 @@ fast_speed: 4.0
 # The speed to use if the waypoint is marked as nearing a cone
 slow_speed: 2.0
 
+# Sets whether to use commanded velocity under GUIDED mode
+# or throttle control under MANUAL mode. If false, use
+# GUIDED mode, if true, use MANUAL R/C override.
+cone_approach_use_throttle: false
+
 # The constant used to determine the cone approach speed. The
 # speed is this constant times the distance, subject to the
 # limits below.
-
 cone_approach_k_speed: 0.25
 
-# The maximum speed used when approaching a cone.
+# The minimum and maximum speeds used when approaching a cone,
+# in m/s. If using the throttle, these are the minimum and
+# maximum throttle deviations from the neutral position, values
+# from 0 to 500.
+cone_approach_min_speed: 0.2
 cone_approach_max_speed: 1.0
 
-# The minimum speed used when approaching a cone.
-cone_approach_min_speed: 0.2
-
-# The constant used to determine the turn rate when approaching
-# a cone. This represents the number of seconds after which the
-# heading error should become zero, based on the commanded
+# The proportional constant used to determine the turn rate
+# when approaching. If not using the throttle, this value
+# represents the inverse of the number of seconds after which
+# the heading error should become zero, based on the commanded
 # turning. Increase this to turn faster toward the cone.
-cone_approach_k_turning: 0.5
+# E.g., if 2.0, heading will be corrected in 1/2.0 = 0.5 sec
+#
+# If using the throttle, then this proportional constant is
+# used to determine the throttle deviation from the neutral
+# position.
+cone_approach_k_turning: 2.0
+
+# The maximum turning rate, in radians/sec. If using the
+# throttle, this is a value from 0 to 500 and representes
+# the maximum throttle deviation from the neutral position.
+cone_approach_max_turning: 5.0
 
 # The number of seconds in which the robot must touch the cone
 # or the attempt will be abandoned.

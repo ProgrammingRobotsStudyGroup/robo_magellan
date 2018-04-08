@@ -97,6 +97,8 @@ class Navigator:
 
         self.fast_speed = rospy.get_param('~fast_speed', 3.0)
         self.slow_speed = rospy.get_param('~slow_speed', 1.5)
+        self.cone_approach_use_throttle = rospy.get_param(
+            '~cone_approach_use_throttle', False)
         self.cone_approach_k_speed = rospy.get_param(
             '~cone_approach_k_speed', 0.25)
         self.cone_approach_max_speed = rospy.get_param(
@@ -105,6 +107,8 @@ class Navigator:
             '~cone_approach_min_speed', 0.25)
         self.cone_approach_k_turning = rospy.get_param(
             '~cone_approach_k_turning', 0.5)
+        self.cone_approach_max_turning = rospy.get_param(
+            '~cone_approach_max_turning', pi/2)
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
         self.escape_k_throttle = rospy.get_param('~escape_k_throttle', 90)
@@ -317,15 +321,21 @@ class Navigator:
         speed = min(max(self.cone_approach_k_speed*distance,
                         self.cone_approach_min_speed),
                     self.cone_approach_max_speed)
-        turning = cone_heading / self.cone_approach_k_turning
+        turning = min(self.cone_approach_k_turning*abs(cone_heading),
+                      self.cone_approach_max_turning)
+        if cone_heading < 0:
+            turning = -turning
 
         rospy.loginfo('[Navigator] d=%f heading=%f speed=%f turning=%f',
                       distance, cone_heading*180/pi, speed, turning)
 
-        twist = TwistStamped()
-        twist.twist.linear.x = speed
-        twist.twist.angular.z = turning
-        self.vel_pub.publish(twist)
+        if self.cone_approach_use_throttle:
+            self.set_manual_speed(speed, turning)
+        else:
+            twist = TwistStamped()
+            twist.twist.linear.x = speed
+            twist.twist.angular.z = turning
+            self.vel_pub.publish(twist)
 
     def get_cone_distance(self, area):
         # Area should be proportional to the square of distance.
