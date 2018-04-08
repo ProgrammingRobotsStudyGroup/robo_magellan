@@ -67,7 +67,7 @@ class GpsCapture:
             with open(command[1], 'w') as f:
                 f.write('QGC WPL 110\n')
                 for i in range(len(waypoints)):
-                    f.write('{0}       0       0       16      0.000000        0.000000        0.000000        0.000000        {1}       {2}       {3}       1\n'.format(i, waypoints[i][0], waypoints[i][1], waypoints[i][2]))
+                    f.write('{0}\t0\t0\t16\t0.000000\t0.000000\t0.000000\t0.000000\t{1}\t{2}\t{3}\t1\n'.format(i, waypoints[i][0], waypoints[i][1], waypoints[i][2]))
             print('Saved waypoints to {0}'.format(command[1]))
         else:
             print('Unknown command: %s'.format(command[0]))
