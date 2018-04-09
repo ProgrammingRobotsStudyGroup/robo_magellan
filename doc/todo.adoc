@@ -1,0 +1,21 @@
+= To-Do List
+
+- mock_cone_detector creates infinite area and overflows h
+- new waypoints shorter than old don't delete existing waypoints
+- adjust waypoints for start position and cone position
+- cone area goes down when very close to cone
+- reverse PWM does not work
+- touch sensor does not work
+- cone detection in bright light does not work
+- PWM forward steering values are reversed
+- PWM neutral points need to be configurable
+- GUIDED mode does not work
+- PWM values on grass must be different
+- Encode PWM values or range set to use in the waypoints file
+- Have a way of manually triggering parameter reload
+
+== Notes
+
+MAV_CMD_DO_SET_HOME appears to reset the map origin, as well as zero the
+offset between the map origin and base_link (for /mavros/local_position/pose
+and /mavros/local_position/odom).
