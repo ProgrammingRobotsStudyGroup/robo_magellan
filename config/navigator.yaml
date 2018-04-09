@@ -2,10 +2,10 @@
 gcs_id: 1
 
 # The normal waypoint speed
-fast_speed: 4.0
+fast_speed: 2.0
 
 # The speed to use if the waypoint is marked as nearing a cone
-slow_speed: 2.0
+slow_speed: 1.0
 
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
