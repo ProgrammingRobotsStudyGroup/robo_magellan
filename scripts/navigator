@@ -407,7 +407,7 @@ class Navigator:
         if speed != self.last_wp_speed:
             self.last_wp_speed = speed
             self.set_mode(Modes.HOLD)
-            self.set_parameter('WP_SPEED', speed)
+            self.set_parameter('CRUISE_SPEED', speed)
             self.set_mode(Modes.AUTO)
             rospy.loginfo('Speed %f', speed)
         
