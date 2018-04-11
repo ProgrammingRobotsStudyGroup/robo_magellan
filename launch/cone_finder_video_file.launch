@@ -9,6 +9,7 @@
   <arg name="single_frame" default="False" />
   <!-- The video frame ID -->
   <arg name="frame_id" default="camera" />
+  <arg name="bin_config" default="$(find robo_magellan)/config/realsense-bins-0_6.json" />
 
   <node name="video_publish" pkg="robo_magellan" type="video_publish">
     <param name="~single_frame" value="$(arg single_frame)" />
@@ -27,7 +28,7 @@
     <param name="~minConeArea" value="400" />
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />
-    <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
+    <param name="~binConfig" value="$(arg bin_config)" />
 
     <!-- Use 'convexHull', 'relaxed' or 'huMoments' for filter algorithm. -->
     <param name="~contourFilterAlgorithm" value="relaxed" />
