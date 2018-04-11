@@ -233,10 +233,10 @@ class Navigator:
             self.set_current_waypoint(0)
             self.set_waypoint_speed()
             self.begin_state(States.FOLLOWING_WAYPOINTS)
-        elif self.state is States.FINISHED and cmd==ExecCmds.RESET:
+        elif self.state is States.FINISHED and cmd==ExecCmds.START:
             self.show_event('on_exec_cmd', cmd)
             self.begin_state(States.WAITING_FOR_START)
-        elif self.state is States.FAILED and cmd==ExecCmds.RESET:
+        elif self.state is States.FAILED and cmd==ExecCmds.START:
             self.show_event('on_exec_cmd', cmd)
             self.begin_state(States.WAITING_FOR_START)
 
