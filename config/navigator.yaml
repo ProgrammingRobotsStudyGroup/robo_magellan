@@ -7,6 +7,16 @@ fast_speed: 2.0
 # The speed to use if the waypoint is marked as nearing a cone
 slow_speed: 1.0
 
+# The throttle PWM range.
+throttle_neutral: 1500
+throttle_fwd_max: 1900
+throttle_reverse_max: 1100
+
+# The steering PWM range.
+steering_neutral: 1435
+steering_left_max: 1000
+steering_right_max: 2000
+
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
 # GUIDED mode, if true, use MANUAL R/C override.

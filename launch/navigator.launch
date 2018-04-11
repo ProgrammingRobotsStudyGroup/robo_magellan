@@ -2,6 +2,8 @@
 <launch xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <arg name="log_output" default="screen" />
+  <arg name="view_mission" default="false" />
+  <arg name="start_rviz" default="false" />
 
   <!-- Competition launch file for RoboMagellan
        Parameters:
@@ -39,32 +41,27 @@
         output="$(arg log_output)">
     <rosparam file="$(find robo_magellan)/config/navigator.yaml" />
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
-    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
-    <remap from="~touch" to="/robo_magellan/touch" />
+    <remap from="~cone_locations" to="/cone_finder/locations" />
+    <remap from="~touch" to="/touch" />
     <remap from="~exec_cmd" to="/exec_cmd_simple" />
-  </node>
-
-  <node name="utm_transform_publisher" pkg="robo_magellan"
-        type="utm_transform_publisher" />
-
-  <node name="waypoint_transformer" pkg="robo_magellan"
-        type="waypoint_transformer" output="$(arg log_output)">
-    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
   </node>
 
   <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
 
-  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py" />
+  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py">
+    <remap from="~touch" to="/touch" />
+  </node>
 
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
   
-  <!-- Mission viewer - does nothing if rviz not launched -->
-  <node name="view_mission" pkg="robo_magellan" type="view_mission"
-        output="$(arg log_output)">
-    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
-    <remap from="~cone_locations" to="/robo_magellan/cone_finder/locations" />
-  </node>
+  <include file="$(find robo_magellan)/launch/utm_transform.launch" />
+
+  <group if="$(arg view_mission)">
+    <include file="$(find robo_magellan)/launch/view_mission.launch">
+      <arg name="start_rviz" value="$(arg start_rviz)" />
+    </include>
+  </group>
 
 </launch>
