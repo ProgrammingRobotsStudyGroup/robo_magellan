@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+
+  <node name="utm_transform_publisher" pkg="robo_magellan"
+        type="utm_transform_publisher" />
+
+  <node name="waypoint_transformer" pkg="robo_magellan"
+        type="waypoint_transformer" output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+  </node>
+
+</launch>

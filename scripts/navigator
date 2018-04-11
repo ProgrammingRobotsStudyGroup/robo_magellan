@@ -76,6 +76,7 @@ class States:
     ESCAPING_CONE = NavigatorState('ESCAPING_CONE')
     FINISHED = NavigatorState('FINISHED')
     FAILED = NavigatorState('FAILED')
+    SIMPLE_ESCAPE = NavigatorState('SIMPLE_ESCAPE')
 
 
 class Navigator:
@@ -97,6 +98,23 @@ class Navigator:
 
         self.fast_speed = rospy.get_param('~fast_speed', 3.0)
         self.slow_speed = rospy.get_param('~slow_speed', 1.5)
+
+        self.throttle_neutral = rospy.get_param(
+            '~throttle_neutral', 1500)
+        self.throttle_reverse_max = rospy.get_param(
+            '~throttle_reverse_max', 1000)
+        self.throttle_fwd_max = rospy.get_param(
+            '~throttle_fwd_max', 2000)
+
+        self.steering_neutral = rospy.get_param(
+            '~steering_neutral', 1500)
+        self.steering_left_max = rospy.get_param(
+            '~steering_left_max', 1000)
+        self.steering_right_max = rospy.get_param(
+            '~steering_right_max', 2000)
+
+        self.cone_approach_use_throttle = rospy.get_param(
+            '~cone_approach_use_throttle', False)
         self.cone_approach_k_speed = rospy.get_param(
             '~cone_approach_k_speed', 0.25)
         self.cone_approach_max_speed = rospy.get_param(
@@ -105,15 +123,18 @@ class Navigator:
             '~cone_approach_min_speed', 0.25)
         self.cone_approach_k_turning = rospy.get_param(
             '~cone_approach_k_turning', 0.5)
+        self.cone_approach_max_turning = rospy.get_param(
+            '~cone_approach_max_turning', pi/2)
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
+
         self.escape_k_throttle = rospy.get_param('~escape_k_throttle', 90)
         self.escape_min_throttle = rospy.get_param(
-            '~escape_min_throttle', 35)
+            '~escape_min_throttle', 0.6)
         self.escape_max_throttle = rospy.get_param(
-            '~escape_max_throttle', 70)
-        self.escape_k_turning = rospy.get_param('~escape_k_turning', 500)
-        self.escape_max_turning = rospy.get_param('~escape_max_turning', 400)
+            '~escape_max_throttle', 0.6)
+        self.escape_k_turning = rospy.get_param('~escape_k_turning', 0.5)
+        self.escape_max_turning = rospy.get_param('~escape_max_turning', 1.0)
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
 
@@ -267,17 +288,30 @@ class Navigator:
         if self.state is States.DRIVING_TO_CONE and touching:
             self.show_event('on_touch', touching)
             self.state_timer.shutdown()
-            self.state_timer = None
+            self.set_manual_speed(0, 0)
             if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
                 self.set_mode(Modes.HOLD)
                 self.begin_state(States.FINISHED)
             else:
                 self.set_mode(Modes.MANUAL)
+                self.set_manual_speed(0, 0)
                 # Should update waypoints for cone location, but skip for now.
                 self.escape_wp \
                     = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
+                #self.begin_state(States.ESCAPING_CONE)
+
+                # Do alternate, simple escape.
+                self.begin_state(States.SIMPLE_ESCAPE)
+                time.sleep(1.0)
+                # Back up for 3 seconds
+                self.set_manual_speed(-0.7, 0)
+                time.sleep(3.0)
+                # Stop, then follow waypoints.
                 self.set_manual_speed(0, 0)
-                self.begin_state(States.ESCAPING_CONE)
+                time.sleep(3.0)
+                self.set_current_waypoint(self.cone_wp_index + 1)
+                self.set_waypoint_speed()
+                self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_timeout_finding_cone(self, event):
         self.state_timer = None
@@ -299,7 +333,11 @@ class Navigator:
            and len(cone_locations.poses) > 0:
             self.show_event('on_cone_locations', len(cone_locations.poses))
             # Found the cone.
-            self.set_mode(Modes.GUIDED)
+            self.set_manual_speed(0, 0)
+            if self.cone_approach_use_throttle:
+                self.set_mode(Modes.MANUAL)
+            else:
+                self.set_mode(Modes.GUIDED)
             self.drive_to_cone(cone_locations.poses[0])
             self.begin_state(States.DRIVING_TO_CONE)
         elif self.state is States.DRIVING_TO_CONE \
@@ -317,15 +355,21 @@ class Navigator:
         speed = min(max(self.cone_approach_k_speed*distance,
                         self.cone_approach_min_speed),
                     self.cone_approach_max_speed)
-        turning = cone_heading / self.cone_approach_k_turning
+        turning = min(self.cone_approach_k_turning*abs(cone_heading),
+                      self.cone_approach_max_turning)
+        if cone_heading < 0:
+            turning = -turning
 
         rospy.loginfo('[Navigator] d=%f heading=%f speed=%f turning=%f',
                       distance, cone_heading*180/pi, speed, turning)
 
-        twist = TwistStamped()
-        twist.twist.linear.x = speed
-        twist.twist.angular.z = turning
-        self.vel_pub.publish(twist)
+        if self.cone_approach_use_throttle:
+            self.set_manual_speed(speed, turning)
+        else:
+            twist = TwistStamped()
+            twist.twist.linear.x = speed
+            twist.twist.angular.z = turning
+            self.vel_pub.publish(twist)
 
     def get_cone_distance(self, area):
         # Area should be proportional to the square of distance.
@@ -341,10 +385,10 @@ class Navigator:
         turning = min(self.escape_k_turning*abs(heading_diff),
                       self.escape_max_turning)
 
-        # We are backing up. Positive turning turns the wheels to the right,
-        # negative turning turns the wheels to the left.
+        # We are backing up. Positive turning turns the wheels to the left,
+        # negative turning turns the wheels to the right.
         speed = -speed
-        if heading_diff < 0:
+        if heading_diff >= 0:
             turning = -turning
 
         rospy.loginfo('[Navigator] heading_diff=%f speed=%f turning=%f',
@@ -393,10 +437,13 @@ class Navigator:
         if speed != self.last_wp_speed:
             self.last_wp_speed = speed
             self.set_mode(Modes.HOLD)
-            self.set_parameter('WP_SPEED', speed)
+            self.set_parameter('CRUISE_SPEED', speed)
             self.set_mode(Modes.AUTO)
             rospy.loginfo('Speed %f', speed)
         
+    # Sets the R/C override speeds. Turning is positive
+    # to the left, while the R/C PWM value for turning
+    # decreases to the left.
     def set_manual_speed(self, speed, turning):
         channels = [OverrideRCIn.CHAN_NOCHANGE, # 0
                     OverrideRCIn.CHAN_NOCHANGE, # 1
@@ -407,10 +454,34 @@ class Navigator:
                     OverrideRCIn.CHAN_NOCHANGE, # 6
                     OverrideRCIn.CHAN_NOCHANGE] # 7
 
-        speed = max(-500, min(500, speed))
-        turning = max(-500, min(500, turning))
-        channels[RCChannels.SPEED] = 1500 + speed
-        channels[RCChannels.TURNING] = 1500 + turning
+        if speed >= 0:
+            throttle_limit = self.throttle_fwd_max
+        else:
+            throttle_limit = self.throttle_reverse_max
+
+        throttle = abs(speed) * (throttle_limit - self.throttle_neutral) \
+                   + self.throttle_neutral
+        if throttle_limit > self.throttle_neutral:
+            throttle = min(throttle, throttle_limit)
+        else:
+            throttle = max(throttle, throttle_limit)
+
+        if turning >= 0:
+            steering_limit = self.steering_left_max
+        else:
+            steering_limit = self.steering_righ_max
+
+        steering = abs(turning) * (steering_limit - self.steering_neutral) \
+                   + self.steering_neutral
+        if steering_limit >= self.steering_neutral:
+            steering = min(steering, steering_limit)
+        else:
+            steering = max(steering, steering_limit)
+            
+        channels[RCChannels.SPEED] = int(throttle)
+        channels[RCChannels.TURNING] = int(steering)
+
+        rospy.loginfo('Setting manual speed=%f turning=%f: throttle=%d steering=%d', speed, turning, throttle, steering)
 
         msg = OverrideRCIn()
         msg.channels = channels

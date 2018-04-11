@@ -1,0 +1,25 @@
+= To-Do List
+
+- mock_cone_detector creates infinite area and overflows h
+- (*DONE*) new waypoints shorter than old don't delete existing waypoints
+- adjust waypoints for start position and cone position
+- cone area goes down when very close to cone
+- (*DONE*) parameterize throttle and steering PWM values
+- touch sensor does not work
+- cone detection in bright light does not work
+- GUIDED mode does not work
+- Encode PWM values or range set to use in the waypoints file
+- If waypoint encountered before cone is seen, rover goes into HOLD mode
+with no recovery. Needs to be fixed.
+
+== Possible To-Do
+
+- (*DONE*) Change from using WP_SPEED to CRUISE_SPEED. (Seems to be used by Vicky,
+while WP_SPEED is not.)
+- Have a way of manually triggering parameter reload
+
+== Notes
+
+MAV_CMD_DO_SET_HOME appears to reset the map origin, as well as zero the
+offset between the map origin and base_link (for /mavros/local_position/pose
+and /mavros/local_position/odom).

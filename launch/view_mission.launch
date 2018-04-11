@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+  <arg name="start_rviz" default="false" />
+  <arg name="utm_transform" default="false" />
+
+  <group if="$(arg utm_transform)">
+    <include file="$(find robo_magellan)/launch/utm_transform.launch" />
+  </group>
+
+  <group if="$(arg start_rviz)">
+    <node name="rviz" pkg="rviz" type="rviz"
+          args="-d $(find robo_magellan)/config/view_mission.rviz" />
+  </group>
+
+  <node name="view_mission" pkg="robo_magellan" type="view_mission"
+        output="$(arg log_output)">
+    <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~cone_locations" to="/cone_finder/locations" />
+  </node>
+
+</launch>
