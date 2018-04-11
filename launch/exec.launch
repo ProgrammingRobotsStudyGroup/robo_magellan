@@ -13,6 +13,9 @@
         
   -->
 
+  <arg name="view_mission" default="false" />
+  <arg name="start_rviz" default="false" />
+
   <!-- Start mavros only if installed.
        Permits use on machine without pixhawk/mavros.
   -->
@@ -50,4 +53,11 @@
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
   
+  <group if="$(arg view_mission)">
+    <include file="$(find robo_magellan)/launch/view_mission.launch">
+      <arg name="utm_transform" value="true" />
+      <arg name="start_rviz" value="$(arg start_rviz)" />
+    </include>
+  </group>
+
 </launch>
