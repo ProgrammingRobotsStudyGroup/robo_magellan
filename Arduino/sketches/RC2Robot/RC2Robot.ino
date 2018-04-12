@@ -27,6 +27,8 @@
 #define SERIAL_STREAM Serial
 #define DEBUG_SERIAL_STREAM Serial
 
+#define BUMPER_SWITCH 0
+
 void setup() {
   Serial.begin(115200);
   initCommand();
@@ -34,6 +36,10 @@ void setup() {
   initWheelEncoder();
 
   initBumper();
+
+  #ifdef BUMPER_SWITCH
+  pinMode(BUMPER_SWITCH, INPUT);
+  #endif
 }
 
 /**
@@ -51,18 +57,19 @@ void loop() {
   if (elapsed > _delay) {
     timer = newtime;
 
-    // Show left encoder ticks.
+    #ifdef BUMPER_SWITCH
+    // Print bumper indication.
+    Serial.print("B ");
+    Serial.println(digitalRead(BUMPER_SWITCH));
+    #endif
+
+    // Show left and right encoder ticks.
     Serial.print("E ");
+    Serial.print(elapsed);
+    Serial.print(' ');
     Serial.print(readTicks(LEFT_ENCODER));
     Serial.print(' ');
-    Serial.print(elapsed);
-    Serial.println();
-
-    // Show right encoder ticks.
-    Serial.print("E2 ");
     Serial.print(readTicks(RIGHT_ENCODER));
-    Serial.print(' ');
-    Serial.print(elapsed);
     Serial.println();
   }
 }
