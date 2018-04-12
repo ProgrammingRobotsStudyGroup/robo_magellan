@@ -88,11 +88,8 @@ def kill_sw_mon():
                     kill_sw_ok = True
                     pub.publish(kill_sw_ok)
                     rospy.loginfo(kill_sw_ok)
-                    # if this is first press of kill sw, start the state machine
-                    if not once:
-                        pub_exec_simple.publish("START_EXEC")
-                        once = True
-                        rospy.loginfo("kill_sw_mon: Pubishing START_EXEC")
+                    pub_exec_simple.publish("START_EXEC")
+                    rospy.loginfo("kill_sw_mon: Pubishing START_EXEC")
             else:
                 GPIO.wait_for_edge(gpio_pin, GPIO.RISING)
                 time.sleep(0.1)  # wait for sw bounce
