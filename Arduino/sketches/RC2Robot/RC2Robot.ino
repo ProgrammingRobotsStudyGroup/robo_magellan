@@ -38,7 +38,7 @@ void setup() {
   initBumper();
 
   #ifdef BUMPER_SWITCH
-  pinMode(BUMPER_SWITCH, INPUT);
+  pinMode(BUMPER_SWITCH, INPUT_PULLUP);
   #endif
 }
 
@@ -60,7 +60,7 @@ void loop() {
     #ifdef BUMPER_SWITCH
     // Print bumper indication.
     Serial.print("B ");
-    Serial.println(digitalRead(BUMPER_SWITCH));
+    Serial.println(!digitalRead(BUMPER_SWITCH));
     #endif
 
     // Show left and right encoder ticks.
