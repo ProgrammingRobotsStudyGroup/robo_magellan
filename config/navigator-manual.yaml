@@ -20,7 +20,7 @@ steering_right_max: 2000
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
 # GUIDED mode, if true, use MANUAL R/C override.
-cone_approach_use_throttle: false
+cone_approach_use_throttle: true
 
 # The constant used to determine the cone approach speed. The
 # speed is this constant times the distance, subject to the
@@ -32,7 +32,7 @@ cone_approach_k_speed: 0.25
 # maximum throttle deviations from the neutral position, values
 # from 0 to 500.
 cone_approach_min_speed: 0.2
-cone_approach_max_speed: 1.0
+cone_approach_max_speed: 0.7
 
 # The proportional constant used to determine the turn rate
 # when approaching. If not using the throttle, this value
@@ -44,12 +44,12 @@ cone_approach_max_speed: 1.0
 # If using the throttle, then this proportional constant is
 # used to determine the throttle deviation from the neutral
 # position.
-cone_approach_k_turning: 2.0
+cone_approach_k_turning: 1.0
 
 # The maximum turning rate, in radians/sec. If using the
 # throttle, this is a value from 0 to 500 and representes
 # the maximum throttle deviation from the neutral position.
-cone_approach_max_turning: 5.0
+cone_approach_max_turning: 1.0
 
 # The number of seconds in which the robot must touch the cone
 # or the attempt will be abandoned.

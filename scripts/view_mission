@@ -58,9 +58,9 @@ class ShowMarkers:
             # If fewer waypoints, make sure we delete any extras from
             # prior waypoint lists.
             if i >= len(list.waypoints):
-                marker = Marker()
-                marker.id = i
-                marker.action = Marker.DELETE
+                marker = self.create_marker(i, Marker.DELETE, 0, 0, 0,
+                                            0, 0, 0, 0,
+                                            ns='waypoints')
                 markers.append(marker)
                 continue
             
