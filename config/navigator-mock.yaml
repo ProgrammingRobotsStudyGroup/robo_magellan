@@ -8,7 +8,7 @@ gcs_id: 1
 # This value is not used when approaching or escaping
 # a cone under MANUAL mode. Instead, the PWM limits,
 # below, are used as the maximum range.
-normal_speed: 2.0
+normal_speed: 3.0
 
 # The minimum cone appraoch speed in m/s. This value is
 # used when driving in GUIDED mode toward a cone. This
@@ -32,24 +32,24 @@ throttle_fwd_max: 2000
 throttle_reverse_max: 1000
 
 # The steering PWM range.
-steering_neutral: 1425
+steering_neutral: 1500
 steering_left_max: 1000
-steering_right_max: 1880
+steering_right_max: 2000
 
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
 # GUIDED mode, if true, use MANUAL R/C override.
-cone_approach_use_throttle: false
+cone_approach_use_throttle: true
 
 # The constant used to determine the cone approach speed as
 # a fraction of either the cone cruise speed or the cone
 # throttle range. This is multiplied by the distance to
 # determine the speed factor from 0 to 1.
-cone_approach_k_speed: 0.04
+cone_approach_k_speed: 0.02
 
 # The proportional constant used to determine the turn rate
 # when approaching, as a fraction of the maximum turning.
-cone_approach_k_turning: 0.5
+cone_approach_k_turning: 1.25
 
 # The number of seconds in which the robot must touch the cone
 # or the attempt will be abandoned.
@@ -65,7 +65,7 @@ escape_k_speed: 0.1
 # of the maximum turning to use when backing up from a
 # cone. This times the heading difference gives the fraction
 # of maximum turning to use.
-escape_k_turning: 0.5
+escape_k_turning: 0.4
 
 # The maximum tolerance in heading error in radians before
 # deciding that the robot has turned sufficiently toward

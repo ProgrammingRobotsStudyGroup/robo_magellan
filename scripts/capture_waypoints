@@ -42,12 +42,14 @@ class GpsCapture:
             break
         elif command[0]=='w' or command[0]=='e' or command[0]=='c':
             wp = thread.get_location()
-            if command[0] == 'w':
+            if len(command) > 1:
+                altitude = float(command[1])
+            elif command[0] == 'w':
                 altitude = 0.0
             elif command[0] == 'e':
-                altitude = 1000.0
+                altitude = 100.0
             elif command[0] == 'c':
-                altitude = 2000.0
+                altitude = 1000.0
             waypoints.append((wp[0], wp[1], altitude))
             index = len(waypoints)
             print('Added {0}: {1}'.format(index, waypoints[index-1]))
