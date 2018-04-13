@@ -70,10 +70,13 @@ class ShowMarkers:
             h = 0.05
             w = 0.5
             if list.current_seq == i:
+                # Current waypoint
                 color = (1, 0, 0)
-            elif wp.point.z >= 1900:
+            elif wp.point.z >= 1000:
+                # Waypoint is a cone
                 color = (1, 0.5, 0)
-            elif wp.point.z >= 900:
+            elif int(wp.point.z) / 100 % 10 > 0:
+                # Waypoint has reduced speed
                 color = (1, 0, 1)
             else:
                 color = (0, 1, 0)

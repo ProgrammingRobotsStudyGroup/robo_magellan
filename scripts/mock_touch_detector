@@ -41,7 +41,7 @@ class MockTouchDetector:
 
         for wp in self.waypoint_list.waypoints:
             # Skip waypoints that are not cones.
-            if wp.point.z < 2000:
+            if wp.point.z < 1000:
                 continue
             
             # Cone location.

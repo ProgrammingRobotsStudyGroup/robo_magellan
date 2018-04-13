@@ -2,6 +2,31 @@
 
 """Implements navigation for the Robo Magellan rover."""
 
+# A note about speeds for movement and turning when approaching and
+# driving away from cones. The calculated speed and turning are
+# fractions from 0 to 1 which are multipled by either the nominal
+# speed and max turning, resp., when in AUTO mode, or by the PWM
+# ranges when in MANUAL mode.
+#
+# Minimum and maximum speeds are also fractions between 0 and 1,
+# and are used to constrain the calculated fractional speed before
+# multiplying by the nominal speed or PWM range.
+#
+# Minimum and maximum turnings rates are not used to constrain
+# the turning, since the rover won't stall because of insufficient
+# turning.
+#
+# Encoding of cone altitudes
+#
+# The cone altitude is encoded into 4 digits as follows:
+#   Nxxx: 1=cone, 2=last cone, 0=not a cone
+#   xNxx's: percentage of normal cruise speed 0=100%, 1=10%, 2=20%, etc.
+#   xxNN's: min speed toward cone as pct of nominal, 00=0%, 23=23%, etc.
+#
+# In GUIDED mode, max speed is ~normal_speed, in m/s.
+# In MANUAL mode, max speed is maximum throtle PWM.
+# When backing away from cone, nominal speed is maximum reverse throttle PWM.
+
 import time
 from math import pi, tan, atan2, sqrt
 import rospy
@@ -76,7 +101,8 @@ class States:
     ESCAPING_CONE = NavigatorState('ESCAPING_CONE')
     FINISHED = NavigatorState('FINISHED')
     FAILED = NavigatorState('FAILED')
-    SIMPLE_ESCAPE = NavigatorState('SIMPLE_ESCAPE')
+    # A special state for ignoring messages while delaying for a bit.
+    LIMBO = NavigatorState('LIMBO')
 
 
 class Navigator:
@@ -96,8 +122,9 @@ class Navigator:
 
         rate = rospy.Rate(rospy.get_param('~rate', 10))
 
-        self.fast_speed = rospy.get_param('~fast_speed', 3.0)
-        self.slow_speed = rospy.get_param('~slow_speed', 1.5)
+        self.normal_speed = rospy.get_param('~normal_speed', 2.0)
+        self.min_speed = rospy.get_param('~min_speed', 0.1)
+        self.max_turning = rospy.get_param('~max_turning', 5.0)
 
         self.throttle_neutral = rospy.get_param(
             '~throttle_neutral', 1500)
@@ -117,24 +144,13 @@ class Navigator:
             '~cone_approach_use_throttle', False)
         self.cone_approach_k_speed = rospy.get_param(
             '~cone_approach_k_speed', 0.25)
-        self.cone_approach_max_speed = rospy.get_param(
-            '~cone_approach_max_speed', 3.0)
-        self.cone_approach_min_speed = rospy.get_param(
-            '~cone_approach_min_speed', 0.25)
         self.cone_approach_k_turning = rospy.get_param(
             '~cone_approach_k_turning', 0.5)
-        self.cone_approach_max_turning = rospy.get_param(
-            '~cone_approach_max_turning', pi/2)
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
 
-        self.escape_k_throttle = rospy.get_param('~escape_k_throttle', 90)
-        self.escape_min_throttle = rospy.get_param(
-            '~escape_min_throttle', 0.6)
-        self.escape_max_throttle = rospy.get_param(
-            '~escape_max_throttle', 0.6)
-        self.escape_k_turning = rospy.get_param('~escape_k_turning', 0.5)
-        self.escape_max_turning = rospy.get_param('~escape_max_turning', 1.0)
+        self.escape_k_throttle = rospy.get_param('~escape_k_speed', 2.0)
+        self.escape_k_turning = rospy.get_param('~escape_k_turning', 2.0)
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
 
@@ -259,6 +275,7 @@ class Navigator:
             else:
                 self.set_manual_speed(0, 0)
                 self.set_current_waypoint(self.cone_wp_index + 1)
+                self.cone_wp_index = -1
                 self.set_waypoint_speed()
                 self.begin_state(States.FOLLOWING_WAYPOINTS)
 
@@ -268,16 +285,16 @@ class Navigator:
             rospy.logerr('No waypoints loaded')
             return
 
-        if self.state is States.FOLLOWING_WAYPOINTS \
-             and self.is_cone_waypoint(self.waypoint_list.current_seq):
-            self.show_event('on_waypoints_changed')
-            self.cone_wp_index = self.waypoint_list.current_seq
-            self.set_waypoint_speed()
-            self.set_timer(self.cone_timeout,  self.on_timeout_finding_cone)
-            self.begin_state(States.EXPECTING_CONE)
-        elif self.state is States.FOLLOWING_WAYPOINTS:
-            self.show_event('on_waypoints_changed')
-            self.set_waypoint_speed()
+        if self.state is States.FOLLOWING_WAYPOINTS:
+            if not self.is_cone_waypoint(self.waypoint_list.current_seq):
+                self.show_event('on_waypoints_changed')
+                self.set_waypoint_speed()
+            else:
+                self.show_event('on_waypoints_changed')
+                self.cone_wp_index = self.waypoint_list.current_seq
+                self.set_waypoint_speed()
+                self.set_timer(self.cone_timeout,  self.on_timeout_finding_cone)
+                self.begin_state(States.EXPECTING_CONE)
 
     def on_map_waypoints_changed(self, list):
         self.map_waypoint_list = list
@@ -295,23 +312,30 @@ class Navigator:
             else:
                 self.set_mode(Modes.MANUAL)
                 self.set_manual_speed(0, 0)
+
+                # Must pause for a bit so braking isn't actuated when we
+                # reverse. Go into limbo state so we won't respond to
+                # messages while delaying.
+                self.begin_state(States.LIMBO)
+                time.sleep(1.0)
+
                 # Should update waypoints for cone location, but skip for now.
                 self.escape_wp \
                     = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
-                #self.begin_state(States.ESCAPING_CONE)
+                self.begin_state(States.ESCAPING_CONE)
 
-                # Do alternate, simple escape.
-                self.begin_state(States.SIMPLE_ESCAPE)
-                time.sleep(1.0)
-                # Back up for 3 seconds
-                self.set_manual_speed(-0.7, 0)
-                time.sleep(3.0)
-                # Stop, then follow waypoints.
-                self.set_manual_speed(0, 0)
-                time.sleep(3.0)
-                self.set_current_waypoint(self.cone_wp_index + 1)
-                self.set_waypoint_speed()
-                self.begin_state(States.FOLLOWING_WAYPOINTS)
+                ## Do alternate, simple escape.
+                #self.begin_state(States.LIMBO)
+                #time.sleep(1.0)
+                ## Back up for 3 seconds
+                #self.set_manual_speed(-0.7, 0)
+                #time.sleep(3.0)
+                ## Stop, then follow waypoints.
+                #self.set_manual_speed(0, 0)
+                #time.sleep(3.0)
+                #self.set_current_waypoint(self.cone_wp_index + 1)
+                #self.set_waypoint_speed()
+                #self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_timeout_finding_cone(self, event):
         self.state_timer = None
@@ -325,6 +349,7 @@ class Navigator:
             # Timeout, not last cone.
             self.set_mode(Modes.HOLD)
             self.set_current_waypoint(self.cone_wp_index + 1)
+            self.cone_wp_index = -1
             self.set_waypoint_speed()
             self.begin_state(States.FOLLOWING_WAYPOINTS)
 
@@ -352,11 +377,12 @@ class Navigator:
         cone_heading = atan2(cone_pose.x, fov_dist)
         distance = self.get_cone_distance(cone_pose.area)
 
-        speed = min(max(self.cone_approach_k_speed*distance,
-                        self.cone_approach_min_speed),
-                    self.cone_approach_max_speed)
+        min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
+
+        speed = min(max(self.cone_approach_k_speed*distance, min_speed),
+                    max_speed)
         turning = min(self.cone_approach_k_turning*abs(cone_heading),
-                      self.cone_approach_max_turning)
+                      self.max_turning)
         if cone_heading < 0:
             turning = -turning
 
@@ -366,10 +392,13 @@ class Navigator:
         if self.cone_approach_use_throttle:
             self.set_manual_speed(speed, turning)
         else:
+            linear_speed = max(self.min_speed, speed*self.normal_speed)
             twist = TwistStamped()
-            twist.twist.linear.x = speed
-            twist.twist.angular.z = turning
+            twist.twist.linear.x = linear_speed
+            twist.twist.angular.z = turning * self.max_turning
             self.vel_pub.publish(twist)
+            rospy.loginfo('[GUIDED] speed=%f turning=%f',
+                          twist.twist.linear.x, twist.twist.angular.z)
 
     def get_cone_distance(self, area):
         # Area should be proportional to the square of distance.
@@ -379,17 +408,12 @@ class Navigator:
         return 3 * ratio
 
     def turn_robot(self, heading_diff):
-        speed = max(min(self.escape_k_throttle*abs(heading_diff),
-                        self.escape_max_throttle),
-                    self.escape_min_throttle)
-        turning = min(self.escape_k_turning*abs(heading_diff),
-                      self.escape_max_turning)
+        min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
-        # We are backing up. Positive turning turns the wheels to the left,
-        # negative turning turns the wheels to the right.
-        speed = -speed
-        if heading_diff >= 0:
-            turning = -turning
+        speed = - min(max(self.escape_k_throttle*abs(heading_diff), min_speed),
+                      max_speed)
+        turning = min(self.escape_k_turning*abs(heading_diff),
+                      self.max_turning)
 
         rospy.loginfo('[Navigator] heading_diff=%f speed=%f turning=%f',
                       heading_diff*180/pi, speed, turning)
@@ -428,18 +452,19 @@ class Navigator:
         rospy.sleep(0.2)
 
     def set_waypoint_speed(self):
-        self.set_speed(self.get_waypoint_speed(self.waypoint_list.current_seq))
-
-    def set_speed(self, speed):
-        ## Don't change speed, for now.
-        #return
+        waypoint_speed = self.get_waypoint_speed(
+            self.waypoint_list.current_seq)
+        speed = self.normal_speed * waypoint_speed
 
         if speed != self.last_wp_speed:
             self.last_wp_speed = speed
             self.set_mode(Modes.HOLD)
             self.set_parameter('CRUISE_SPEED', speed)
-            self.set_mode(Modes.AUTO)
-            rospy.loginfo('Speed %f', speed)
+
+        # Make sure to go back into AUTO mode so that we continue to the
+        # next waypoint.
+        self.set_mode(Modes.AUTO)
+        rospy.loginfo('Speed %f', speed)
         
     # Sets the R/C override speeds. Turning is positive
     # to the left, while the R/C PWM value for turning
@@ -466,10 +491,15 @@ class Navigator:
         else:
             throttle = max(throttle, throttle_limit)
 
+        # If we are backing up, negate the turning, since the wheels
+        # must be turned opposite the turning.
+        if speed < 0:
+            turning = -turning
+
         if turning >= 0:
             steering_limit = self.steering_left_max
         else:
-            steering_limit = self.steering_righ_max
+            steering_limit = self.steering_right_max
 
         steering = abs(turning) * (steering_limit - self.steering_neutral) \
                    + self.steering_neutral
@@ -481,11 +511,10 @@ class Navigator:
         channels[RCChannels.SPEED] = int(throttle)
         channels[RCChannels.TURNING] = int(steering)
 
-        rospy.loginfo('Setting manual speed=%f turning=%f: throttle=%d steering=%d', speed, turning, throttle, steering)
-
         msg = OverrideRCIn()
         msg.channels = channels
         self.rc_pub.publish(msg)
+        rospy.loginfo('[MANUAL] speed=%f turning=%f: throttle=%d steering=%d', speed, turning, throttle, steering)
 
     def set_mode(self, mode):
         self._mavros_set_mode(0, mode)
@@ -506,14 +535,24 @@ class Navigator:
 
     def is_cone_waypoint(self, wp_index):
         wp = self.waypoint_list.waypoints[wp_index]
-        return wp.z_alt >= 2000
+        return wp.z_alt >= 1000
 
     def get_waypoint_speed(self, wp_index):
         wp = self.waypoint_list.waypoints[wp_index]
-        if wp.z_alt >= 1000:
-            return self.slow_speed
+        speed = int(wp.z_alt) / 100 % 10
+        if speed == 0:
+            return 1.0
         else:
-            return self.fast_speed
+            return 0.1 * speed
+
+    def get_cone_speed_factor(self, wp_index):
+        wp = self.waypoint_list.waypoints[wp_index]
+        min_speed = 0.01 * (int(wp.z_alt) % 100)
+        max_speed = self.get_waypoint_speed(wp_index)
+        rospy.loginfo('get_cone_speed_factor %f --> %f, %f', wp.z_alt,
+                      min_speed, max_speed)
+
+        return (min_speed, max_speed)
 
 if __name__ == "__main__":
     try:
