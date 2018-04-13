@@ -27,7 +27,7 @@
 #define SERIAL_STREAM Serial
 #define DEBUG_SERIAL_STREAM Serial
 
-#define BUMPER_SWITCH 0
+#define BUMPER_SWITCH 4
 
 void setup() {
   Serial.begin(115200);

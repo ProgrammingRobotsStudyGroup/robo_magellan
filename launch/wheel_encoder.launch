@@ -1,6 +1,6 @@
 <launch>
   <node name="wheel_encoder" pkg="robo_magellan" type="arduino_receiver">
-    <param name="~publish_touch" value="False" />
+    <param name="~publish_touch" value="True" />
     <param name="~wheel_diameter" value="0.200" />
     <param name="~ticks_per_revolution" value="80" />
     <param name="~serial_device" value="/dev/ttyACM0" />
