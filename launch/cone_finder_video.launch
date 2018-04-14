@@ -1,23 +1,5 @@
 <launch>
-  <include file="$(find realsense_camera)/launch/r200_nodelet_rgbd.launch">
-    <arg name="depth_width" value="640"/>
-    <arg name="depth_height" value="480"/>
-    <arg name="rgb" default="color"/>
-  </include>
-  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
-    <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
-    <param name="~captureVideo" value="False" />
-    <param name="~publishImages" value="True" />
-    <param name="~ignorePriorDetections" value="True" />
-
-    <param name="~minConeArea" value="400" />
-    <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
-    <param name="~thresholdAlgorithm" value="bin" />
-    <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
-
-    <!-- Use 'convexHull', 'relaxed' or 'huMoments' for filter algorithm. -->
-    <param name="~contourFilterAlgorithm" value="relaxed" />
-  </node>
+  <include file="$(find robo_magellan)/launch/cone_finder.launch">
   <node name="image_view" pkg="image_view" type="image_view" args="image:=/cone_finder/colorImage" output="screen" />
 </launch>
 
