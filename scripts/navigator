@@ -128,8 +128,12 @@ class Navigator:
 
         self.throttle_neutral = rospy.get_param(
             '~throttle_neutral', 1500)
+        self.throttle_reverse_min = rospy.get_param(
+            '~throttle_reverse_min', 1500)
         self.throttle_reverse_max = rospy.get_param(
             '~throttle_reverse_max', 1000)
+        self.throttle_fwd_min = rospy.get_param(
+            '~throttle_fwd_min', 1500)
         self.throttle_fwd_max = rospy.get_param(
             '~throttle_fwd_max', 2000)
 
@@ -481,11 +485,16 @@ class Navigator:
 
         if speed >= 0:
             throttle_limit = self.throttle_fwd_max
+            throttle_min = self.throttle_fwd_min
         else:
             throttle_limit = self.throttle_reverse_max
+            throttle_min = self.throttle_reverse_min
 
-        throttle = abs(speed) * (throttle_limit - self.throttle_neutral) \
-                   + self.throttle_neutral
+        if speed==0:
+            throttle = self.throttle_neutral
+        else:
+            throttle = abs(speed) * (throttle_limit - throttle_min) \
+                       + throttle_min
         if throttle_limit > self.throttle_neutral:
             throttle = min(throttle, throttle_limit)
         else:

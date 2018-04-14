@@ -28,7 +28,9 @@ max_turning: 5.0
 
 # The throttle PWM range.
 throttle_neutral: 1500
+throttle_fwd_min: 1600
 throttle_fwd_max: 2000
+throttle_reverse_min: 1400
 throttle_reverse_max: 1000
 
 # The steering PWM range.
