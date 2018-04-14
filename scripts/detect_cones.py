@@ -5,7 +5,7 @@ import numpy as np, cv2, argparse, time, sys
 import rospy, threading
 
 # Needed for publishing the messages
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image
 from robo_magellan.msg import pose_data
 from robo_magellan.msg import location_msgs as location_data
 from cv_bridge import CvBridge, CvBridgeError
@@ -26,15 +26,11 @@ class RosColorDepth:
     def __init__(self):
         rospy.init_node('cone_finder')
         self.started = True
-        self.colorCamInfo = CameraInfo()
-        self.depthCamInfo = CameraInfo()
 
         minArea = rospy.get_param("~minConeArea", 300)
         self.cf = ConeFinder(minArea)
         self.cs = ConeSeeker()
 
-        rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.colorCamInfoCallback)
-        rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.depthCamInfoCallback)
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
         self.depthImage = None
         rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
@@ -58,12 +54,6 @@ class RosColorDepth:
         rospy.loginfo('Threshold algorithm %s' % self.thresholdAlgorithm)
         rospy.loginfo("[%s] Initialized." %(self.node_name))
         rospy.spin()
-
-    def colorCamInfoCallback(self, colorCamInfo):
-        self.colorCamInfo = colorCamInfo
-
-    def depthCamInfoCallback(self, depthCamInfo):
-        self.depthCamInfo = depthCamInfo
 
     def imageCallback(self, colorImage):
         thread = threading.Thread(target=self.processImage, args=(colorImage, self.depthImage))
@@ -172,12 +162,6 @@ class RosColorDepth:
         if (ch != dh) and (cw != dw):
             cvRGB = cv2.resize(cvRGB, (dw, dh))
             ch, cw = dh, dw
-
-        self.colorCamInfo.width = cw
-        self.colorCamInfo.height = ch
-        if self.depthCamInfo is not None:
-            self.depthCamInfo.width = dw
-            self.depthCamInfo.height = dh
 
         try:
             self.lc = self.lc + 1
