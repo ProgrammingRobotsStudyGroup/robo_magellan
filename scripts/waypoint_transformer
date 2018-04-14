@@ -5,21 +5,27 @@
 import rospy
 import tf
 import tf2_ros
-from mavros_msgs.msg import WaypointList
-from mavros_msgs.srv import WaypointPull
-from geodesy.utm import fromLatLong
+from geographic_msgs.msg import GeoPoint
+from mavros_msgs.msg import WaypointList, Waypoint, CommandCode
+from mavros_msgs.srv import WaypointPull, WaypointPush
+from geodesy.utm import UTMPoint, fromLatLong
 from robo_magellan.msg import LocalWaypointList as LocalWaypointList
 from robo_magellan.msg import LocalWaypoint as LocalWaypoint
 
 class Topics:
     MISSION_WAYPOINTS = '/mavros/mission/waypoints'
-    LOCAL_WAYPOINTS = '~waypoints/local'
     PULL_WAYPOINTS = '/mavros/mission/pull'
+    PUSH_WAYPOINTS = '/mavros/mission/push'
+    LOCAL_WAYPOINTS = '~waypoints/local'
+    UPDATE_LOCAL_WAYPOINTS = '~waypoints/update'
 
 class WaypointTransformer:
 
     def run(self):
         rospy.init_node('waypoint_transformer')
+
+        self.zone = None
+        self.band = None
 
         rate = rospy.Rate(rospy.get_param('~rate', 1.0))
 
@@ -29,15 +35,22 @@ class WaypointTransformer:
         # Sleep for a bit so that we (likely) get a valid transform.
         rospy.sleep(rospy.Duration(1))
 
-        rospy.Subscriber(Topics.MISSION_WAYPOINTS, WaypointList,
-                         self.on_waypoints_changed)
         self.waypoint_pub = rospy.Publisher(Topics.LOCAL_WAYPOINTS,
                                             LocalWaypointList, queue_size=1,
                                             latch=True)
 
+        rospy.Subscriber(Topics.MISSION_WAYPOINTS, WaypointList,
+                         self.on_waypoints_changed)
+        rospy.Subscriber(Topics.UPDATE_LOCAL_WAYPOINTS, LocalWaypointList,
+                         self.on_local_waypoints_updated)
+
         rospy.wait_for_service('/mavros/mission/pull')
         self._mavros_pull_waypoints = rospy.ServiceProxy(Topics.PULL_WAYPOINTS,
                                                          WaypointPull)
+
+        rospy.wait_for_service('/mavros/mission/push')
+        self._mavros_push_waypoints = rospy.ServiceProxy(Topics.PUSH_WAYPOINTS,
+                                                         WaypointPush)
 
         self.waypoint_list = None
 
@@ -59,6 +72,35 @@ class WaypointTransformer:
     def on_waypoints_changed(self, list):
         self.waypoint_list = list
 
+    def on_local_waypoints_updated(self, list):
+        rospy.loginfo('Updating local waypoints: size=%d current=%d',
+                      len(list.waypoints), list.current_seq)
+
+        try:
+            t = self.tf_buffer.lookup_transform('utm', 'map', rospy.Time(0))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException):
+            rospy.loginfo('No UTM transform - cannot update waypoints')
+            return
+
+        new_waypoints = []
+
+        for wp in list.waypoints:
+            utm = UTMPoint(wp.point.x - t.transform.translation.x,
+                           wp.point.y - t.transform.translation.y,
+                           zone=self.zone, band=self.band)
+            geo_point = utm.toMsg()
+
+            new_wp = Waypoint()
+            new_wp.command = CommandCode.NAV_WAYPOINT
+            new_wp.autocontinue = True
+            new_wp.x_lat = geo_point.latitude
+            new_wp.y_long = geo_point.longitude
+            new_wp.z_alt = wp.point.z
+            new_waypoints.append(new_wp)
+
+        self._mavros_push_waypoints(list.current_seq, new_waypoints)
+
     def publish_waypoints(self, t):
         local_waypoints = LocalWaypointList()
         local_waypoints.current_seq = self.waypoint_list.current_seq
@@ -66,6 +108,12 @@ class WaypointTransformer:
 
         for wp in self.waypoint_list.waypoints:
             utm = fromLatLong(wp.x_lat, wp.y_long)
+
+            # Set zone and band for current location, if not set.
+            if self.zone is None:
+                self.zone = utm.zone
+                self.band = utm.band
+
             local_wp = LocalWaypoint()
             local_wp.point.x = utm.easting + t.transform.translation.x
             local_wp.point.y = utm.northing + t.transform.translation.y
