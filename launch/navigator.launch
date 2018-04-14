@@ -48,14 +48,14 @@
 
   <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
 
-  <node name="touch_detector" pkg="robo_magellan" type="touch_detector.py">
-    <remap from="~touch" to="/touch" />
-  </node>
-
   <node name="chatty" pkg="robo_magellan" type="chatty.py" />
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
   
+  <node name="arduino_receiver" pkg="robo_magellan" type="arduino_receiver">
+    <remap from="~touch" to="/robo_magellan/touch" />
+  <node/>
+
   <include file="$(find robo_magellan)/launch/utm_transform.launch" />
 
   <group if="$(arg view_mission)">

@@ -19,10 +19,10 @@ class Receiver():
 
         rospy.init_node(self.node_name)
 
-        self.publish_touch = rospy.get_param('~publish_touch', False)
-        self.wheel_diameter = rospy.get_param('~wheel_diameter')
-        self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution')
-        port = rospy.get_param('~serial_device', '/dev/ttyACM99')
+        self.publish_touch = rospy.get_param('~publish_touch', True)
+        self.wheel_diameter = rospy.get_param('~wheel_diameter', 0.200)
+        self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution', 80)
+        port = rospy.get_param('~serial_device', '/dev/ttyACM0')
         baud = rospy.get_param('~serial_rate', 115200)
 
         self.serial_port = serial.Serial(port, baud)
@@ -67,40 +67,40 @@ class Receiver():
                     l = l.rstrip()
                     # rospy.loginfo("%s: line=%s" % (self.node_name, l))
 
-                    m = re.match('^([-0-9]+)$', l)
+                    m = re.match('^B ([-0-9]+)$', l)
                     if m:
                         value = int(m.group(1))
                         # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
                         if self.publish_touch:
                             self.touch_pub.publish(value)
 
-                    m = re.match('^E ([-0-9]+)( ([-0-9]+))?( ([-0-9]+))?$', l)
+                    m = re.match('^E ([-0-9]+) ([-0-9]+) ([-0-9]+)', l)
+                    # Groups are:
+                    #   0 = entire match
+                    #   1 = period in ms
+                    #   2 = left ticks
+                    #   3 = right ticks
+
                     if m:
-                        value = int(m.group(1))
                         # rospy.loginfo("%s: Receiver E got %d" % (self.node_name, value))
                         # Speed in m/s is:
                         #   pi*diameter*dticks/ticks_per_revolution / period
-                        # Default period is 0.1 seconds.
-                        if len(m.groups()) >= 4 and len(m.group(3)) > 0:
-                            period = 0.001 * int(m.group(3))
-                        else:
-                            period = 0.1
-
+                        # Convert period to seconds.
+                        period = 0.001 * int(m.group(1))
+                        s = 0
+                        value = int(m.group(2))
                         if self.last_ticks is not None:
                             delta = value - self.last_ticks
-                            s = pi*self.wheel_diameter * (float(delta) / self.ticks_per_revolution) / period
-                            # rospy.loginfo("%s: Receiver E value= %d period= %f s= %f" % (self.node_name, value, period, s))
+                            s = pi*self.wheel_diameter \
+                                * (float(delta) / self.ticks_per_revolution) \
+                                / period
+                            # rospy.loginfo('%s: Receiver E value= %d period= %f s= %f', self.node_name, value, period, s)
                             self.speed_pub.publish(s)
                         self.last_ticks = value
 
-                        if len(m.groups()) >= 6 and len(m.group(5)) > 0:
-                            e = int(m.group(5))
-
-                            # distance (increment/decrement)
-                            # 80 ticks/wheel rotation,
-                            # circumfence 0.638m
-                            d = 0.638 * (float(e) / 80)
-                            self.enc_pub.publish(d)
+                        # Distance is speed * time.
+                        d = s * period
+                        self.enc_pub.publish(d)
             except serial.serialutil.SerialException:
                 rospy.loginfo("close serial")
 
