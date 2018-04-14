@@ -52,7 +52,7 @@
 
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
   
-  <node name="arudino_receiver" pkg="robo_magellan" type="arudino_receiver">
+  <node name="arduino_receiver" pkg="robo_magellan" type="arduino_receiver">
     <remap from="~touch" to="/robo_magellan/touch" />
   <node/>
 
