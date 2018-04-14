@@ -19,10 +19,10 @@ class Receiver():
 
         rospy.init_node(self.node_name)
 
-        self.publish_touch = rospy.get_param('~publish_touch', False)
-        self.wheel_diameter = rospy.get_param('~wheel_diameter')
-        self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution')
-        port = rospy.get_param('~serial_device', '/dev/ttyACM99')
+        self.publish_touch = rospy.get_param('~publish_touch', True)
+        self.wheel_diameter = rospy.get_param('~wheel_diameter', 0.200)
+        self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution', 80)
+        port = rospy.get_param('~serial_device', '/dev/ttyACM0')
         baud = rospy.get_param('~serial_rate', 115200)
 
         self.serial_port = serial.Serial(port, baud)
@@ -87,7 +87,7 @@ class Receiver():
                         #   pi*diameter*dticks/ticks_per_revolution / period
                         # Convert period to seconds.
                         period = 0.001 * int(m.group(1))
-
+                        s = 0
                         value = int(m.group(2))
                         if self.last_ticks is not None:
                             delta = value - self.last_ticks
