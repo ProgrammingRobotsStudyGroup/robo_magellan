@@ -278,6 +278,13 @@ class Navigator:
                 self.turn_robot(diff)
             else:
                 self.set_manual_speed(0, 0)
+                self.begin_state(States.LIMBO)
+                time.sleep(1.0)
+                self.set_manual_speed(0.3, 0)
+                time.sleep(1.0)
+                self.set_manual_speed(0, 0)
+                time.sleep(1.0)
+
                 self.set_current_waypoint(self.cone_wp_index + 1)
                 self.cone_wp_index = -1
                 self.set_waypoint_speed()
@@ -322,6 +329,9 @@ class Navigator:
                 # messages while delaying.
                 self.begin_state(States.LIMBO)
                 time.sleep(1.0)
+                self.set_manual_speed(-.3, 0)
+                time.sleep(1.0)
+                self.set_manual_speed(0, 0)
 
                 # Should update waypoints for cone location, but skip for now.
                 self.escape_wp \
@@ -503,9 +513,11 @@ class Navigator:
         # If we are backing up, negate the turning, since the wheels
         # must be turned opposite the turning.
         if speed < 0:
-            turning = -turning
+            wheel_turning = turning
+        else:
+            wheel_turning = -turning
 
-        if turning >= 0:
+        if wheel_turning >= 0:
             steering_limit = self.steering_left_max
         else:
             steering_limit = self.steering_right_max

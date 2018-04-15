@@ -53,8 +53,8 @@
   <node name="monitor" pkg="robo_magellan" type="monitor.py" />
   
   <node name="arduino_receiver" pkg="robo_magellan" type="arduino_receiver">
-    <remap from="~touch" to="/robo_magellan/touch" />
-  <node/>
+    <remap from="/robo_magellan/touch" to="/touch" />
+  </node>
 
   <include file="$(find robo_magellan)/launch/utm_transform.launch" />
 
