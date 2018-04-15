@@ -6,7 +6,7 @@
   </include>
   <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
-    <param name="~captureVideo" value="False" />
+    <param name="~captureVideo" value="True" />
     <param name="~publishImages" value="True" />
     <param name="~ignorePriorDetections" value="True" />
 
