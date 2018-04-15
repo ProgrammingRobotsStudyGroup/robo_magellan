@@ -1,5 +1,9 @@
 = To-Do List
 
+- shouldn't need intermediate waypoint to trigger EXPECTING_CONE
+- have to handle case where cone waypoint is achieved before seeing cone
+- need to limit time of reverse
+- have to handle case where in MANUAL mode and don't see cone
 - mock_cone_detector creates infinite area and overflows h
 - (*DONE*) new waypoints shorter than old don't delete existing waypoints
 - adjust waypoints for start position and cone position
