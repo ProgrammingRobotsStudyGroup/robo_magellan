@@ -1,19 +1,21 @@
 = To-Do List
 
-- shouldn't need intermediate waypoint to trigger EXPECTING_CONE
-- have to handle case where cone waypoint is achieved before seeing cone
+Below, *ISSUE* means a GitHub issue has been created instead.
+
+- (*DONE*) shouldn't need intermediate waypoint to trigger EXPECTING_CONE
+- (*ISSUE*) have to handle case where cone waypoint is achieved before seeing cone
 - need to limit time of reverse
-- have to handle case where in MANUAL mode and don't see cone
-- mock_cone_detector creates infinite area and overflows h
+- (*ISSUE*) have to handle case where in MANUAL mode and don't see cone
+- (*ISSUE*) mock_cone_detector creates infinite area and overflows h
 - (*DONE*) new waypoints shorter than old don't delete existing waypoints
-- adjust waypoints for start position and cone position
-- cone area goes down when very close to cone
+- (*ISSUE*) adjust waypoints for start position and cone position
+- (*ISSUE*) cone area goes down when very close to cone
 - (*DONE*) parameterize throttle and steering PWM values
 - (*DONE*) touch sensor does not work
 - (*DONE*) cone detection in bright light does not work
-- GUIDED mode does not work
+- (*ISSUE*) GUIDED mode does not work
 - (*DONE*) Encode PWM values or range set to use in the waypoints file
-- If waypoint encountered before cone is seen, rover goes into HOLD mode
+- (*ISSUE*) If waypoint encountered before cone is seen, rover goes into HOLD mode
 with no recovery. Needs to be fixed.
 
 == Possible To-Do
