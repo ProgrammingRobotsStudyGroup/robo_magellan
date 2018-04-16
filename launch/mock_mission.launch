@@ -15,6 +15,7 @@
         output="$(arg log_output)">
     <rosparam file="$(find robo_magellan)/config/navigator-mock.yaml" />
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~waypoints/update" to="/robo_magellan/waypoints/update" />
     <remap from="~cone_locations" to="/cone_finder/locations" />
     <remap from="~touch" to="/touch" />
     <remap from="~exec_cmd" to="/exec_cmd_simple" />

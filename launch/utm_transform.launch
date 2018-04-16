@@ -9,6 +9,7 @@
   <node name="waypoint_transformer" pkg="robo_magellan"
         type="waypoint_transformer" output="$(arg log_output)">
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
+    <remap from="~waypoints/update" to="/robo_magellan/waypoints/update" />
   </node>
 
 </launch>

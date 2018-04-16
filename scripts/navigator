@@ -41,7 +41,7 @@ from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 from mavros_msgs.srv import WaypointSetCurrent
 from robo_magellan.msg import location_msgs as location_data
-from robo_magellan.msg import LocalWaypointList as LocalWaypointList
+from robo_magellan.msg import LocalWaypointList, LocalWaypoint
 
 
 class Modes:
@@ -76,6 +76,7 @@ class Topics:
     EXEC_CMD = '~exec_cmd'
     TOUCH = '~touch'
     LOCAL_WAYPOINTS = '~waypoints/local'
+    UPDATE_WAYPOINTS = '~waypoints/update'
     NAVIGATOR_STATE = '~state'
 
 
@@ -116,6 +117,7 @@ class Navigator:
         self.waypoint_list.waypoints = []
         self.map_waypoint_list = None
         self.escape_wp = None
+        self.robot_pose = PoseStamped()
 
         rospy.init_node('navigator')
 
@@ -172,6 +174,9 @@ class Navigator:
         self.state_pub = rospy.Publisher(Topics.NAVIGATOR_STATE,
                                          std_msgs.String, queue_size=1,
                                          latch=True)
+
+        self.waypoints_pub = rospy.Publisher(Topics.UPDATE_WAYPOINTS,
+                                             LocalWaypointList)
 
         rospy.Subscriber(Topics.EXEC_CMD, std_msgs.String, self.on_exec_cmd)
         rospy.Subscriber(Topics.ROBOT_STATE, State, self.on_state)
@@ -246,10 +251,13 @@ class Navigator:
             if len(self.waypoint_list.waypoints) < 2:
                 rospy.logerr('No waypoints loaded')
                 return
-            # Adjust waypoints w/ wp index zero and start following
-            # waypoints.
             self.arm_robot(True)
             self.set_current_waypoint(1)
+            # Adjust waypoints w/ wp index zero and start following
+            # waypoints. Wait a small amount of time for the waypoints
+            # to update in the Pixhawk.
+            self.adjust_waypoints(0)
+            time.sleep(1.0)
             # Handle case where first waypoint is a cone.
             if self.is_cone_waypoint(1):
                 self.cone_wp_index = 1
@@ -269,6 +277,8 @@ class Navigator:
             self.begin_state(States.FAILED)
 
     def on_robot_pose(self, position):
+        self.robot_pose = position
+
         if self.state is States.ESCAPING_CONE:
             self.show_event('on_robot_pose')
             pose = position.pose;
@@ -447,6 +457,37 @@ class Navigator:
             return theta - 2*pi
         else:
             return theta
+
+    # Adjust the waypoints so that the waypoint with the given index exactly
+    # matches the current robot position, and other waypoints are adjusted
+    # to keep the same geometric relationship. Set the current waypoint to
+    # the one following the given index.
+    #
+    # This method is used to adjust the waypoints for GPS drift by making
+    # the waypoints relative to the current, known position.
+    def adjust_waypoints(self, index):
+        if self.map_waypoint_list is None:
+            rospy.logerr('No map waypoints are available')
+            return
+
+        new_waypoints = LocalWaypointList()
+        new_waypoints.current_seq = index + 1
+        new_waypoints.waypoints = []
+
+        base_wp = self.map_waypoint_list.waypoints[index]
+        offset_x = self.robot_pose.pose.position.x - base_wp.point.x
+        offset_y = self.robot_pose.pose.position.y - base_wp.point.y
+
+        for wp in self.map_waypoint_list.waypoints:
+            new_wp = LocalWaypoint()
+            new_wp.point.x = wp.point.x + offset_x
+            new_wp.point.y = wp.point.y + offset_y
+            new_wp.point.z = wp.point.z
+            new_waypoints.waypoints.append(new_wp)
+
+        rospy.loginfo('Adjusting waypoints, new size is %d',
+                      len(new_waypoints.waypoints))
+        self.waypoints_pub.publish(new_waypoints)
 
     def arm_robot(self, is_armed):
         self._mavros_arming(is_armed)

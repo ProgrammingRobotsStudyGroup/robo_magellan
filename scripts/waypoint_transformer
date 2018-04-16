@@ -44,11 +44,11 @@ class WaypointTransformer:
         rospy.Subscriber(Topics.UPDATE_LOCAL_WAYPOINTS, LocalWaypointList,
                          self.on_local_waypoints_updated)
 
-        rospy.wait_for_service('/mavros/mission/pull')
+        rospy.wait_for_service(Topics.PULL_WAYPOINTS)
         self._mavros_pull_waypoints = rospy.ServiceProxy(Topics.PULL_WAYPOINTS,
                                                          WaypointPull)
 
-        rospy.wait_for_service('/mavros/mission/push')
+        rospy.wait_for_service(Topics.PUSH_WAYPOINTS)
         self._mavros_push_waypoints = rospy.ServiceProxy(Topics.PUSH_WAYPOINTS,
                                                          WaypointPush)
 
@@ -73,9 +73,6 @@ class WaypointTransformer:
         self.waypoint_list = list
 
     def on_local_waypoints_updated(self, list):
-        rospy.loginfo('Updating local waypoints: size=%d current=%d',
-                      len(list.waypoints), list.current_seq)
-
         try:
             t = self.tf_buffer.lookup_transform('utm', 'map', rospy.Time(0))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
@@ -99,7 +96,10 @@ class WaypointTransformer:
             new_wp.z_alt = wp.point.z
             new_waypoints.append(new_wp)
 
-        self._mavros_push_waypoints(list.current_seq, new_waypoints)
+        # Must use a start index of zero or Ardupilot won't accept the
+        # waypoint push.
+        self._mavros_push_waypoints(0, new_waypoints)
+        rospy.loginfo('Published %d waypoints', len(new_waypoints))
 
     def publish_waypoints(self, t):
         local_waypoints = LocalWaypointList()
