@@ -4,20 +4,15 @@
 
 state "WAITING_FOR_START" as waitingForStart
 waitingForStart : mode: any
-waitingForStart --> followingWaypoints : [/exec_cmd_simple]\n'START_EXEC' message /\nadjust waypoints for wp index 0\narm throttle\nset speed for waypoint 0\nset AUTO mode
+waitingForStart --> followingWaypoints : [/exec_cmd_simple]\n'START_EXEC' message /\nadjust waypoints for wp index 0\narm throttle\nset speed for waypoint 1\nset AUTO mode
 
 state "FOLLOWING_WAYPOINTS" as followingWaypoints
 followingWaypoints: mode: AUTO
-followingWaypoints --> followingWaypoints : [/mavros/mission/waypoints]\nnew waypoint, not cone /\nadjust wp speed
-followingWaypoints --> expectingCone : [/mavros/mission/waypoints]\nnew waypoint, cone /\nsave cone wp index\nadjust wp speed\nset timeout
-
-state "EXPECTING_CONE" as expectingCone
-expectingCone: mode: AUTO
-expectingCone --> expectingCone : [/robo_magellan/cone_finder/locations]\ncone not seen
-expectingCone --> followingWaypoints : timeout, not last cone/\nset HOLD mode\nincrement wp index\nadjust wp speed\nset AUTO mode
-expectingCone --> drivingToCone : [/robo_magellan/cone_finder/locations]\ncone seen /\ndetermine cone position\nset manual speed to 0\nset GUIDED or MANUAL mode\ndrive to cone position
-expectingCone --> failed : [/mavros/state]\nHOLD mode /\ncancel timeout
-expectingCone --> failed : timeout, last cone /\nset HOLD mode
+followingWaypoints --> followingWaypoints : [/mavros/mission/waypoints]\nnew waypoint /\nadjust wp speed
+followingWaypoints --> followingWaypoints : [/mavros/mission/waypoints]\nnew waypoint, past cone /\nignore cone and continue
+followingWaypoints --> followingWaypoints : [/robo_magellan/cone_finder/locations]\ncone not seen
+followingWaypoints --> drivingToCone : [/robo_magellan/cone_finder/locations]\ncone is next and cone seen /\ndetermine cone position\nset manual speed to 0\nset GUIDED or MANUAL mode\ndrive to cone position
+followingWaypoints --> failed : [/mavros/state]\nHOLD mode /
 
 state "DRIVING_TO_CONE" as drivingToCone
 drivingToCone: mode: GUIDED or MANUAL
