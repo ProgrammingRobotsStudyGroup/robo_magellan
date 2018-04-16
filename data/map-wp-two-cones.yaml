@@ -1,0 +1,11 @@
+current_seq: 0
+waypoints:
+- point:
+    x: 0
+- point:
+    x: 10
+    z: 1507
+- point:
+    x: 10
+    y: 10
+    z: 1507
