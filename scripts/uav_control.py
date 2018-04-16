@@ -41,7 +41,7 @@ from std_msgs.msg import Int16
 # MAVROS
 from mavros_msgs.msg import OverrideRCIn
 #from mavros_msgs.srv import CommandBool
-from mavros_msgs.msg import WaypointList
+from mavros_msgs.msg import WaypointList, WaypointReached
 
 from mavros_msgs.srv import WaypointPush, WaypointPull, WaypointClear, WaypointSetCurrent
 #from mavros_msgs.srv import *
@@ -99,8 +99,8 @@ class UAV_Control:
             WaypointList, self.__waypoints_cb)
 
         self.sub_current = rospy.Subscriber(
-            "/mavros/mission/current", Int16,
-            self.__current_cb, queue_size = 1)
+            "/mavros/mission/reached", WaypointReached,
+            self.__current_cb)
 
 
     def __waypoints_cb(self, topic):
@@ -111,12 +111,12 @@ class UAV_Control:
             self.lock.release()
 
 
-    def __current_cb(self, topic):
+    def __current_cb(self, waypoint_reached):
         rospy.loginfo('__current_cb: ')
-        rospy.loginfo('__current_cb: '+str(topic))
+        rospy.loginfo('__current_cb: %d', waypoint_reached.wp_seq)
         self.lock.acquire()
         try:
-            self.current_waypoint = topic.data
+            self.current_waypoint = waypoint_reached.wp_seq
             wp = self.waypoint_list[self.current_waypoint]
             cone_alt = wp.z_alt
             (q, r) = divmod(cone_alt, 2)
