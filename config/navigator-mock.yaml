@@ -34,9 +34,10 @@ throttle_reverse_min: 1500
 throttle_reverse_max: 1000
 
 # The steering PWM range.
+# Note that these are reverse of Victoria!
 steering_neutral: 1500
-steering_left_max: 1000
-steering_right_max: 2000
+steering_left_max: 2000
+steering_right_max: 1000
 
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
