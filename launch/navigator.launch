@@ -4,6 +4,7 @@
   <arg name="log_output" default="screen" />
   <arg name="view_mission" default="false" />
   <arg name="start_rviz" default="false" />
+  <arg name="start_navigator" default="true" />
 
   <!-- Competition launch file for RoboMagellan
        Parameters:
@@ -38,7 +39,7 @@
 
   <!-- Navigator and supporting nodes -->
   <node name="navigator" pkg="robo_magellan" type="navigator"
-        output="$(arg log_output)">
+        output="$(arg log_output)" if="$(arg start_navigator)">
     <rosparam file="$(find robo_magellan)/config/navigator.yaml" />
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
     <remap from="~waypoints/update" to="/robo_magellan/waypoints/update" />
