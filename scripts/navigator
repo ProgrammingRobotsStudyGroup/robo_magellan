@@ -40,6 +40,8 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 from mavros_msgs.srv import WaypointSetCurrent
+from robo_magellan.gorp import Gorp
+from robo_magellan.constants import Topics, ExecCmds
 from robo_magellan.msg import location_msgs as location_data
 from robo_magellan.msg import LocalWaypointList, LocalWaypoint
 
@@ -54,30 +56,6 @@ class Modes:
 class MavrosCmds:
     MAV_CMD_DO_CHANGE_SPEED = 178
     MAV_CMD_DO_SET_HOME = 179
-
-
-class ExecCmds:
-    START = 'START_EXEC'
-    RESET = 'RESET'
-
-
-class Topics:
-    WAYPOINTS = '/mavros/mission/waypoints'
-    SET_CURRENT_WAYPOINT = '/mavros/mission/set_current'
-    RC_OVERRIDE = '/mavros/rc/override'
-    SETPOINT_VELOCITY = '/mavros/setpoint_velocity/cmd_vel'
-    GET_PARAM = '/mavros/param/get'
-    SET_PARAM = '/mavros/param/set'
-    ARMING = '/mavros/cmd/arming'
-    SET_MODE = '/mavros/set_mode'
-    ROBOT_POSE = '/mavros/local_position/pose'
-    ROBOT_STATE = '/mavros/state'
-    CONE_LOCATIONS = '~cone_locations'
-    EXEC_CMD = '~exec_cmd'
-    TOUCH = '~touch'
-    LOCAL_WAYPOINTS = '~waypoints/local'
-    UPDATE_WAYPOINTS = '~waypoints/update'
-    NAVIGATOR_STATE = '~state'
 
 
 class RCChannels:
@@ -176,7 +154,7 @@ class Navigator:
                                          latch=True)
 
         self.waypoints_pub = rospy.Publisher(Topics.UPDATE_WAYPOINTS,
-                                             LocalWaypointList)
+                                             LocalWaypointList, queue_size=1)
 
         rospy.Subscriber(Topics.EXEC_CMD, std_msgs.String, self.on_exec_cmd)
         rospy.Subscriber(Topics.ROBOT_STATE, State, self.on_state)
@@ -245,7 +223,11 @@ class Navigator:
     def on_exec_cmd(self, msg):
         cmd = msg.data
 
-        if self.state is States.WAITING_FOR_START and cmd==ExecCmds.START:
+        if cmd == ExecCmds.RESET:
+            self.show_event('on_exec_cmd', cmd)
+            self.set_manual_speed(0, 0)
+            self.begin_state(States.WAITING_FOR_START)
+        elif self.state is States.WAITING_FOR_START and cmd==ExecCmds.START:
             self.show_event('on_exec_cmd', cmd)
             # Make sure we have waypoints.
             if len(self.waypoint_list.waypoints) < 2:
@@ -256,19 +238,13 @@ class Navigator:
             # Adjust waypoints w/ wp index zero and start following
             # waypoints. Wait a small amount of time for the waypoints
             # to update in the Pixhawk.
-            ##self.adjust_waypoints(0)
-            ##time.sleep(1.0)
+            self.adjust_waypoints(0)
+            time.sleep(1.0)
             # Handle case where first waypoint is a cone.
             if self.is_cone_waypoint(1):
                 self.cone_wp_index = 1
             self.set_waypoint_speed(1)
             self.begin_state(States.FOLLOWING_WAYPOINTS)
-        elif self.state is States.FINISHED and cmd==ExecCmds.RESET:
-            self.show_event('on_exec_cmd', cmd)
-            self.begin_state(States.WAITING_FOR_START)
-        elif self.state is States.FAILED and cmd==ExecCmds.RESET:
-            self.show_event('on_exec_cmd', cmd)
-            self.begin_state(States.WAITING_FOR_START)
 
     def on_state(self, state):
         if self.state is States.FOLLOWING_WAYPOINTS and state.mode==Modes.HOLD:
@@ -462,10 +438,8 @@ class Navigator:
         else:
             return theta
 
-    # Adjust the waypoints so that the waypoint with the given index exactly
-    # matches the current robot position, and other waypoints are adjusted
-    # to keep the same geometric relationship. Set the current waypoint to
-    # the one following the given index.
+    # Adjust the waypoints so that they are all relative to the current
+    # robot location.
     #
     # This method is used to adjust the waypoints for GPS drift by making
     # the waypoints relative to the current, known position.
@@ -475,18 +449,22 @@ class Navigator:
             return
 
         new_waypoints = LocalWaypointList()
+        new_waypoints.frame = LocalWaypointList.FRAME_ROBOT_RELATIVE
         new_waypoints.current_seq = index + 1
         new_waypoints.waypoints = []
 
         base_wp = self.map_waypoint_list.waypoints[index]
-        offset_x = self.robot_pose.pose.position.x - base_wp.point.x
-        offset_y = self.robot_pose.pose.position.y - base_wp.point.y
 
         for wp in self.map_waypoint_list.waypoints:
             new_wp = LocalWaypoint()
-            new_wp.point.x = wp.point.x + offset_x
-            new_wp.point.y = wp.point.y + offset_y
+            new_wp.point.x = wp.point.x - base_wp.point.x
+            new_wp.point.y = wp.point.y - base_wp.point.y
             new_wp.point.z = wp.point.z
+
+            rospy.loginfo('New relative wp %d: x=%f y=%f z=%f',
+                          len(new_waypoints.waypoints),
+                          new_wp.point.x, new_wp.point.y, new_wp.point.z)
+
             new_waypoints.waypoints.append(new_wp)
 
         rospy.loginfo('Adjusting waypoints, new size is %d',
@@ -564,9 +542,6 @@ class Navigator:
             
         channels[RCChannels.SPEED] = int(throttle)
         channels[RCChannels.TURNING] = int(steering)
-
-        if channels[RCChannels.SPEED] == 1500:
-            channels[RCChannels.SPEED] = OverrideRCIn.CHAN_RELEASE
 
         msg = OverrideRCIn()
         msg.channels = channels
