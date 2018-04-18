@@ -256,8 +256,8 @@ class Navigator:
             # Adjust waypoints w/ wp index zero and start following
             # waypoints. Wait a small amount of time for the waypoints
             # to update in the Pixhawk.
-            self.adjust_waypoints(0)
-            time.sleep(1.0)
+            ##self.adjust_waypoints(0)
+            ##time.sleep(1.0)
             # Handle case where first waypoint is a cone.
             if self.is_cone_waypoint(1):
                 self.cone_wp_index = 1
@@ -291,11 +291,15 @@ class Navigator:
             else:
                 self.set_manual_speed(0, 0)
                 self.begin_state(States.LIMBO)
-                time.sleep(1.0)
-                self.set_manual_speed(0.3, 0)
+                time.sleep(2.0)
+                self.set_manual_speed(-0.3, 0)
                 time.sleep(1.0)
                 self.set_manual_speed(0, 0)
+                time.sleep(2.0)
+                self.set_manual_speed(-0.3, 0)
                 time.sleep(1.0)
+                self.set_manual_speed(0, 0)
+                time.sleep(2.0)
 
                 self.set_current_waypoint(self.cone_wp_index + 1)
                 self.set_waypoint_speed(self.cone_wp_index + 1)
@@ -560,6 +564,9 @@ class Navigator:
             
         channels[RCChannels.SPEED] = int(throttle)
         channels[RCChannels.TURNING] = int(steering)
+
+        if channels[RCChannels.SPEED] == 1500:
+            channels[RCChannels.SPEED] = OverrideRCIn.CHAN_RELEASE
 
         msg = OverrideRCIn()
         msg.channels = channels
