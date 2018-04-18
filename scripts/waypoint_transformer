@@ -94,6 +94,19 @@ class WaypointTransformer:
             new_wp.x_lat = geo_point.latitude
             new_wp.y_long = geo_point.longitude
             new_wp.z_alt = wp.point.z
+
+            # Set the frame. If the first waypoint, use the global frame,
+            # else use the global relative frame, to match what mavros
+            # gives us back.
+            if len(new_waypoints) == 0:
+                new_wp.frame = Waypoint.FRAME_GLOBAL
+            else:
+                new_wp.frame = Waypoint.FRAME_GLOBAL_REL_ALT
+
+            rospy.loginfo('New waypoint %d: frame=%d lat=%f lon=%f alt=%f',
+                          len(new_waypoints), new_wp.frame,
+                          new_wp.x_lat, new_wp.y_long, new_wp.z_alt)
+
             new_waypoints.append(new_wp)
 
         # Must use a start index of zero or Ardupilot won't accept the

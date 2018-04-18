@@ -256,8 +256,8 @@ class Navigator:
             # Adjust waypoints w/ wp index zero and start following
             # waypoints. Wait a small amount of time for the waypoints
             # to update in the Pixhawk.
-            ##self.adjust_waypoints(0)
-            ##time.sleep(1.0)
+            self.adjust_waypoints(0)
+            time.sleep(1.0)
             # Handle case where first waypoint is a cone.
             if self.is_cone_waypoint(1):
                 self.cone_wp_index = 1
@@ -487,6 +487,7 @@ class Navigator:
             new_wp.point.x = wp.point.x + offset_x
             new_wp.point.y = wp.point.y + offset_y
             new_wp.point.z = wp.point.z
+
             new_waypoints.waypoints.append(new_wp)
 
         rospy.loginfo('Adjusting waypoints, new size is %d',
@@ -564,9 +565,6 @@ class Navigator:
             
         channels[RCChannels.SPEED] = int(throttle)
         channels[RCChannels.TURNING] = int(steering)
-
-        if channels[RCChannels.SPEED] == 1500:
-            channels[RCChannels.SPEED] = OverrideRCIn.CHAN_RELEASE
 
         msg = OverrideRCIn()
         msg.channels = channels
