@@ -47,7 +47,7 @@ cone_approach_use_throttle: true
 # a fraction of either the cone cruise speed or the cone
 # throttle range. This is multiplied by the distance to
 # determine the speed factor from 0 to 1.
-cone_approach_k_speed: 0.02
+cone_approach_k_speed: 0.05
 
 # The proportional constant used to determine the turn rate
 # when approaching, as a fraction of the maximum turning.
@@ -61,7 +61,7 @@ cone_timeout_seconds: 60
 # of the cone waypoint speed to use when escaping from a
 # cone. This times the heading difference to the next
 # waypoint is used as the speed fraction from 0 to 1.
-escape_k_speed: 0.1
+escape_k_speed: 0.05
 
 # The proportional constant used to determine the fraction
 # of the maximum turning to use when backing up from a
