@@ -5,19 +5,14 @@
 import rospy
 import tf
 import tf2_ros
+from geometry_msgs.msg import PoseStamped
 from geographic_msgs.msg import GeoPoint
 from mavros_msgs.msg import WaypointList, Waypoint, CommandCode
 from mavros_msgs.srv import WaypointPull, WaypointPush
 from geodesy.utm import UTMPoint, fromLatLong
-from robo_magellan.msg import LocalWaypointList as LocalWaypointList
-from robo_magellan.msg import LocalWaypoint as LocalWaypoint
-
-class Topics:
-    MISSION_WAYPOINTS = '/mavros/mission/waypoints'
-    PULL_WAYPOINTS = '/mavros/mission/pull'
-    PUSH_WAYPOINTS = '/mavros/mission/push'
-    LOCAL_WAYPOINTS = '~waypoints/local'
-    UPDATE_LOCAL_WAYPOINTS = '~waypoints/update'
+from robo_magellan.constants import Topics
+from robo_magellan.msg import LocalWaypointList
+from robo_magellan.msg import LocalWaypoint
 
 class WaypointTransformer:
 
@@ -39,10 +34,11 @@ class WaypointTransformer:
                                             LocalWaypointList, queue_size=1,
                                             latch=True)
 
-        rospy.Subscriber(Topics.MISSION_WAYPOINTS, WaypointList,
+        rospy.Subscriber(Topics.WAYPOINTS, WaypointList,
                          self.on_waypoints_changed)
-        rospy.Subscriber(Topics.UPDATE_LOCAL_WAYPOINTS, LocalWaypointList,
+        rospy.Subscriber(Topics.UPDATE_WAYPOINTS, LocalWaypointList,
                          self.on_local_waypoints_updated)
+        rospy.Subscriber(Topics.ROBOT_POSE, PoseStamped, self.on_robot_pose)
 
         rospy.wait_for_service(Topics.PULL_WAYPOINTS)
         self._mavros_pull_waypoints = rospy.ServiceProxy(Topics.PULL_WAYPOINTS,
@@ -72,6 +68,9 @@ class WaypointTransformer:
     def on_waypoints_changed(self, list):
         self.waypoint_list = list
 
+    def on_robot_pose(self, position):
+        self.robot_pose = position
+
     def on_local_waypoints_updated(self, list):
         try:
             t = self.tf_buffer.lookup_transform('utm', 'map', rospy.Time(0))
@@ -80,11 +79,24 @@ class WaypointTransformer:
             rospy.loginfo('No UTM transform - cannot update waypoints')
             return
 
+        if self.zone is None:
+            rospy.logerror('Cannot update waypoints - no UTM zone')
+            return
+
         new_waypoints = []
 
+        if list.frame == LocalWaypointList.FRAME_MAP:
+            dx = 0
+            dy = 0
+        else:
+            dx = self.robot_pose.pose.position.x
+            dy = self.robot_pose.pose.position.y
+            rospy.loginfo('Waypoints relative to robot position: x=%f y=%f',
+                          dx, dy)
+
         for wp in list.waypoints:
-            utm = UTMPoint(wp.point.x - t.transform.translation.x,
-                           wp.point.y - t.transform.translation.y,
+            utm = UTMPoint(wp.point.x - t.transform.translation.x + dx,
+                           wp.point.y - t.transform.translation.y + dy,
                            zone=self.zone, band=self.band)
             geo_point = utm.toMsg()
 
