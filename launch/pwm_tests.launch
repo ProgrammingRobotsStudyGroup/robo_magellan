@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <arg name="log_output" default="screen" />
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <!-- this must match the UP port-baud rate connected to Pixhawk -->
+    <arg name="fcu_url" value="/dev/ttyS1:115200" />
+    <arg name="log_output" value="$(arg log_output)" />
+  </include>
+
+  
+  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
+
+  <node name="pwm_tests" pkg="robo_magellan" type="pwm_tests.py" >
+  </node>
+
+</launch>
