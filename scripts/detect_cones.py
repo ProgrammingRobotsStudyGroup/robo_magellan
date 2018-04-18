@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from robo_magellan.msg import pose_data
 from robo_magellan.msg import location_msgs as location_data
 from cv_bridge import CvBridge, CvBridgeError
-from cone_finder import ConeFinder, ConeSeeker
+from robo_magellan.cone_finder import ConeFinder, ConeSeeker
 
 class RosColorDepth:
     node_name = "cone_finder"

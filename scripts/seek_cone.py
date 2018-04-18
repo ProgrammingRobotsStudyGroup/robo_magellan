@@ -6,7 +6,7 @@
 import sys, argparse, rospy
 from mavros_msgs.msg import OverrideRCIn
 from robo_magellan.msg import location_msgs as Locations
-from cone_finder import ConeSeeker
+from robo_magellan.cone_finder import ConeSeeker
 
 msg = """
 cone_seeker: reading cone_finder location messages and 
