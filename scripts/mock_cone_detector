@@ -16,7 +16,7 @@ class Topics:
     LOCAL_POSITION = '/mavros/local_position/pose'
     CONE_LOCATIONS = '~cone_locations'
     LOCAL_WAYPOINTS = '~waypoints/local'
-    
+
 class MockConeDetector:
 
     def run(self):
@@ -26,7 +26,13 @@ class MockConeDetector:
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
         self.detect_cones = rospy.get_param("~detect_cones", True)
-        
+
+        self.cone_detection_patterns = eval(rospy.get_param(
+            '~cone_detection_patterns', "[]"))
+        self.detection_positions = [0 for p in self.cone_detection_patterns]
+        self.detection_counts = [0 for p in self.cone_detection_patterns]
+        rospy.loginfo('%d cone patterns', len(self.cone_detection_patterns))
+
         self.waypoint_list = LocalWaypointList()
         self.waypoint_list.waypoints = []
 
@@ -57,12 +63,12 @@ class MockConeDetector:
         # heading angle.
         fov_dist = self.camera_horz_pixels/2 / tan(self.camera_horz_fov/2)
 
-        i = 0
+        cone_index = 0
         for wp in self.waypoint_list.waypoints:
             # Skip waypoints that are not cones.
             if wp.point.z < 1000:
                 continue
-            
+
             # Cone location.
             xc, yc = wp.point.x, wp.point.y
             d = sqrt((xc-xr)**2 + (yc-yr)**2)
@@ -82,22 +88,56 @@ class MockConeDetector:
                 pose.y = 0 # Just put all cones in the middle, vertically.
                 pose.z = 0 # Assume minimum possible depth is not available.
                 pose.w, pose.h, pose.area = self.get_cone_area(d)
-                cone_poses.append(pose)
 
-                if self.detect_cones:
+                if self.detect_cones and self.is_cone_detected(cone_index):
+                    cone_poses.append(pose)
                     rospy.loginfo('[Detector] cone %d: d=%f heading=%f x=%d',
-                                  i, d, heading*180/pi, pose.x)
+                                  cone_index, d, heading*180/pi, pose.x)
 
-            i += 1
-
-        # Ignore all cone positions if we should not detect them.
-        if not self.detect_cones:
-            cone_poses = []
+            cone_index += 1
 
         msg = location_data()
         msg.header.stamp = rospy.Time.now()
         msg.poses = cone_poses
         self.cone_pub.publish(msg)
+
+    def is_cone_detected(self, cone_index):
+        # If we don't have a detection pattern for the cone, we always
+        # see it.
+        if cone_index >= len(self.cone_detection_patterns):
+            rospy.loginfo('No detection pattern for cone %d', cone_index)
+            return True
+
+        pattern = self.cone_detection_patterns[cone_index]
+        position = self.detection_positions[cone_index]
+        count = self.detection_counts[cone_index]
+
+        # If we have exhausted the pattern, we always see the cone.
+        if position >= len(pattern):
+            rospy.loginfo('No more patterns for cone %d', cone_index)
+            return True
+
+        # If we have exhausted the count for the current position, move
+        # to the next position.
+        if count > pattern[position]:
+            position += 1
+            count = 0
+            rospy.loginfo('Moving to pattern %d for cone %d',
+                          position, cone_index)
+
+        count += 1
+        # We detect the cone at even numbered positions in the pattern or
+        # if we have exhausted the pattern.
+        detected = (position >= len(pattern)) or (position%2 == 0)
+        rospy.loginfo('Cone detection: cone=%d position=%d count=%d detect=%s',
+                      cone_index, position, count, detected)
+
+        # Update count and position.
+        self.detection_positions[cone_index] = position
+        self.detection_counts[cone_index] = count
+
+        return detected
+
 
     def get_cone_area(self, d):
         # Area should be proportional to the square of distance.
