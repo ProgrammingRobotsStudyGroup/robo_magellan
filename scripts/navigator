@@ -75,6 +75,8 @@ class NavigatorState:
 class States:
     WAITING_FOR_START = NavigatorState('WAITING_FOR_START')
     FOLLOWING_WAYPOINTS = NavigatorState('FOLLOWING_WAYPOINTS')
+    CIRCLING_BACK = NavigatorState('CIRCLING_BACK')
+    CIRCLING_FORWARD = NavigatorState('CIRCLING_FORWARD')
     DRIVING_TO_CONE = NavigatorState('DRIVING_TO_CONE')
     ESCAPING_CONE = NavigatorState('ESCAPING_CONE')
     FINISHED = NavigatorState('FINISHED')
@@ -88,13 +90,12 @@ class Navigator:
     def run(self):
         self.state = None
         self.last_wp_speed = None
-        self.state_timer = None
         self.cone_wp_index = None
         self.cone_pose = None
         self.waypoint_list = WaypointList()
         self.waypoint_list.waypoints = []
         self.map_waypoint_list = None
-        self.escape_wp = None
+        self.target_heading = None
         self.robot_pose = PoseStamped()
 
         rospy.init_node('navigator')
@@ -136,6 +137,13 @@ class Navigator:
         self.escape_k_turning = rospy.get_param('~escape_k_turning', 2.0)
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
+
+        self.direction_change_reverse_duration = rospy.get_param(
+            '~direction_change_reverse_speed', -1.0)
+        self.direction_change_reverse_duration = rospy.get_param(
+            '~direction_change_reverse_duration', 1.5)
+        self.direction_change_idle_duration = rospy.get_param(
+            '~direction_change_idle_duration', 1.0)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
@@ -191,16 +199,6 @@ class Navigator:
         rospy.wait_for_service(topic)
         return rospy.ServiceProxy(topic, type)
 
-    def set_timer(self, timeout, callback):
-        self.cancel_timer()
-        self.state_timer = rospy.Timer(rospy.Duration(timeout), callback,
-                                       oneshot=True)
-
-    def cancel_timer(self):
-        if self.state_timer is not None:
-            self.state_timer.shutdown()
-            self.state_timer = None
-
     def begin_state(self, new_state):
         old_state = self.state
         self.state = new_state
@@ -234,23 +232,35 @@ class Navigator:
                 rospy.logerr('No waypoints loaded')
                 return
             self.arm_robot(True)
-            self.set_current_waypoint(1)
             # Adjust waypoints w/ wp index zero and start following
             # waypoints. Wait a small amount of time for the waypoints
             # to update in the Pixhawk.
             self.adjust_waypoints(0)
             time.sleep(1.0)
-            # Handle case where first waypoint is a cone.
-            if self.is_cone_waypoint(1):
-                self.cone_wp_index = 1
-            self.set_waypoint_speed(1)
+            self.follow_waypoints(1)
+
+    def follow_waypoints(self, index):
+            self.set_current_waypoint(index)
+            # Handle case where waypoint is a cone.
+            if self.is_cone_waypoint(index):
+                self.cone_wp_index = index
+            else:
+                self.cone_wp_index = None
+            self.set_waypoint_speed(index)
             self.begin_state(States.FOLLOWING_WAYPOINTS)
 
     def on_state(self, state):
         if self.state is States.FOLLOWING_WAYPOINTS and state.mode==Modes.HOLD:
             self.show_event('on_state', state.mode)
-            self.cancel_timer()
-            self.begin_state(States.FAILED)
+            self.begin_circling_back()
+
+    def begin_circling_back(self):
+        robot_heading = self.pose_heading(self.robot_pose.pose)
+        self.target_heading = robot_heading + 175.0/180.0*pi
+        self.set_manual_speed(0, 0)
+        self.set_mode(Modes.MANUAL)
+        self.turn_to_heading(self.target_heading)
+        self.begin_state(States.CIRCLING_BACK)
 
     def on_robot_pose(self, position):
         self.robot_pose = position
@@ -259,32 +269,15 @@ class Navigator:
             self.show_event('on_robot_pose')
             pose = position.pose;
             robot_heading = self.pose_heading(position.pose)
-            wp_heading = self.angle_to_point(position.pose.position,
-                                             self.escape_wp.point)
-            diff = self.normalize_angle(wp_heading - robot_heading)
+            diff = self.normalize_angle(self.target_heading - robot_heading)
             if abs(diff) > self.escape_angle_tolerance:
-                self.turn_robot(diff)
+                self.escape_backward(diff)
             else:
                 self.set_manual_speed(0, 0)
                 self.begin_state(States.LIMBO)
-                time.sleep(2.0)
-                self.set_manual_speed(-0.3, 0)
-                time.sleep(1.0)
-                self.set_manual_speed(0, 0)
-                time.sleep(2.0)
-                self.set_manual_speed(-0.3, 0)
-                time.sleep(1.0)
-                self.set_manual_speed(0, 0)
-                time.sleep(2.0)
-
-                self.set_current_waypoint(self.cone_wp_index + 1)
-                self.set_waypoint_speed(self.cone_wp_index + 1)
-                # Handle case where next waypoint is a cone.
-                if self.is_cone_waypoint(self.cone_wp_index + 1):
-                    self.cone_wp_index = self.cone_wp_index + 1
-                else:
-                    self.cone_wp_index = None
-                self.begin_state(States.FOLLOWING_WAYPOINTS)
+                self.target_heading = None
+                time.sleep(self.direction_change_idle_duration)
+                self.follow_waypoints(self.cone_wp_index + 1)
 
     def on_waypoints_changed(self, waypoint_list):
         self.waypoint_list = waypoint_list
@@ -294,9 +287,14 @@ class Navigator:
 
         if self.state is States.FOLLOWING_WAYPOINTS:
             self.show_event('on_waypoints_changed')
-            self.set_waypoint_speed(self.waypoint_list.current_seq)
-            if self.is_cone_waypoint(self.waypoint_list.current_seq):
-                self.cone_wp_index = self.waypoint_list.current_seq
+            if self.cone_wp_index is not None \
+               and self.waypoint_list.current_seq > self.cone_wp_index:
+                # Missed a cone - need to circle to find it.
+                self.begin_circling_back()
+            else:
+                self.set_waypoint_speed(self.waypoint_list.current_seq)
+                if self.is_cone_waypoint(self.waypoint_list.current_seq):
+                    self.cone_wp_index = self.waypoint_list.current_seq
 
     def on_map_waypoints_changed(self, list):
         self.map_waypoint_list = list
@@ -318,48 +316,67 @@ class Navigator:
                 # reverse. Go into limbo state so we won't respond to
                 # messages while delaying.
                 self.begin_state(States.LIMBO)
-                self.set_manual_speed(-1, 0)
-                time.sleep(1.5)
+                if self.direction_change_reverse_duration > 0:
+                    self.set_manual_speed(self.direction_change_reverse_speed,
+                                          0)
+                    time.sleep(self.direction_change_reverse_duration)
                 self.set_manual_speed(0, 0)
-                time.sleep(1.0)
+                time.sleep(self.direction_change_idle_duration)
                 # Should update waypoints for cone location, but skip for now.
-                self.escape_wp \
+                cone_wp \
+                    = self.map_waypoint_list.waypoints[self.cone_wp_index]
+                escape_wp \
                     = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
+                self.target_heading \
+                    = self.angle_to_point(cone_wp.point, escape_wp.point)
                 self.begin_state(States.ESCAPING_CONE)
 
-    def on_timeout_finding_cone(self, event):
-        self.state_timer = None
-        if self.cone_wp_index == len(self.waypoint_list.waypoints)-1:
-            self.show_event('on_timeout_finding_cone')
-            # Timeout on last waypoint.
-            self.set_mode(Modes.HOLD)
-            self.begin_state(States.FAILED)
-        else:
-            self.show_event('on_timeout_finding_cone')
-            # Timeout, not last cone.
-            self.set_mode(Modes.HOLD)
-            self.set_current_waypoint(self.cone_wp_index + 1)
-            self.set_waypoint_speed(self.cone_wp_index + 1)
-            self.cone_wp_index = None
-            self.begin_state(States.FOLLOWING_WAYPOINTS)
-
     def on_cone_locations(self, cone_locations):
-        if self.state is States.FOLLOWING_WAYPOINTS \
+        if (self.state is States.FOLLOWING_WAYPOINTS \
+            or self.state is States.CIRCLING_BACK \
+            or self.state is States.CIRCLING_FORWARD) \
            and self.cone_wp_index is not None \
            and len(cone_locations.poses) > 0:
             self.show_event('on_cone_locations', len(cone_locations.poses))
-            # Found the cone.
-            self.set_manual_speed(0, 0)
-            if self.cone_approach_use_throttle:
-                self.set_mode(Modes.MANUAL)
-            else:
-                self.set_mode(Modes.GUIDED)
-            self.drive_to_cone(cone_locations.poses[0])
-            self.begin_state(States.DRIVING_TO_CONE)
+            self.begin_driving_to_cone()
         elif self.state is States.DRIVING_TO_CONE \
              and len(cone_locations.poses) > 0:
             self.show_event('on_cone_locations', len(cone_locations.poses))
             self.drive_to_cone(cone_locations.poses[0])
+        elif self.state is States.CIRCLING_FORWARD:
+            robot_heading = self.pose_heading(self.robot_pose.pose)
+            diff = self.normalize_angle(self.target_heading - robot_heading)
+            if abs(diff) > self.escape_angle_tolerance:
+                self.circle_forward(diff)
+            elif self.cone_wp_index+1 < len(self.waypoint_list.waypoints):
+                # More waypoints - skip to next waypoint
+                self.set_manual_speed(0,0)
+                self.set_current_waypoint(self.cone_wp_index + 1)
+                self.follow_waypoints(self.cone_wp_index + 1)
+                rospy.loginfo('Missed cone - moving to next waypoint')
+            else:
+                self.set_manual_speed(0, 0)
+                self.set_mode(Modes.HOLD)
+                self.begin_state(States.FAILED)
+        elif self.state is States.CIRCLING_BACK:
+            robot_heading = self.pose_heading(self.robot_pose.pose)
+            diff = self.normalize_angle(self.target_heading - robot_heading)
+            if abs(diff) > self.escape_angle_tolerance:
+                self.circle_forward(diff)
+            else:
+                self.target_heading += 175.0/180.0*pi
+                self.turn_to_heading(self.target_heading)
+                self.begin_state(States.CIRCLING_FORWARD)
+
+    def begin_driving_to_cone(self):
+        # Found the cone.
+        self.set_manual_speed(0, 0)
+        if self.cone_approach_use_throttle:
+            self.set_mode(Modes.MANUAL)
+        else:
+            self.set_mode(Modes.GUIDED)
+            self.drive_to_cone(cone_locations.poses[0])
+            self.begin_state(States.DRIVING_TO_CONE)
 
     def drive_to_cone(self, cone_pose):
         # A pseudo-distance used to determine the pixel width of a cone
@@ -398,7 +415,23 @@ class Navigator:
         ratio = sqrt(3900.0 / area)
         return 3 * ratio
 
-    def turn_robot(self, heading_diff):
+    def turn_to_heading(self, heading):
+        robot_heading = self.pose_heading(self.robot_pose.pose)
+        diff = self.normalize_angle(self.target_heading - robot_heading)
+        self.circle_forward(diff)
+
+    def circle_forward(self, heading_diff):
+        min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
+
+        speed = min_speed
+        turning = self.max_turning
+
+        rospy.loginfo('[circling] heading_diff=%f speed=%f turning=%f',
+                      heading_diff*180/pi, speed, turning)
+
+        self.set_manual_speed(speed, turning)
+
+    def escape_backward(self, heading_diff):
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
         speed = - min(max(self.escape_k_throttle*abs(heading_diff), min_speed),
@@ -406,7 +439,7 @@ class Navigator:
         turning = min(self.escape_k_turning*abs(heading_diff),
                       self.max_turning)
 
-        rospy.loginfo('[Navigator] heading_diff=%f speed=%f turning=%f',
+        rospy.loginfo('[escaping] heading_diff=%f speed=%f turning=%f',
                       heading_diff*180/pi, speed, turning)
 
         self.set_manual_speed(speed, turning)
