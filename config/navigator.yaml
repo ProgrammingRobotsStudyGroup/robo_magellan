@@ -88,3 +88,10 @@ horz_fov: 70.0
 
 # The horizontal field-of-view of the camera, in pixels.
 horz_pixels: 640
+
+# The number of consecutive cone location messages to receive
+# without a cone detection while driving in manual to a cone
+# before we go into recovery mode. (Equals the number of
+# video frames, if the cone detector is sending one message
+# per frame.)
+cone_lost_limit: 15

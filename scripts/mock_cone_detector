@@ -119,7 +119,7 @@ class MockConeDetector:
 
         # If we have exhausted the count for the current position, move
         # to the next position.
-        if count > pattern[position]:
+        if count >= pattern[position]:
             position += 1
             count = 0
             rospy.loginfo('Moving to pattern %d for cone %d',
