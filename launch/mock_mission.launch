@@ -5,6 +5,7 @@
   <arg name="view_mission" default="true" />
   <arg name="start_rviz" default="false" />
   <arg name="detect_cones" default="true" />
+  <arg name="cone_detection_patterns" default="[]" />
 
   <include file="$(find mavros)/launch/apm.launch">
     <!-- this must match the UP port-baud rate connected to Pixhawk -->
@@ -25,6 +26,8 @@
   <node name="mock_cone_detector" pkg="robo_magellan"
         type="mock_cone_detector" output="$(arg log_output)">
     <param name="~detect_cones" value="$(arg detect_cones)" />
+    <param name="~cone_detection_patterns"
+           value="$(arg cone_detection_patterns)" />
     <remap from="~waypoints/local" to="/robo_magellan/waypoints/local" />
     <remap from="~cone_locations" to="/cone_finder/locations" />
   </node>

@@ -97,6 +97,7 @@ class Navigator:
         self.map_waypoint_list = None
         self.target_heading = None
         self.robot_pose = PoseStamped()
+        self.cone_lost_count = 0
 
         rospy.init_node('navigator')
 
@@ -147,6 +148,8 @@ class Navigator:
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
+
+        self.cone_lost_limit = rospy.get_param('~cone_lost_limit', 15)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -304,7 +307,6 @@ class Navigator:
 
         if self.state is States.DRIVING_TO_CONE and touching:
             self.show_event('on_touch', touching)
-            self.cancel_timer()
             self.set_manual_speed(0, 0)
             if self.cone_wp_index == len(self.waypoint_list.waypoints) - 1:
                 self.set_mode(Modes.HOLD)
@@ -341,8 +343,14 @@ class Navigator:
             self.begin_driving_to_cone()
         elif self.state is States.DRIVING_TO_CONE \
              and len(cone_locations.poses) > 0:
+            self.cone_lost_count = 0
             self.show_event('on_cone_locations', len(cone_locations.poses))
             self.drive_to_cone(cone_locations.poses[0])
+        elif self.state is States.DRIVING_TO_CONE:
+            self.cone_lost_count += 1
+            if self.cone_lost_count > self.cone_lost_limit:
+                # Lost cone, must recover.
+                self.begin_circling_back()
         elif self.state is States.CIRCLING_FORWARD:
             robot_heading = self.pose_heading(self.robot_pose.pose)
             diff = self.normalize_angle(self.target_heading - robot_heading)
@@ -376,7 +384,7 @@ class Navigator:
         else:
             self.set_mode(Modes.GUIDED)
             self.drive_to_cone(cone_locations.poses[0])
-            self.begin_state(States.DRIVING_TO_CONE)
+        self.begin_state(States.DRIVING_TO_CONE)
 
     def drive_to_cone(self, cone_pose):
         # A pseudo-distance used to determine the pixel width of a cone
