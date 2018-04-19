@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import time
 import rospy
 import rospkg
 
@@ -25,6 +26,8 @@ from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 from mavros_msgs.srv import WaypointSetCurrent
 
+from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
+
 import uav_state
 
 class RCChannels:
@@ -35,6 +38,18 @@ class Topics:
 	EXEC_CMD = '~exec_cmd'
 	RC_OVERRIDE = '/mavros/rc/override'
 	KILL_SW_ENABLE = '/kill_sw_enabled'
+	SETPOINT = '/setpoint'
+	CONTROL = '/control'
+	SET_MODE = '/mavros/set_mode'
+	SETPOINT_VELOCITY = '/mavros/setpoint_velocity/cmd_vel'
+	SET_PARAM = '/mavros/param/set'
+
+class Modes:
+	MANUAL = 'MANUAL'
+	HOLD = 'HOLD'
+	AUTO = 'AUTO'
+	GUIDED = 'GUIDED'
+	RTL = 'RTL'
 
 
 # Sets the R/C override speeds. Turning is positive
@@ -63,20 +78,68 @@ def on_kill_switch_enable(msg):
 	rospy.loginfo('pwm_test - on_exec_cmd')
 	cmd = msg.data
 	if cmd is True:
-		set_manual_speed(-50, 0)
+		set_manual_speed(1500, 0)
+		time.sleep(2.0)
+		set_manual_speed(-1500, 0)
+		time.sleep(1.5)
+		set_manual_speed(0,0)
+		time.sleep(1.0)
+		set_manual_speed(-1500, 0)
+
+		# set_mode(Modes.GUIDED)
+		# linear_speed = -1
+		# twist = TwistStamped()
+		# twist.twist.linear.x = linear_speed
+		# twist.twist.angular.z = 0
+		# vel_pub.publish(twist)
+		# rospy.loginfo('[GUIDED] speed=%f turning=%f', twist.twist.linear.x, twist.twist.angular.z)
 	else:
 		set_manual_speed(0, 0)
+		# linear_speed = 0
+		# twist = TwistStamped()
+		# twist.twist.linear.x = linear_speed
+		# twist.twist.angular.z = 0
+		# vel_pub.publish(twist)
 
 def pwm_test():
 	rospy.init_node('pwm_test')
 	global rc_pub
 	rc_pub = rospy.Publisher(Topics.RC_OVERRIDE, OverrideRCIn, queue_size=1)
+	# setpoint_pub = rospy.Publisher(, Bool, queue_size=10)
 	rospy.Subscriber(Topics.KILL_SW_ENABLE, Bool, on_kill_switch_enable)
+	# rospy.Subscriber()
+	global vel_pub
+	vel_pub = rospy.Publisher(Topics.SETPOINT_VELOCITY, TwistStamped, queue_size=1)
+
+	global _mavros_set_mode
+	_mavros_set_mode = get_proxy(Topics.SET_MODE, SetMode)
+
+	global _mavros_param_set
+	_mavros_param_set = get_proxy(Topics.SET_PARAM, ParamSet)
 
 	rate = rospy.Rate(rospy.get_param('~rate', 10))
 
+	if rospy.has_param("~gcs_id"):
+		gcs_id = 1
+		set_parameter('SYSID_MYGCS', gcs_id)
+
 	while not rospy.is_shutdown():
 		rate.sleep()
+
+def get_proxy(topic, type):
+	rospy.wait_for_service(topic)
+	return rospy.ServiceProxy(topic, type)
+
+def set_mode(mode):
+	_mavros_set_mode(0, mode)
+
+def set_parameter(param_name, x):
+    value = ParamValue()
+    if type(x) is int:
+        value.integer = x
+    else:
+        value.real = x
+    _mavros_param_set(param_name, value)
 
 if __name__ == '__main__':
 	# Start the node

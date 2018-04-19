@@ -313,17 +313,15 @@ class Navigator:
                 self.begin_state(States.FINISHED)
             else:
                 self.set_mode(Modes.MANUAL)
-                self.set_manual_speed(0, 0)
 
                 # Must pause for a bit so braking isn't actuated when we
                 # reverse. Go into limbo state so we won't respond to
                 # messages while delaying.
                 self.begin_state(States.LIMBO)
-                time.sleep(1.0)
-                self.set_manual_speed(-.3, 0)
-                time.sleep(1.0)
+                self.set_manual_speed(-1, 0)
+                time.sleep(1.5)
                 self.set_manual_speed(0, 0)
-
+                time.sleep(1.0)
                 # Should update waypoints for cone location, but skip for now.
                 self.escape_wp \
                     = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
