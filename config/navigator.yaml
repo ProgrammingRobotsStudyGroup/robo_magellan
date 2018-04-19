@@ -53,10 +53,6 @@ cone_approach_k_speed: 0.05
 # when approaching, as a fraction of the maximum turning.
 cone_approach_k_turning: 1.75
 
-# The number of seconds in which the robot must touch the cone
-# or the attempt will be abandoned.
-cone_timeout_seconds: 60
-
 # The proportional constant used to determine the fraction
 # of the cone waypoint speed to use when escaping from a
 # cone. This times the heading difference to the next

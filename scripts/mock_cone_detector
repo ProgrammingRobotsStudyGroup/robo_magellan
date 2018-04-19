@@ -25,6 +25,7 @@ class MockConeDetector:
         self.detection_distance = rospy.get_param('~detection_distance', 8.0)
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
+        self.detect_cones = rospy.get_param("~detect_cones", True)
         
         self.waypoint_list = LocalWaypointList()
         self.waypoint_list.waypoints = []
@@ -83,10 +84,15 @@ class MockConeDetector:
                 pose.w, pose.h, pose.area = self.get_cone_area(d)
                 cone_poses.append(pose)
 
-                rospy.loginfo('[Detector] cone %d: d=%f heading=%f x=%d', i, d,
-                              heading*180/pi, pose.x)
+                if self.detect_cones:
+                    rospy.loginfo('[Detector] cone %d: d=%f heading=%f x=%d',
+                                  i, d, heading*180/pi, pose.x)
 
             i += 1
+
+        # Ignore all cone positions if we should not detect them.
+        if not self.detect_cones:
+            cone_poses = []
 
         msg = location_data()
         msg.header.stamp = rospy.Time.now()
