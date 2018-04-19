@@ -75,6 +75,19 @@ escape_k_turning: 0.7
 # the next cone. A value of 0.1 rad is about 6 degrees.
 escape_angle_tolerance: 0.15
 
+# The amount of time, in seconds, to kick the reverse throttle in
+# order to put the ESC into reverse mode. If zero, no need to
+# kick the reverse throttle to change direction (as in SITL, e.g.).
+direction_change_reverse_duration: 0.0
+
+# The relative throttle amount to use when initiating reverse, to
+# move the ESC into reverse mode.
+direction_change_reverse_speed: -1.0
+
+# The amount of time, in seconds, to pause after the reverse kick
+# before initiating reverse throttle again.
+direction_change_idle_duration: 1.0
+
 # The horizontal field-of-view of the camera, in degrees.
 horz_fov: 70.0
 
