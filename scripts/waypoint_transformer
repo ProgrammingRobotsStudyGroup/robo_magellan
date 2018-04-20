@@ -89,8 +89,11 @@ class WaypointTransformer:
             dx = 0
             dy = 0
         else:
-            dx = self.robot_pose.pose.position.x
-            dy = self.robot_pose.pose.position.y
+            # Adjust by half of the current rover position. (Assuming
+            # original capture could be off, and rover could also be off,
+            # so split the difference.)
+            dx = self.robot_pose.pose.position.x / 2
+            dy = self.robot_pose.pose.position.y / 2
             rospy.loginfo('Waypoints relative to robot position: x=%f y=%f',
                           dx, dy)
 
