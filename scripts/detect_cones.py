@@ -27,8 +27,14 @@ class RosColorDepth:
         rospy.init_node('cone_finder')
         self.started = True
 
+        self.show_all_contours = rospy.get_param('~show_all_contours', False)
+
         minArea = rospy.get_param("~minConeArea", 300)
-        self.cf = ConeFinder(minArea)
+        min_aspect_ratio = rospy.get_param('~min_aspect_ratio', 1.1)
+        # By default, allow a large Y coordinate for cones.
+        max_y = rospy.get_param('~max_y', 10000)
+
+        self.cf = ConeFinder(minArea, min_aspect_ratio, max_y)
         self.cs = ConeSeeker()
 
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
@@ -74,29 +80,28 @@ class RosColorDepth:
 
     def markVideo(self, imghull, contours, poses):
         (cl, conf, sadj, tadj) = self.cs.seek_cone(poses)
-        if False:
+        (ih, iw) = imghull.shape[:2]
+
+        if self.show_all_contours:
+            img_height = imghull.shape[0]
             for c in contours:
                 if len(c) >= 3:
                     cv2.polylines(imghull, [c], True, (0,255,255), 1)
                     x,y,w,h = cv2.boundingRect(c)
                     area = cv2.contourArea(c)
-                    msg_str = '{0:.0f}'.format(area)
+                    msg_str = 'a={0:.0f} y={1:d}'.format(area, ih-y-h)
                     cv2.putText(imghull, msg_str, (x+w, y+h),
                                 cv2.FONT_HERSHEY_SIMPLEX,
-                                1, (0, 0, 255), 2, cv2.LINE_AA)
+                                1, (0, 255, 255), 2, cv2.LINE_AA)
         if conf > 0.1:
-            #frame could be non zero
-            (ih, iw) = imghull.shape[:2]
             pt1 = (iw/2 + cl.x - cl.w/2, ih - cl.y - cl.h)
             pt2 = (iw/2 + cl.x + cl.w/2, ih - cl.y)
             cv2.rectangle(imghull, pt1, pt2, (0, 0, 255), 3)
-            conf_str = '{0:.2f}'.format(conf)
-            cv2.putText(imghull, conf_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
-                        1, (0, 0, 255), 2, cv2.LINE_AA)
-            x,y,w,h = cv2.boundingRect(contours[0])
-            area = cv2.contourArea(contours[0])
-            msg_str = '{0:.0f}'.format(area)
-            cv2.putText(imghull, msg_str, (x+w, y+h),
+            #conf_str = '{0:.2f}'.format(conf)
+            #cv2.putText(imghull, conf_str, pt1, cv2.FONT_HERSHEY_SIMPLEX,
+            #            1, (0, 0, 255), 2, cv2.LINE_AA)
+            msg_str = 'a={0:.0f} y={1:d}'.format(cl.area, cl.y)
+            cv2.putText(imghull, msg_str, pt1,
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1, (0, 0, 255), 2, cv2.LINE_AA)
 

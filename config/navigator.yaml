@@ -38,6 +38,11 @@ steering_neutral: 1425
 steering_left_max: 1000
 steering_right_max: 1880
 
+# Cone detection thresholds to use when driving to a cone
+# or recovering when the robot cannot find the cone.
+cone_normal_min_area: 200
+cone_recovery_min_area: 400
+
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
 # GUIDED mode, if true, use MANUAL R/C override.
@@ -64,6 +69,10 @@ escape_k_speed: 0.05
 # cone. This times the heading difference gives the fraction
 # of maximum turning to use.
 escape_k_turning: 0.7
+
+# A minimum speed to use when backing up while escaping the
+# cone. If zero, the minimum speed, above, is used.
+escape_min_speed: 0.7
 
 # The maximum tolerance in heading error in radians before
 # deciding that the robot has turned sufficiently toward

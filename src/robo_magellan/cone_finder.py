@@ -26,8 +26,10 @@ class ConeFinder:
     coneShapes = []
 
     # On a 640x480 size image, cone area is ~300 sq pixels @25ft
-    def __init__(self, min_area=300):
+    def __init__(self, min_area=300, min_aspect_ratio=1.1, max_y=10000):
         self.min_area = min_area
+        self.min_aspect_ratio = min_aspect_ratio
+        self.max_y = max_y
         self.firstTime = True
         self.rgbOut = None
         self.depthOut = None
@@ -262,7 +264,7 @@ class ConeFinder:
         h, w = img.shape[:2]
 
         image_centerX = w/2
-        image_centerY = h  # y goes down from top
+        image_height = h  # y goes down from top
 
         listOfHullsAndArea = []
         if len(contours) != 0:
@@ -287,8 +289,8 @@ class ConeFinder:
             # print 'convexHull',len(temp)
             if len(hull) >= 3 and self._convexHullIsPointingUp(hull):
                 x, y, w, h = cv2.boundingRect(hull)
-                # Ignore cones that aren't taller than wide.
-                if h <= w:
+                # Ignore cones that aren't enough taller than wide.
+                if h/w < self.min_aspect_ratio:
                     continue
 
                 listOfCones.append(hull)
@@ -296,12 +298,15 @@ class ConeFinder:
                 pose.x = x + w/2 - image_centerX
                 pose.w = w
                 # Height is being measured top of screen to down so we need to invert y
-                pose.y = (image_centerY - (y+h))
+                pose.y = (image_height - (y+h))
                 pose.h = h
                 pose.z = int(dMin)   # But this is the hypotenuse
                 pose.d = int(dMax - dMin)
                 pose.area = area
-                poses.append(pose)
+
+                # Ignore cones that have a Y position too high.
+                if pose.y <= self.max_y:
+                    poses.append(pose)
 
         return (contours, poses, listOfCones)
 
@@ -333,7 +338,7 @@ class ConeFinder:
 
             # Ignore contours that aren't a bit taller than wide, unless
             # they are really big.
-            if h < w*1.1 and area < 30000:
+            if h/w < self.min_aspect_ratio and area < 30000:
                 continue
 
             # Ignore contours where the centroid isn't in the bottom half.
@@ -351,7 +356,10 @@ class ConeFinder:
             pose.w = w
             pose.h = h
             pose.area = area
-            poses.append(pose)
+
+            # Ignore cones that have a Y position too high.
+            if pose.y <= self.max_y:
+                poses.append(pose)
 
         return (filtered_contours, poses, list_of_cones)
 

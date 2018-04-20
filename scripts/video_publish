@@ -14,6 +14,10 @@ from cv_bridge import CvBridge, CvBridgeError
 class VideoPublish:
 
     def __init__(self):
+        self.frames = []
+        self.max_frames = 100
+        self.frame_index = 0
+
         rospy.init_node('video_publish')
 
         start_frame = rospy.get_param('~start_frame', 1)
@@ -39,13 +43,13 @@ class VideoPublish:
 
         frame_number = 0
         while frame_number+1 < start_frame:
-            ret, im = cap.read()
+            ret, im = self.read_frame(cap)
             if not ret:
                 break
             frame_number += 1
 
         while not rospy.is_shutdown():
-            ret, im = cap.read()
+            ret, im = self.read_frame(cap)
             if not ret:
                 break
             frame_number += 1
@@ -72,8 +76,12 @@ class VideoPublish:
                 key = cv2.waitKey(0)
                 if key == 27:
                     break
+                elif key == ord(';'):
+                    frame_number -= self.backup_frames(2)
                 elif key == ord(']'):
                     frame_number += self.skip_frames(cap, 9)
+                elif key == ord('['):
+                    frame_number -= self.backup_frames(11)
                 elif key == ord('='):
                     frame_number += self.skip_frames(cap, 99)
                 elif key == ord('/'):
@@ -83,11 +91,31 @@ class VideoPublish:
     def skip_frames(self, cap, n):
         skipped = 0
         for i in range(n):
-            ret, im = cap.read()
+            ret, im = self.read_frame(cap)
             if not ret:
                 break
             skipped += 1
         return skipped
+
+    def backup_frames(self, n):
+        n = min(self.frame_index, n)
+        self.frame_index -= n
+        return n
+
+    def read_frame(self, cap):
+        if self.frame_index < len(self.frames):
+            frame = self.frames[self.frame_index]
+            self.frame_index += 1
+            return True, frame
+        else:
+            ret, frame = cap.read()
+            if ret:
+                self.frames.append(frame)
+                if len(self.frames) > self.max_frames:
+                    self.frames.pop(0)
+                else:
+                    self.frame_index += 1
+            return ret, frame
 
 if __name__ == '__main__':
     try:

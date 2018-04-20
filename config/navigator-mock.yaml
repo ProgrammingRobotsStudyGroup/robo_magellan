@@ -48,23 +48,27 @@ cone_approach_use_throttle: true
 # a fraction of either the cone cruise speed or the cone
 # throttle range. This is multiplied by the distance to
 # determine the speed factor from 0 to 1.
-cone_approach_k_speed: 0.02
+cone_approach_k_speed: 0.04
 
 # The proportional constant used to determine the turn rate
 # when approaching, as a fraction of the maximum turning.
-cone_approach_k_turning: 1.25
+cone_approach_k_turning: 1.5
 
 # The proportional constant used to determine the fraction
 # of the cone waypoint speed to use when escaping from a
 # cone. This times the heading difference to the next
 # waypoint is used as the speed fraction from 0 to 1.
-escape_k_speed: 0.1
+escape_k_speed: 0.04
 
 # The proportional constant used to determine the fraction
 # of the maximum turning to use when backing up from a
 # cone. This times the heading difference gives the fraction
 # of maximum turning to use.
 escape_k_turning: 0.7
+
+# A minimum speed to use when backing up while escaping the
+# cone. If zero, the minimum speed, above, is used.
+escape_min_speed: 0.0
 
 # The maximum tolerance in heading error in radians before
 # deciding that the robot has turned sufficiently toward

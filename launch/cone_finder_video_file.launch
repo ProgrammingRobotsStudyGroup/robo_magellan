@@ -11,7 +11,8 @@
   <arg name="frame_id" default="camera" />
   <arg name="bin_config" default="$(find robo_magellan)/config/realsense-bins-0_6.json" />
 
-  <node name="video_publish" pkg="robo_magellan" type="video_publish">
+  <node name="video_publish" pkg="robo_magellan" type="video_publish"
+        output="screen">
     <param name="~single_frame" value="$(arg single_frame)" />
     <param name="~start_frame" value="$(arg start_frame)" />
     <param name="~fps" value="$(arg fps)" />
@@ -19,13 +20,18 @@
     <param name="~frame_id" value="$(arg frame_id)" />
   </node>
 
-  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py">
+  <node name="cone_finder" pkg="robo_magellan" type="detect_cones.py"
+        output="screen">
     <rosparam command="load" file="$(find robo_magellan)/launch/cone_finder.yaml" />
-    <param name="~captureVideo" value="False" />
-    <param name="~publishImages" value="True" />
-    <param name="~ignorePriorDetections" value="True" />
+    <param name="~captureVideo" value="false" />
+    <param name="~publishImages" value="true" />
+    <param name="~ignorePriorDetections" value="true" />
 
-    <param name="~minConeArea" value="400" />
+    <param name="~show_all_contours" value="true" />
+    <param name="~minConeArea" value="75" />
+    <param name="~min_aspect_ratio" value="1.1" />
+    <param name="~max_y" value="280" />
+
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />
     <param name="~binConfig" value="$(arg bin_config)" />
