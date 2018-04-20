@@ -40,7 +40,6 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from mavros_msgs.msg import State, OverrideRCIn, ParamValue, WaypointList
 from mavros_msgs.srv import ParamGet, ParamSet, SetMode, CommandBool
 from mavros_msgs.srv import WaypointSetCurrent
-from robo_magellan.gorp import Gorp
 from robo_magellan.constants import Topics, ExecCmds
 from robo_magellan.msg import location_msgs as location_data
 from robo_magellan.msg import LocalWaypointList, LocalWaypoint
@@ -139,12 +138,15 @@ class Navigator:
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
 
-        self.direction_change_reverse_duration = rospy.get_param(
+        self.direction_change_reverse_speed = rospy.get_param(
             '~direction_change_reverse_speed', -1.0)
         self.direction_change_reverse_duration = rospy.get_param(
             '~direction_change_reverse_duration', 1.5)
         self.direction_change_idle_duration = rospy.get_param(
             '~direction_change_idle_duration', 1.0)
+
+        self.circling_angle_tolerance = rospy.get_param(
+            '~circling_angle_tolerance', 0.15)
 
         self.camera_horz_fov = rospy.get_param('~horz_fov', 70.0) / 180.0 * pi
         self.camera_horz_pixels = rospy.get_param('~horz_pixels', 640)
@@ -354,7 +356,7 @@ class Navigator:
         elif self.state is States.CIRCLING_FORWARD:
             robot_heading = self.pose_heading(self.robot_pose.pose)
             diff = self.normalize_angle(self.target_heading - robot_heading)
-            if abs(diff) > self.escape_angle_tolerance:
+            if abs(diff) > self.circling_angle_tolerance:
                 self.circle_forward(diff)
             elif self.cone_wp_index+1 < len(self.waypoint_list.waypoints):
                 # More waypoints - skip to next waypoint
@@ -369,7 +371,7 @@ class Navigator:
         elif self.state is States.CIRCLING_BACK:
             robot_heading = self.pose_heading(self.robot_pose.pose)
             diff = self.normalize_angle(self.target_heading - robot_heading)
-            if abs(diff) > self.escape_angle_tolerance:
+            if abs(diff) > self.circling_angle_tolerance:
                 self.circle_forward(diff)
             else:
                 self.target_heading += 175.0/180.0*pi
@@ -442,6 +444,8 @@ class Navigator:
     def escape_backward(self, heading_diff):
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
+        # Override minimum speed based on testing results.
+	min_speed = 0.7
         speed = - min(max(self.escape_k_throttle*abs(heading_diff), min_speed),
                       max_speed)
         turning = min(self.escape_k_turning*abs(heading_diff),
