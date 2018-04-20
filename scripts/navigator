@@ -124,6 +124,11 @@ class Navigator:
         self.steering_right_max = rospy.get_param(
             '~steering_right_max', 2000)
 
+        self.cone_normal_min_area = rospy.get_param('~cone_normal_min_area',
+                                                    100)
+        self.cone_recovery_min_area = rospy.get_param(
+            '~cone_recovery_min_area', 400)
+
         self.cone_approach_use_throttle = rospy.get_param(
             '~cone_approach_use_throttle', False)
         self.cone_approach_k_speed = rospy.get_param(
@@ -135,6 +140,7 @@ class Navigator:
 
         self.escape_k_throttle = rospy.get_param('~escape_k_speed', 2.0)
         self.escape_k_turning = rospy.get_param('~escape_k_turning', 2.0)
+        self.escape_min_speed = rospy.get_param('~escape_min_speed', 0.7)
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
 
@@ -340,14 +346,20 @@ class Navigator:
             or self.state is States.CIRCLING_BACK \
             or self.state is States.CIRCLING_FORWARD) \
            and self.cone_wp_index is not None \
-           and len(cone_locations.poses) > 0:
+           and self.cone_detected(cone_locations.poses,
+                                  self.cone_recovery_min_area):
+            cone_pose = self.cone_detected(cone_locations.poses,
+                                           self.cone_recovery_min_area)
             self.show_event('on_cone_locations', len(cone_locations.poses))
-            self.begin_driving_to_cone()
+            self.begin_driving_to_cone(cone_pose)
         elif self.state is States.DRIVING_TO_CONE \
-             and len(cone_locations.poses) > 0:
+             and self.cone_detected(cone_locations.poses,
+                                    self.cone_normal_min_area):
+            cone_pose = self.cone_detected(cone_locations.poses,
+                                           self.cone_normal_min_area)
             self.cone_lost_count = 0
             self.show_event('on_cone_locations', len(cone_locations.poses))
-            self.drive_to_cone(cone_locations.poses[0])
+            self.drive_to_cone(cone_pose)
         elif self.state is States.DRIVING_TO_CONE:
             self.cone_lost_count += 1
             if self.cone_lost_count > self.cone_lost_limit:
@@ -378,14 +390,14 @@ class Navigator:
                 self.turn_to_heading(self.target_heading)
                 self.begin_state(States.CIRCLING_FORWARD)
 
-    def begin_driving_to_cone(self):
+    def begin_driving_to_cone(self, cone_pose):
         # Found the cone.
         self.set_manual_speed(0, 0)
         if self.cone_approach_use_throttle:
             self.set_mode(Modes.MANUAL)
         else:
             self.set_mode(Modes.GUIDED)
-            self.drive_to_cone(cone_locations.poses[0])
+            self.drive_to_cone(cone_pose)
         self.begin_state(States.DRIVING_TO_CONE)
 
     def drive_to_cone(self, cone_pose):
@@ -445,7 +457,7 @@ class Navigator:
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
         # Override minimum speed based on testing results.
-	min_speed = 0.7
+	min_speed = max(min_speed, self.escape_min_speed)
         speed = - min(max(self.escape_k_throttle*abs(heading_diff), min_speed),
                       max_speed)
         turning = min(self.escape_k_turning*abs(heading_diff),
@@ -480,6 +492,14 @@ class Navigator:
             return theta - 2*pi
         else:
             return theta
+
+    # Finds a cone pose that has an area greater than a specified minimum,
+    # or returns None if none found.
+    def cone_detected(self, poses, min_area):
+        for pose in poses:
+            if pose.area >= min_area:
+                return pose
+        return None
 
     # Adjust the waypoints so that they are all relative to the current
     # robot location.
