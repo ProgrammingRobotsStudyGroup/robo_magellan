@@ -10,7 +10,7 @@
     <param name="~publishImages" value="True" />
     <param name="~ignorePriorDetections" value="True" />
 
-    <param name="~minConeArea" value="400" />
+    <param name="~minConeArea" value="350" />
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />
     <param name="~binConfig" value="$(find robo_magellan)/config/realsense-bins-0_6.json" />
