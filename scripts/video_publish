@@ -76,14 +76,14 @@ class VideoPublish:
                 key = cv2.waitKey(0)
                 if key == 27:
                     break
+                elif key == ord(';'):
+                    frame_number -= self.backup_frames(2)
                 elif key == ord(']'):
                     frame_number += self.skip_frames(cap, 9)
+                elif key == ord('['):
+                    frame_number -= self.backup_frames(11)
                 elif key == ord('='):
                     frame_number += self.skip_frames(cap, 99)
-                elif key == ord('-'):
-                    frame_number -= self.backup_frames(2)
-                    rospy.loginfo('Back up: new frame number: %d',
-                                  frame_number)
                 elif key == ord('/'):
                     single_frame = False
                     preview = True
@@ -98,12 +98,8 @@ class VideoPublish:
         return skipped
 
     def backup_frames(self, n):
-        rospy.loginfo('Before backup, nframes=%d frame_index=%d',
-                      len(self.frames), self.frame_index)
         n = min(self.frame_index, n)
         self.frame_index -= n
-        rospy.loginfo('After backup, nframes=%d frame_index=%d backed up=%d',
-                      len(self.frames), self.frame_index, n)
         return n
 
     def read_frame(self, cap):
