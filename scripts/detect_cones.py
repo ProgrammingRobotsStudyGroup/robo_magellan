@@ -37,6 +37,9 @@ class RosColorDepth:
         self.cf = ConeFinder(minArea, min_aspect_ratio, max_y)
         self.cs = ConeSeeker()
 
+        max_contour_vertices = rospy.get_param('~max_contour_vertices', 1E9)
+        self.cf.set_max_contour_vertices(max_contour_vertices)
+
         rospy.Subscriber("/camera/color/image_raw", Image, self.imageCallback)
         self.depthImage = None
         rospy.Subscriber("/camera/depth/image_raw", Image, self.depthCallback)
@@ -47,7 +50,8 @@ class RosColorDepth:
         self.thresholdAlgorithm = rospy.get_param('~thresholdAlgorithm', 'bin')
         self.cf.setThresholdAlgorithm(self.thresholdAlgorithm)
 
-        self.contourFilterAlgorithm = rospy.get_param('~contourFilterAlgorithm', 'convexNull')
+        self.contourFilterAlgorithm = rospy.get_param('~contourFilterAlgorithm',
+                                                      'convexNull')
         self.cf.setContourFilterAlgorithm(self.contourFilterAlgorithm)
 
         if rospy.has_param('~binConfig'):

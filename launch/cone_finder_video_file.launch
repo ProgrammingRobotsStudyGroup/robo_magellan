@@ -28,9 +28,19 @@
     <param name="~ignorePriorDetections" value="true" />
 
     <param name="~show_all_contours" value="true" />
+
+    <!-- Use a very small cone area since we area filtering
+         in the navigator. -->
     <param name="~minConeArea" value="75" />
-    <param name="~min_aspect_ratio" value="1.1" />
-    <param name="~max_y" value="280" />
+
+    <!-- Reject cone detections below this aspect ratio. -->
+    <param name="~min_aspect_ratio" value="1.0" />
+
+    <!-- Reject cone contours with more than this number of vertices. -->
+    <param name="~max_contour_vertices" value="1000000" />
+
+    <!-- Require cones to be below the horizon. -->
+    <param name="~max_y" value="10000" />
 
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />

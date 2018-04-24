@@ -29,6 +29,10 @@ class ConeFinder:
     def __init__(self, min_area=300, min_aspect_ratio=1.1, max_y=10000):
         self.min_area = min_area
         self.min_aspect_ratio = min_aspect_ratio
+
+        # Allow a large number of contour vertices, by default.
+        self.max_contour_vertices = 1E9
+
         self.max_y = max_y
         self.firstTime = True
         self.rgbOut = None
@@ -66,6 +70,9 @@ class ConeFinder:
                     4025, 4026, 4027, 4041, 4042, 4043, 4044, 4045, 4058, 4059,
                     4060, 4061, 4062, 4076, 4077, 4078]})
                 
+    def set_max_contour_vertices(self, n):
+        self.max_contour_vertices = n
+
     def _setBinConfiguration(self, binConfig):
         self.numBins = binConfig['numBins']
         self.bins = np.zeros(self.numBins**3, np.uint8)
@@ -272,7 +279,11 @@ class ConeFinder:
                 epsilon = 0.1 * cv2.arcLength(cnt, True)
                 # print'epsilon',epsilon
                 contour = cv2.approxPolyDP(cnt, epsilon, True)
-                #contour = cv2.approxPolyDP(cnt, 6.7, True)
+
+                # Ignore contours that are over a threshold of complexity.
+                if len(contour) > self.max_contour_vertices:
+                    continue
+
                 # Find convex hulls.
                 hull = cv2.convexHull(contour, returnPoints=True)
                 # get the depth range for the hull - min and max
@@ -318,9 +329,17 @@ class ConeFinder:
 
         contours_and_area = []
         for c in contours:
+            # Ignore contours that are lines or too complex.
             if len(c) >= 3:
                 epsilon = 0.02 * cv2.arcLength(c, True)
                 c = cv2.approxPolyDP(c, epsilon, True)
+
+                # Ignore contours that are over a threshold of complexity.
+                if len(c) > self.max_contour_vertices:
+                    # rospy.loginfo('Ignoring because of complexity: %d > %d',
+                    #               len(c), self.max_contour_vertices)
+                    continue
+
                 area = cv2.contourArea(c)
                 if area >= 3:
                     contours_and_area.append((c, cv2.contourArea(c)))
@@ -332,13 +351,15 @@ class ConeFinder:
 
             # Ignore contours where the area is smaller than the minimum.
             if area < self.min_area:
+                # rospy.loginfo('Ignoring because of min area: %f < %f',
+                #               area, self.min_area)
                 continue
-
-            filtered_contours.append(c)
 
             # Ignore contours that aren't a bit taller than wide, unless
             # they are really big.
             if h/w < self.min_aspect_ratio and area < 30000:
+                # rospy.loginfo('Ignoring because of aspect ratio: %f < %f',
+                #               h/w, self.min_aspect_ratio)
                 continue
 
             # Ignore contours where the centroid isn't in the bottom half.
@@ -348,8 +369,6 @@ class ConeFinder:
 #            if cy <= y + h/2:
 #                continue
 
-            list_of_cones.append(c)
-
             pose = pose_data()
             pose.x = x + w/2 - image_centerX
             pose.y = image_height - y - h
@@ -358,8 +377,14 @@ class ConeFinder:
             pose.area = area
 
             # Ignore cones that have a Y position too high.
-            if pose.y <= self.max_y:
-                poses.append(pose)
+            if pose.y > self.max_y:
+                # rospy.loginfo('Ignoring because of max Y: %d > %d',
+                #               pose.y, self.max_y)
+                continue
+
+            filtered_contours.append(c)
+            list_of_cones.append(c)
+            poses.append(pose)
 
         return (filtered_contours, poses, list_of_cones)
 
