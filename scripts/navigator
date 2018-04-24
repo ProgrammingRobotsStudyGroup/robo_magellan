@@ -90,6 +90,7 @@ class Navigator:
         self.state = None
         self.last_wp_speed = None
         self.cone_wp_index = None
+        self.cone_is_close = False
         self.cone_pose = None
         self.waypoint_list = WaypointList()
         self.waypoint_list.waypoints = []
@@ -129,6 +130,8 @@ class Navigator:
         self.cone_recovery_min_area = rospy.get_param(
             '~cone_recovery_min_area', 400)
 
+        self.cone_close_distance = rospy.get_param('~cone_close_distance', 2.0)
+
         self.cone_approach_use_throttle = rospy.get_param(
             '~cone_approach_use_throttle', False)
         self.cone_approach_k_speed = rospy.get_param(
@@ -138,9 +141,16 @@ class Navigator:
         self.cone_timeout = rospy.get_param(
             '~cone_timeout_seconds', 60)
 
+        self.escape_strategy = rospy.get_param('~escape_strategy',
+                                               'simple_backup')
+        self.escape_backup_duration = rospy.get_param(
+            '~escape_backup_duration', 1.0)
+
         self.escape_k_throttle = rospy.get_param('~escape_k_speed', 2.0)
         self.escape_k_turning = rospy.get_param('~escape_k_turning', 2.0)
         self.escape_min_speed = rospy.get_param('~escape_min_speed', 0.7)
+        if self.escape_min_speed == 0:
+            self.escape_min_speed = self.min_speed
         self.escape_angle_tolerance = rospy.get_param(
             '~escape_angle_tolerance', 0.15)
 
@@ -257,6 +267,7 @@ class Navigator:
                 self.cone_wp_index = index
             else:
                 self.cone_wp_index = None
+            self.cone_is_close = False
             self.set_waypoint_speed(index)
             self.begin_state(States.FOLLOWING_WAYPOINTS)
 
@@ -306,14 +317,20 @@ class Navigator:
                 self.set_waypoint_speed(self.waypoint_list.current_seq)
                 if self.is_cone_waypoint(self.waypoint_list.current_seq):
                     self.cone_wp_index = self.waypoint_list.current_seq
+                self.cone_is_close = False
 
     def on_map_waypoints_changed(self, list):
         self.map_waypoint_list = list
 
     def on_touch(self, msg):
-        touching = msg.data
+        # Very quickly change state if touching the cone.
+        if self.state is States.DRIVING_TO_CONE and msg.data:
+            self.state = States.LIMBO
+            touching = True
+        else:
+            touching = False
 
-        if self.state is States.DRIVING_TO_CONE and touching:
+        if touching:
             self.show_event('on_touch', touching)
             self.set_manual_speed(0, 0)
             if self.cone_wp_index == len(self.waypoint_list.waypoints) - 1:
@@ -339,7 +356,24 @@ class Navigator:
                     = self.map_waypoint_list.waypoints[self.cone_wp_index + 1]
                 self.target_heading \
                     = self.angle_to_point(cone_wp.point, escape_wp.point)
-                self.begin_state(States.ESCAPING_CONE)
+
+                if self.escape_strategy == 'simple_backup':
+                    self.simple_backup(self.escape_backup_duration)
+                    self.follow_waypoints(self.cone_wp_index + 1)
+                    rospy.loginfo('After escaping, state=%s',
+                                  self.state.get_name())
+                else:
+                    # New backup strategy, back up toward next waypoint.
+                    self.begin_state(States.ESCAPING_CONE)
+
+    # Escape by backing up straight for a duration, then pausing to setting
+    # before moving.
+    def simple_backup(self, duration):
+        rospy.loginfo('Simple backup strategy, duration=%f', duration)
+        self.set_manual_speed(-self.escape_min_speed, 0)
+        time.sleep(duration)
+        self.set_manual_speed(0, 0)
+        time.sleep(2.0)
 
     def on_cone_locations(self, cone_locations):
         if (self.state is States.FOLLOWING_WAYPOINTS \
@@ -407,7 +441,14 @@ class Navigator:
         cone_heading = atan2(cone_pose.x, fov_dist)
         distance = self.get_cone_distance(cone_pose.area)
 
+        if distance <= self.cone_close_distance:
+            self.cone_is_close = True
+
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
+
+        # Drive at minimum speed if cone is already close.
+        if self.cone_is_close:
+            max_speed = min_speed
 
         speed = min(max(self.cone_approach_k_speed*distance, min_speed),
                     max_speed)
@@ -457,7 +498,8 @@ class Navigator:
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
         # Override minimum speed based on testing results.
-	min_speed = max(min_speed, self.escape_min_speed)
+        min_speed = max(min_speed, self.escape_min_speed)
+
         speed = - min(max(self.escape_k_throttle*abs(heading_diff), min_speed),
                       max_speed)
         turning = min(self.escape_k_turning*abs(heading_diff),

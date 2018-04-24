@@ -14,7 +14,7 @@ normal_speed: 3.0
 # used when driving in GUIDED mode toward a cone. This
 # value is not used when driving in MANUAL mode. Instead,
 # the PWM limits, below, as used.
-min_speeed: 0.1
+min_speeed: 0.15
 
 # The maximum turning velocity, in rad/sec, when using
 # GUIDED mode to approach a cone. It is multipled by
@@ -39,6 +39,16 @@ steering_neutral: 1500
 steering_left_max: 2000
 steering_right_max: 1000
 
+# The distance in meters at which the cone is presumed
+# to be very close and the rover should drive at the
+# minimum speed.
+cone_close_distance: 2.0
+
+# Cone detection thresholds to use when driving to a cone
+# or recovering when the robot cannot find the cone.
+cone_normal_min_area: 200
+cone_recovery_min_area: 400
+
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use
 # GUIDED mode, if true, use MANUAL R/C override.
@@ -48,11 +58,20 @@ cone_approach_use_throttle: true
 # a fraction of either the cone cruise speed or the cone
 # throttle range. This is multiplied by the distance to
 # determine the speed factor from 0 to 1.
-cone_approach_k_speed: 0.04
+cone_approach_k_speed: 0.02
 
 # The proportional constant used to determine the turn rate
 # when approaching, as a fraction of the maximum turning.
 cone_approach_k_turning: 1.5
+
+# The strategy to use when escaping the cone.
+#     simple_backup --> Back up straight
+#     -other value- --> Back up and turn toward next waypoint
+escape_strategy: simple_backup
+
+# The duration in seconds to back up if using the 'simple_backup'
+# strategy.
+escape_backup_duration: 1.0
 
 # The proportional constant used to determine the fraction
 # of the cone waypoint speed to use when escaping from a
@@ -68,7 +87,7 @@ escape_k_turning: 0.7
 
 # A minimum speed to use when backing up while escaping the
 # cone. If zero, the minimum speed, above, is used.
-escape_min_speed: 0.0
+escape_min_speed: 0.2
 
 # The maximum tolerance in heading error in radians before
 # deciding that the robot has turned sufficiently toward
@@ -87,6 +106,9 @@ direction_change_reverse_speed: -1.0
 # The amount of time, in seconds, to pause after the reverse kick
 # before initiating reverse throttle again.
 direction_change_idle_duration: 1.0
+
+# The maximum tolerance in heading error while circling.
+circling_angle_tolerance: 0.15
 
 # The horizontal field-of-view of the camera, in degrees.
 horz_fov: 70.0

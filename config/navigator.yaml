@@ -38,6 +38,11 @@ steering_neutral: 1425
 steering_left_max: 1000
 steering_right_max: 1880
 
+# The distance in meters at which the cone is presumed
+# to be very close and the rover should drive at the
+# minimum speed.
+cone_close_distance: 2.0
+
 # Cone detection thresholds to use when driving to a cone
 # or recovering when the robot cannot find the cone.
 cone_normal_min_area: 200
@@ -57,6 +62,15 @@ cone_approach_k_speed: 0.05
 # The proportional constant used to determine the turn rate
 # when approaching, as a fraction of the maximum turning.
 cone_approach_k_turning: 1.75
+
+# The strategy to use when escaping the cone.
+#     simple_backup --> Back up straight
+#     -other value- --> Back up and turn toward next waypoint
+escape_strategy: simple_backup
+
+# The duration in seconds to back up if using the 'simple_backup'
+# strategy.
+escape_backup_duration: 1.0
 
 # The proportional constant used to determine the fraction
 # of the cone waypoint speed to use when escaping from a
