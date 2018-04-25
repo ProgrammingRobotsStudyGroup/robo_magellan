@@ -8,7 +8,7 @@ gcs_id: 1
 # This value is not used when approaching or escaping
 # a cone under MANUAL mode. Instead, the PWM limits,
 # below, are used as the maximum range.
-normal_speed: 1.0
+normal_speed: 3.0
 
 # The minimum cone appraoch speed in m/s. This value is
 # used when driving in GUIDED mode toward a cone. This
@@ -70,7 +70,7 @@ escape_strategy: simple_backup
 
 # The duration in seconds to back up if using the 'simple_backup'
 # strategy.
-escape_backup_duration: 1.0
+escape_backup_duration: 1.1
 
 # The proportional constant used to determine the fraction
 # of the cone waypoint speed to use when escaping from a
