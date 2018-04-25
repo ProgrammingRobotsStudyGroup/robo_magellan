@@ -29,3 +29,4 @@ class ExecCmds:
     """Defines commands for controlling the navigation code."""
     START = 'START_EXEC'
     RESET = 'RESET'
+    ADJUST_WAYPOINTS = 'ADJUST_WAYPOINTS'

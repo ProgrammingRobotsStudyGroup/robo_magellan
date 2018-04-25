@@ -1,0 +1,27 @@
+#! /bin/bash
+
+function usage() {
+    echo "usage: rosrun robo_magellan exec (start|reset|adjust)"
+    exit 1
+}
+
+if [ $# -ne 1 ]; then
+    usage
+fi
+
+case $1 in
+    start)
+        CMD=START_EXEC
+        ;;
+    reset)
+        CMD=RESET
+        ;;
+    adjust)
+        CMD=ADJUST_WAYPOINTS
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+rostopic pub -1 /exec_cmd_simple std_msgs/String "data: '$CMD'"

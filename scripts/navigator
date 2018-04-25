@@ -253,12 +253,12 @@ class Navigator:
                 rospy.logerr('No waypoints loaded')
                 return
             self.arm_robot(True)
-            # Adjust waypoints w/ wp index zero and start following
-            # waypoints. Wait a small amount of time for the waypoints
-            # to update in the Pixhawk.
-            self.adjust_waypoints(0)
             time.sleep(1.0)
             self.follow_waypoints(1)
+        elif self.state is States.WAITING_FOR_START \
+             and cmd==ExecCmds.ADJUST_WAYPOINTS:
+            # Adjust waypoints w/ wp index zero.
+            self.adjust_waypoints(0)
 
     def follow_waypoints(self, index):
             self.set_current_waypoint(index)

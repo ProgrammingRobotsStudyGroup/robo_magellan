@@ -166,6 +166,8 @@ install(PROGRAMS
   scripts/navigator
   scripts/utm_transform_publisher
   scripts/waypoint_transformer
+  scripts/capture_waypoints
+  scripts/exec
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
