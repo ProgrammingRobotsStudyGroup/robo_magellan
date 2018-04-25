@@ -161,6 +161,8 @@ class Navigator:
         self.direction_change_idle_duration = rospy.get_param(
             '~direction_change_idle_duration', 1.0)
 
+        self.circling_relative_speed = rospy.get_param(
+            '~circling_relative_speed', 1.5)
         self.circling_angle_tolerance = rospy.get_param(
             '~circling_angle_tolerance', 0.15)
 
@@ -486,7 +488,7 @@ class Navigator:
     def circle_forward(self, heading_diff):
         min_speed, max_speed = self.get_cone_speed_factor(self.cone_wp_index)
 
-        speed = min_speed
+        speed = min(min_speed*self.circling_relative_speed, max_speed)
         turning = self.max_turning
 
         rospy.loginfo('[circling] heading_diff=%f speed=%f turning=%f',

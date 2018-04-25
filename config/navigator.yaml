@@ -106,6 +106,10 @@ direction_change_reverse_speed: -1.0
 # before initiating reverse throttle again.
 direction_change_idle_duration: 1.0
 
+# The factor by which we multiply the minimum speed to get the
+# circling speed when recovering from a cone miss.
+circling_relative_speed: 1.5
+
 # The maximum tolerance in heading error while circling.
 circling_angle_tolerance: 0.15
 

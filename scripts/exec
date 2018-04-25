@@ -1,27 +1,31 @@
 #! /bin/bash
 
 function usage() {
-    echo "usage: rosrun robo_magellan exec (start|reset|adjust)"
+    echo "usage: rosrun robo_magellan exec (start|reset|load|pull|adjust)"
     exit 1
 }
 
-if [ $# -ne 1 ]; then
+if [ $# -lt 1 ]; then
     usage
 fi
 
 case $1 in
     start)
-        CMD=START_EXEC
+        rostopic pub -1 /exec_cmd_simple std_msgs/String "data: 'START_EXEC'"
         ;;
     reset)
-        CMD=RESET
+        rostopic pub -1 /exec_cmd_simple std_msgs/String "data: 'RESET'"
+        ;;
+    load)
+        rosrun mavros mavwp load $2
         ;;
     adjust)
-        CMD=ADJUST_WAYPOINTS
+        rostopic pub -1 /exec_cmd_simple std_msgs/String "data: 'ADJUST_WAYPOINTS'"
+        ;;
+    pull)
+        rosservice call /mavros/mission/pull "{}"
         ;;
     *)
         usage
         ;;
 esac
-
-rostopic pub -1 /exec_cmd_simple std_msgs/String "data: '$CMD'"
