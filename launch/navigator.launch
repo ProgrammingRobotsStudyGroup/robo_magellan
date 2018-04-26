@@ -58,7 +58,9 @@
     <remap from="/robo_magellan/touch" to="/touch" />
   </node>
 
-  <include file="$(find robo_magellan)/launch/utm_transform.launch" />
+  <include file="$(find robo_magellan)/launch/utm_transform.launch">
+    <arg name="log_output" value="$(arg log_output)" />
+  </include>
 
   <group if="$(arg view_mission)">
     <include file="$(find robo_magellan)/launch/view_mission.launch">

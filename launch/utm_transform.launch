@@ -4,7 +4,7 @@
   <arg name="log_output" default="screen" />
 
   <node name="utm_transform_publisher" pkg="robo_magellan"
-        type="utm_transform_publisher" />
+        type="utm_transform_publisher" output="$(arg log_output)" />
 
   <node name="waypoint_transformer" pkg="robo_magellan"
         type="waypoint_transformer" output="$(arg log_output)">

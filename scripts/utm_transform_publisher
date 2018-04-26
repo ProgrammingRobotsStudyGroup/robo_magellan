@@ -51,6 +51,12 @@ class UTMPublisher:
         t.transform.rotation.z = q[2]
         t.transform.rotation.w = q[3]
 
+        rospy.loginfo('[utm_transform_publisher] lat=%f lon=%f x=%f y=%f dx=%f dy=%f',
+                      gps_position.latitude, gps_position.longitude,
+                      local_position.pose.position.x,
+                      local_position.pose.position.y,
+                      t.transform.translation.x, t.transform.translation.y)
+
         self.transform_broadcaster.sendTransform(t)
 
 if __name__ == "__main__":
