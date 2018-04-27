@@ -1,0 +1,84 @@
+#! /usr/bin/env python
+
+"""Shows pose information from mavros."""
+
+import rospy
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import NavSatFix
+
+class Topics:
+    GLOBAL_FIX = 'mavros/global_position/raw/fix'
+    GLOBAL_GPS = 'mavros/global_position/global'
+    GLOBAL_UTM = 'mavros/global_position/local'
+    GLOBAL_VEL = 'mavros/global_position/gp_vel'
+    LOCAL_POSE = 'mavros/local_position/pose'
+    LOCAL_VEL = 'mavros/local_position/velocity'
+    
+
+
+class ShowPose:
+
+    def run(self):
+        rospy.init_node('show_pose')
+
+        self.fix = None
+        self.gps = None
+        self.utm = None
+        self.map = None
+
+        rospy.Subscriber(Topics.GLOBAL_FIX, NavSatFix,
+                         self.on_global_raw_fix)
+        rospy.Subscriber(Topics.GLOBAL_GPS, NavSatFix,
+                         self.on_global_gps_position)
+        rospy.Subscriber(Topics.GLOBAL_UTM, Odometry,
+                         self.on_global_utm_position)
+        rospy.Subscriber(Topics.GLOBAL_VEL, TwistStamped,
+                         self.on_global_velocity)
+        rospy.Subscriber(Topics.LOCAL_POSE, PoseStamped, self.on_local_pose)
+        rospy.Subscriber(Topics.LOCAL_VEL, TwistStamped,
+                         self.on_local_velocity)
+
+        rate = rospy.Rate(rospy.get_param('~rate', 1.0))
+
+        while not rospy.is_shutdown():
+            self.show_poses()
+            rate.sleep()
+
+    def show_poses(self):
+        rospy.loginfo('global raw=%s GPS=%s UTM=%s, local pose=%s',
+                      self.fix, self.gps, self.utm, self.map)
+
+    def on_global_gps_position(self, msg):
+        self.gps = {'lat': msg.latitude, 'lon': msg.longitude}
+
+    def on_global_raw_fix(self, msg):
+        self.fix = {'lat': msg.latitude, 'lon': msg.longitude}
+
+    def on_global_utm_position(self, msg):
+        self.utm = {
+            'x': msg.pose.pose.position.x,
+            'y': msg.pose.pose.position.y
+        }
+
+    def on_global_velocity(self, msg):
+        pass
+
+    def on_local_pose(self, msg):
+        self.map = {
+            'x': msg.pose.position.x,
+            'y': msg.pose.position.y
+        }
+
+    def on_local_velocity(self, msg):
+        pass
+
+
+if __name__ == "__main__":
+    try:
+        ShowPose().run()
+
+    except rospy.ROSInterruptException:
+        pass

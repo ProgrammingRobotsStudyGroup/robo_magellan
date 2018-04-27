@@ -12,4 +12,7 @@
     <remap from="~waypoints/update" to="/robo_magellan/waypoints/update" />
   </node>
 
+  <node name="show_pose" pkg="robo_magellan" type="show_pose"
+        output="$(arg log_output)" />
+
 </launch>
