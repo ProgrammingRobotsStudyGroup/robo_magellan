@@ -21,7 +21,7 @@
     <param name="~max_contour_vertices" value="1000000" />
 
     <!-- Require cones to be below the horizon. -->
-    <param name="~max_y" value="260" />
+    <param name="~max_y" value="230" />
 
     <!-- Use 'bin' for new binning algorithm, 'hsv' for hue-based algorithm. -->
     <param name="~thresholdAlgorithm" value="bin" />

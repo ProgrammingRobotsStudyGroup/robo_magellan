@@ -46,7 +46,7 @@ cone_close_distance: 2.0
 # Cone detection thresholds to use when driving to a cone
 # or recovering when the robot cannot find the cone.
 cone_normal_min_area: 200
-cone_recovery_min_area: 400
+cone_recovery_min_area: 300
 
 # Sets whether to use commanded velocity under GUIDED mode
 # or throttle control under MANUAL mode. If false, use

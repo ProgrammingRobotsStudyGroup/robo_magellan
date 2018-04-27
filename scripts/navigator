@@ -561,6 +561,7 @@ class Navigator:
         new_waypoints.waypoints = []
 
         base_wp = self.map_waypoint_list.waypoints[index]
+        rospy.loginfo('Base wp: x=%f y=%f', base_wp.point.x, base_wp.point.y)
 
         for wp in self.map_waypoint_list.waypoints:
             new_wp = LocalWaypoint()
