@@ -1,0 +1,68 @@
+#! /bin/bash
+
+if [ $# -lt 2 ]; then
+    echo "usage: avg_waypoints file1 file2 ..."
+    exit 1
+fi
+
+awk '
+BEGIN {
+    FS = "\t"
+    nFiles = 0
+}
+
+NF==1 {
+    ++nFiles
+    waypoints[nFiles] = 0
+    if (nFiles == 1) {
+        # Use header line of first file.
+        header = $0
+    }
+    next
+}
+
+NF==12 {
+    ++waypoints[nFiles]
+    for (i=1; i<=NF; ++i) {
+        if (nFiles == 1) {
+            print "Field " nFiles "/" waypoints[nFiles] "/" i ": " $i
+            field[waypoints[nFiles], i] = $i
+        } else if (i==9 || i==10) {
+            print "Field " nFiles "/" waypoints[nFiles] "/" i ": " $i
+            field[waypoints[nFiles], i] += $i
+        }
+    }
+    next
+}
+
+{
+    print "Wrong number of fields in file " nFiles " (" NF "!=12): " $0
+    exit 1
+}
+
+END {
+    # Check that all files have the same number of waypoints.
+    n = waypoints[1]
+    for (i=2; i<=nFiles; ++i) {
+        if (waypoints[i] != n) {
+            print "File " i " has wrong number of waypoints (" waypoints[i] "!=" n
+            exit 1
+        }
+    }
+
+    print "Number of waypoints: " n
+
+    print header
+    for (i=1; i<=n; ++i) {
+        for (j=1; j<=12; ++j) {
+            if (j==9 || j==10) {
+                printf("\t%.9f", field[i, j]/nFiles)
+            } else if (j == 1) {
+                printf("%s", field[i, 1])
+            } else {
+                printf("\t%s", field[i, j])
+            }
+        }
+        printf("\n")
+    }
+}' "$@"
