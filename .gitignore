@@ -3,3 +3,6 @@
 startup.log
 pylint.log
 robo_magellan.html
+*.FCStd1
+*.gcode
+
