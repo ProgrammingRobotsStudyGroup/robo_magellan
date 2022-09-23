@@ -16,7 +16,7 @@
  *
  * A set of sensor service routines to manage:
  * - Wheel encoder
- * - Bumper
+ * - Touch sensor
  * - Serial com with upstream host
  */
 
@@ -27,7 +27,7 @@
 #define SERIAL_STREAM Serial
 #define DEBUG_SERIAL_STREAM Serial
 
-#define BUMPER_SWITCH 4
+#define TOUCH_SENSORS true
 
 void setup() {
   Serial.begin(115200);
@@ -35,10 +35,8 @@ void setup() {
 
   initWheelEncoder();
 
-  initBumper();
-
-  #ifdef BUMPER_SWITCH
-  pinMode(BUMPER_SWITCH, INPUT_PULLUP);
+  #ifdef TOUCH_SENSORS
+    initTouchSensor(TOUCH_SWITCH_QTY);
   #endif
 }
 
@@ -57,10 +55,14 @@ void loop() {
   if (elapsed > _delay) {
     timer = newtime;
 
-    #ifdef BUMPER_SWITCH
-    // Print bumper indication.
+    #ifdef TOUCH_SENSORS
+    // Display touch sensor state
     Serial.print("B ");
-    Serial.println(!digitalRead(BUMPER_SWITCH));
+    Serial.print(!digitalRead(TOUCH_SW_1));
+    Serial.print(' ');
+    Serial.print(!digitalRead(TOUCH_SW_2));
+    Serial.print(' ');
+    Serial.println(!digitalRead(TOUCH_SW_3));
     #endif
 
     // Show left and right encoder ticks.

@@ -9,7 +9,7 @@
 
 #include "command.h"
 #include "wheelencoder.h"
-#include "bumper.h"
+#include "touch_sensor.h"
 
 #include <stdint.h>
 
