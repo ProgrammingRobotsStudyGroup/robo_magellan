@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-catkin_python_setup()
+#catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -156,7 +156,14 @@ add_dependencies(video_odometry robo_magellan_generate_messages_cpp)
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-install(PROGRAMS
+catkin_install_python(PROGRAMS 
+  scripts/chatty.py
+  scripts/auto_number.py
+  scripts/mock_cone_detector
+  scripts/mock_touch_detector
+  scripts/show_pose
+  scripts/soundmap.py
+
   scripts/detect_cones.py
   scripts/arduino_receiver
   scripts/seek_cone.py
@@ -168,6 +175,23 @@ install(PROGRAMS
   scripts/waypoint_transformer
   scripts/capture_waypoints
   scripts/exec
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+## Mark executables for installation
+## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
+install(PROGRAMS
+#  scripts/detect_cones.py
+#  scripts/arduino_receiver
+#  scripts/seek_cone.py
+#  scripts/train_color_binned
+#  scripts/video_publish
+#  scripts/view_mission
+#  scripts/navigator
+#  scripts/utm_transform_publisher
+#  scripts/waypoint_transformer
+#  scripts/capture_waypoints
+#  scripts/exec
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
