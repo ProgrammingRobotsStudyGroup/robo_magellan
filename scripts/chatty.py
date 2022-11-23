@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2017 Robot Garden, Inc.
 #
@@ -23,10 +23,13 @@
 #
 ## Sound node. Listens to /play and /playfile topics. Plays wav files.
 #
+import sys
+import rospkg
+
+sys.path.insert(0,rospkg.RosPack().get_path('robo_magellan')+'/scripts')
 
 import subprocess as subp
 
-import rospkg
 import rospy
 from std_msgs.msg import String
 import soundmap

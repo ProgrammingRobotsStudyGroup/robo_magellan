@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2017 Robot Garden, Inc.
 #
@@ -96,33 +96,31 @@ class SoundMapEnum(AutoNumber):
         """Get file name"""
         return self.file_name
 
-
-# Read sound name/file association file
-  # Get an instance of RosPack with the default search paths
-rospack = rospkg.RosPack()
-  # Get the file path for rospy_tutorials
-path = rospack.get_path('robo_magellan') + "/scripts/soundmapfiles.yaml"
-print path
-stream = open(path, "r")
-sound_name_file_assoc = yaml.load_all(stream)
-  # Associate enumerated key (token) with value (file name)
-for doc in sound_name_file_assoc:
-    if doc is None:
-        break
-    for k, v in doc.items():
+if __name__ == "__main__":
+    # Read sound name/file association file
+    # Get an instance of RosPack with the default search paths
+    rospack = rospkg.RosPack()
+    # Get the file path for rospy_tutorials
+    path = rospack.get_path('robo_magellan') + "/scripts/soundmapfiles.yaml"
+    print (path)
+    stream = open(path, "r")
+    # sound_name_file_assoc = yaml.load_all(stream)
+    sound_name_file_assoc = yaml.load(stream, Loader=yaml.SafeLoader)
+    print(sound_name_file_assoc)
+    # Associate enumerated key (token) with value (file name)
+    for k, v in sound_name_file_assoc.items():
         try:
             # Find the enum corresponding to the key
             SoundMapEnum.__getattr__(k).file_name = v
+            print (k, "->", v)
         except:
-            print 'No enum named: '+k
-        #print k, "->", v
-        #pass
-    #print "\n"
+            print ('No enum named: '+k)
 
-#print list(SoundMapEnum)
-#print(SoundMapEnum.ARMED.file_name)
-#print(SoundMapEnum.ARMED)
-#print(SoundMapEnum.AUTO.file_name)
-#print(SoundMapEnum.AUTO)
-#print SoundMapEnum
-
+    
+    #print list(SoundMapEnum)
+    #print(SoundMapEnum.ARMED.file_name)
+    #print(SoundMapEnum.ARMED)
+    #print(SoundMapEnum.AUTO.file_name)
+    #print(SoundMapEnum.AUTO)
+    #print SoundMapEnum
+    
