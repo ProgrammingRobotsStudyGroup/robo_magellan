@@ -1,0 +1,6 @@
+# Linux users can copy this file into /etc/udev/rules.d/ to prevent
+# ModemManager from taking over the virtual serial port of the ESP32
+# 
+
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="esp32"
+
