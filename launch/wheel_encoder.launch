@@ -1,12 +1,25 @@
 <launch>
   <node name="wheel_encoder" pkg="robo_magellan" type="arduino_receiver">
+
+    <!-- Touch Sensors -->
     <param name="~publish_touch" value="True" />
-    <param name="~touch_sensor_count" value="2" />         <!-- Number of touch sensors in use -->
-    <param name="~wheel_diameter" value="0.200" />
-    <param name="~ticks_per_revolution" value="80" />
+    <param name="~touch_sensor_count" value="2" />
+
+    <!-- Wheel size -->
+    <!-- Stampede -->
+    <param name="~wheel_diameter" value="0.12192" /> <!-- 4.8" -->
+    <param name="~ticks_per_revolution" value="20" />
+    <!-- XMaxx -->
+    <!-- param name="~wheel_diameter" value="0.200" / -->
+    <!-- param name="~ticks_per_revolution" value="80" / -->
+
+    <!-- Serial Interface -->
     <!-- param name="~serial_device" value="/dev/ttyACM0" / -->
     <!-- /dev/astar defined in udev rules -->
-    <param name="~serial_device" value="/dev/astar" />
+    <!-- param name="~serial_device" value="/dev/astar" / -->
+    <param name="~serial_device" value="/dev/esp32" />
+
     <param name="~serial_rate" value="115200" />
+
   </node>
 </launch>
