@@ -28,19 +28,53 @@
 // The following pin deffinitions can be changed.
 // If changed, additional changes in the code are required
 
-#define LEFT_ENCODER_PIN_A 8
-#define LEFT_ENC_PIN_A PB4
-#define LEFT_ENCODER_PIN_B 9
-#define LEFT_ENC_PIN_B PB5
+// UNO
+#ifdef ARDUINO_AVR_UNO
+  #define LEFT_ENCODER_PIN_A 2
+  #define LEFT_ENC_PIN_A PB4
+  #define LEFT_ENCODER_PIN_B 3
+  #define LEFT_ENC_PIN_B PB5
 
-#define RIGHT_ENCODER_PIN_A 10
-#define RIGHT_ENC_PIN_A PB6
-#define RIGHT_ENCODER_PIN_B 11
-#define RIGHT_ENC_PIN_B PB7
+  //#define RIGHT_ENCODER_PIN_A 10
+  //#define RIGHT_ENC_PIN_A PB6
+  //#define RIGHT_ENCODER_PIN_B 11
+  //#define RIGHT_ENC_PIN_B PB7
+
+  #define LED_ENC_A 11
+  #define LED_ENC_B 10
+#endif
+
+// 32U4: ATMega
+//  pololu A-Star 32U4 Micro
+//  See https://www.pololu.com/product/3101
+#ifdef ARDUINO_AVR_A_STAR_32U4
+  #define LEFT_ENCODER_PIN_A 8
+  #define LEFT_ENC_PIN_A PB4
+  #define LEFT_ENCODER_PIN_B 9
+  #define LEFT_ENC_PIN_B PB5
+
+  #define RIGHT_ENCODER_PIN_A 10
+  #define RIGHT_ENC_PIN_A PB6
+  #define RIGHT_ENCODER_PIN_B 11
+  #define RIGHT_ENC_PIN_B PB7
+#endif
+
+// ESP32
+#ifdef ESP32
+  #define LEFT_ENCODER_PIN_A 15
+  #define LEFT_ENC_PIN_A GPIO15
+  #define LEFT_ENCODER_PIN_B 2
+  #define LEFT_ENC_PIN_B GPIO2
+
+  #define RIGHT_ENCODER_PIN_A 27
+  #define RIGHT_ENC_PIN_A GPIO12
+  #define RIGHT_ENCODER_PIN_B 26
+  #define RIGHT_ENC_PIN_B GPIO14
+#endif
+
 
 // Left/right encoder
-enum {
-  LEFT_ENCODER,
+enum ENCODER {  LEFT_ENCODER,
   RIGHT_ENCODER
 };
 

@@ -16,8 +16,11 @@
  */
 
 #include "wheelencoder.h"
-#include <FastGPIO.h>
-#include <EnableInterrupt.h>
+//
+#ifndef ESP32
+  #include <FastGPIO.h>
+  #include <EnableInterrupt.h>
+#endif
 
 static const long MIN_CHANGE_TIME = 1000; // 1000us = 1ms is minimum time between ticks.
 
@@ -67,15 +70,27 @@ static void updateTicks(volatile long &ticks, volatile int &last_state,
 
 // Update the left encoder when either encoder pin changes.
 static void leftISR() {
-  int new_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()
+  int new_state;
+#ifndef ESP32 	// NON ESP32 processors
+  new_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()
      | FastGPIO::Pin<LEFT_ENCODER_PIN_B>::isInputHigh()<<1;
+#else			//
+  new_state = (digitalRead(LEFT_ENCODER_PIN_A)==HIGH)
+     | (digitalRead(LEFT_ENCODER_PIN_B)==HIGH)<<1;
+#endif
   updateTicks(left_ticks, last_left_state, last_left_time, new_state);
 }
 
 // Update the encoder when the right A pin changes.
 static void rightISR() {
-  int new_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()
+  int new_state;
+#ifndef ESP32 	// NON ESP32 processors
+  new_state = FastGPIO::Pin<RIGHT_ENCODER_PIN_A>::isInputHigh()
      | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh()<<1;
+#else			// ESP32
+  new_state = (digitalRead(RIGHT_ENCODER_PIN_A)==HIGH)
+     | (digitalRead(RIGHT_ENCODER_PIN_B)==HIGH)<<1;
+#endif
   updateTicks(right_ticks, last_right_state, last_right_time, new_state);
 }
 
@@ -83,6 +98,20 @@ static void rightISR() {
  * 
  */
 void initWheelEncoder() {
+#if ESP32 	// ESP32 processors
+  pinMode(LEFT_ENCODER_PIN_A, INPUT_PULLUP);
+  attachInterrupt(LEFT_ENCODER_PIN_A, leftISR, CHANGE);
+
+  pinMode(LEFT_ENCODER_PIN_B, INPUT_PULLUP);
+  attachInterrupt(LEFT_ENCODER_PIN_B, leftISR, CHANGE);
+
+  pinMode(RIGHT_ENCODER_PIN_A, INPUT_PULLUP);
+  attachInterrupt(RIGHT_ENCODER_PIN_A, rightISR, CHANGE);
+
+  pinMode(RIGHT_ENCODER_PIN_B, INPUT_PULLUP);
+  attachInterrupt(RIGHT_ENCODER_PIN_B, rightISR, CHANGE);
+
+#else		// NON ESP32 processors
   FastGPIO::Pin<LEFT_ENCODER_PIN_A>::setInputPulledUp();
   FastGPIO::Pin<LEFT_ENCODER_PIN_B>::setInputPulledUp();
 
@@ -93,6 +122,7 @@ void initWheelEncoder() {
   enableInterrupt(LEFT_ENCODER_PIN_B, leftISR, CHANGE);
   enableInterrupt(RIGHT_ENCODER_PIN_A, rightISR, CHANGE);
   enableInterrupt(RIGHT_ENCODER_PIN_B, rightISR, CHANGE);
+#endif
 
   resetEncoders();
 }
@@ -108,6 +138,7 @@ long readTicks(int i) {
 
 /* Wrap the encoder reset function */
 void resetEncoder(int i) {
+#ifndef ESP32	// NON ESP32 processors
   if (i == LEFT_ENCODER) {
     left_ticks = 0;
     last_left_state = FastGPIO::Pin<LEFT_ENCODER_PIN_A>::isInputHigh()<<1
@@ -119,6 +150,19 @@ void resetEncoder(int i) {
       | FastGPIO::Pin<RIGHT_ENCODER_PIN_B>::isInputHigh();
     last_right_time = micros();
   }
+#else			// ESP32
+  if (i == LEFT_ENCODER) {
+    left_ticks = 0;
+    last_left_state = (digitalRead(LEFT_ENCODER_PIN_A)==HIGH)
+      | (digitalRead(LEFT_ENCODER_PIN_B)==HIGH)<<1;
+    last_left_time = micros();
+  } else {
+    right_ticks = 0;
+    last_right_state = (digitalRead(RIGHT_ENCODER_PIN_A)==HIGH)
+      | (digitalRead(RIGHT_ENCODER_PIN_B)==HIGH)<<1;
+    last_right_time = micros();
+  }
+#endif
 }
 
 void resetEncoders() {
