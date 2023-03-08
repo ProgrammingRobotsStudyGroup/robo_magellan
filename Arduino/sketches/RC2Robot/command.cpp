@@ -15,10 +15,12 @@
  *
  */
 
-#if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
-#else
-#include "WProgram.h"
+#ifndef ESP32
+  #if defined(ARDUINO) && ARDUINO >= 100
+    #include "Arduino.h"
+  #else
+    #include "WProgram.h"
+  #endif
 #endif
 
 #include "command.h"
@@ -47,7 +49,7 @@ char cmd;                 // command
 char argv1[16];           // First and second arguments
 char argv2[16];
 int arg = 0;
-int index = 0;
+int _index = 0;
 
 /**
  * Read a character from a serial connection
@@ -63,10 +65,10 @@ void processCommandChar() {
     // Terminate a command with a CR
     if (chr == CHAR_CR) {
       if (arg == 1) {
-        argv1[index] = NULL;
+        argv1[_index] = NULL;
       }
       else if (arg == 2) {
-        argv2[index] = NULL;
+        argv2[_index] = NULL;
       }
       executeCommand(cmd, atoi(argv1), atoi(argv2));
       initCommand();
@@ -75,8 +77,8 @@ void processCommandChar() {
     else if (chr == CHAR_SP) {
       switch (arg) {
         case 1:
-          argv1[index] = NULL;
-          index = 0;
+          argv1[_index] = NULL;
+          _index = 0;
           // Fall through
         case 0:
           arg+=1;
@@ -89,12 +91,12 @@ void processCommandChar() {
       }
       else if (arg == 1) {
         // Subsequent arguments can be more than one character
-        argv1[index] = chr;
-        index++;
+        argv1[_index] = chr;
+        _index++;
       }
       else if (arg == 2) {
-        argv2[index] = chr;
-        index++;
+        argv2[_index] = chr;
+        _index++;
       }
     }
   }
@@ -108,13 +110,16 @@ void initCommand() {
   memset(argv1, 0, sizeof(argv1));
   memset(argv2, 0, sizeof(argv2));
   arg = 0;
-  index = 0;
+  _index = 0;
 }
 
 /**
  * Execute command from an external communication channel.
+ * Return: 1 = Command processed;
+ *         0 = Bad command
  */
 int executeCommand(int cmd, int arg1, int arg2) {
+  int retVal = 1;
 
   switch(cmd) {
   case ANALOG_READ:
@@ -153,11 +158,11 @@ int executeCommand(int cmd, int arg1, int arg2) {
 //    SERIAL_STREAM.print(" ");
 //    SERIAL_STREAM.println(readEncoder(RIGHT));
 //    break;
-//   case RESET_ENCODERS:
-//    resetEncoders();
+   case RESET_ENCODERS:
+    resetEncoders();
 //    resetPID();
-//    SERIAL_STREAM.println(STR_OK);
-//    break;
+    SERIAL_STREAM.println("Reset encoders");
+    break;
 //  case MOTOR_SPEEDS:
 //    /* Reset the auto stop timer */
 //    lastMotorCommand = millis();
@@ -184,14 +189,19 @@ int executeCommand(int cmd, int arg1, int arg2) {
 //    SERIAL_STREAM.println(STR_OK);
 //    break;
 //#endif
+
+  // 0=LEFT_ENCODER; 1=RIGHT_ENCODER. See enum.
   case VELOCITY:
     double vel;
     vel = readTicks(arg2);
     SERIAL_STREAM.println(vel);
     break;
+
+  // Bad command=Unrecognized
   default:
     SERIAL_STREAM.println("Bad command");
+    retVal = 0;
     break;
   }
+  return retVal;
 }
-

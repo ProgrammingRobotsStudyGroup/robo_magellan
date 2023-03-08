@@ -25,14 +25,15 @@ void enableInterrupt(uint8_t interruptDesignator, void (*userFunction)(void), ui
 // Use 1, 2 or 3. 
 #define TOUCH_SWITCH_QTY 2
 
+#ifdef ESP32
+#define TOUCH_SW_1  16
+#define TOUCH_SW_2  17
+#define TOUCH_SW_3  05
+#else
 #define TOUCH_SW_1  4
 #define TOUCH_SW_2  5
 #define TOUCH_SW_3  6
-
-void initTouchSensor(int qty);
-void touchSw1ISR();
-void touchSw2ISR();
-void touchSw3ISR();
-
 #endif
+void initTouchSensor(int qty);
 
+#endif //touch_sensor_h
