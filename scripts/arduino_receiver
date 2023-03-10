@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import os
@@ -20,14 +20,37 @@ class Receiver():
         rospy.init_node(self.node_name)
 
         self.publish_touch = rospy.get_param('~publish_touch', True)
+        self.touch_sensor_count = rospy.get_param('~touch_sensor_count', 0)
+        self.touch_sensors_pub = []
         self.wheel_diameter = rospy.get_param('~wheel_diameter', 0.200)
         self.ticks_per_revolution = rospy.get_param('~ticks_per_revolution', 80)
         port = rospy.get_param('~serial_device', '/dev/ttyACM0')
         baud = rospy.get_param('~serial_rate', 115200)
 
-        self.serial_port = serial.Serial(port, baud)
+        # Attempt to find the right connection?
+        # Connect to serial port, with retry
+        MAX_TRY = 20
+        retries = 0
+        while True:
+            try:
+                self.serial_port = serial.Serial(port, baud)
+                break
+            except:
+                if rospy.is_shutdown():
+                    rospy.logwarn("ROS is shutting down")
+                    sys.exit()
+                time.sleep(2)
+                retries += 1
+                if retries >= MAX_TRY:
+                    raise Exception('Failed to connect to: '+port)
+                rospy.logwarn("Retry connect to: "+port)
+
         if self.publish_touch:
             self.touch_pub = rospy.Publisher("/robo_magellan/touch", Bool, queue_size = 1)
+            # If we have a sensor count >0, create a publisher for each
+            if self.touch_sensor_count > 0:
+                for index in range(self.touch_sensor_count):
+                    self.touch_sensors_pub.append(rospy.Publisher("/robo_magellan/touch"+str(index), Bool, queue_size = 1))
         self.speed_pub = rospy.Publisher("/robo_magellan/speed", Float32, queue_size = 1)
         self.enc_pub = rospy.Publisher("/robo_magellan/encoder_distance", Float32, queue_size = 1)
         
@@ -38,6 +61,14 @@ class Receiver():
         rospy.loginfo('{0}: Ready.'.format(self.node_name))
 
     def run(self):
+        # Compile regex expressions
+        # Touch
+        re_touch_orig = re.compile('^B ([-0-9]+)')
+        re_touch = re.compile('^B(\s[-0-9]+)*')
+        re_digits = re.compile('([-0-9]+)')
+        # Encoder
+        re_encoder = re.compile('^E ([-0-9]+) ([-0-9]+) ([-0-9]+)')
+
         while not rospy.is_shutdown():
             t = time.time()
 
@@ -59,22 +90,34 @@ class Receiver():
                 else:
                     led_string += "255 0 0\n"
 
-                self.serial_port.write(led_string)
+                self.serial_port.write(bytes(led_string, 'ascii'))
 
             try:
-                l = self.serial_port.readline()
+                l = str(self.serial_port.readline(), 'utf-8')
                 if l:
                     l = l.rstrip()
                     # rospy.loginfo("%s: line=%s" % (self.node_name, l))
 
-                    m = re.match('^B ([-0-9]+)$', l)
-                    if m:
-                        value = int(m.group(1))
-                        # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
-                        if self.publish_touch:
+                    if self.publish_touch:
+                        # Backward compatibility
+                        # /robo_magellan/touch gets same msgs as /robo_magellan/touch0
+                        m = re_touch_orig.match(l)
+                        if m:
+                            value = int(m.group(1))
+                            # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
                             self.touch_pub.publish(value != 0)
 
-                    m = re.match('^E ([-0-9]+) ([-0-9]+) ([-0-9]+)', l)
+                        # Check for touch switch message w/ 'n' touch sensors 
+                        m = re_touch.match(l)
+                        if m:
+                            touch_values = re_digits.findall(l)
+                            # If we have a sensor count >0, publish the sensor's value
+                            if self.touch_sensor_count > 0:
+                                for index in range(self.touch_sensor_count):
+                                    value = int(touch_values[index])
+                                    self.touch_sensors_pub[index].publish(value != 0)
+
+                    m = re_encoder.match(l)
                     # Groups are:
                     #   0 = entire match
                     #   1 = period in ms
