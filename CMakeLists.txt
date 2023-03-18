@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-#catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -158,6 +158,8 @@ add_dependencies(video_odometry robo_magellan_generate_messages_cpp)
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS 
   scripts/chatty.py
+  src/robo_magellan/constants.py
+  src/robo_magellan/cone_finder.py
   scripts/auto_number.py
   scripts/mock_cone_detector
   scripts/mock_touch_detector
