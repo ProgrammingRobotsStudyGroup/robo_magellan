@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2017 Robot Garden, Inc.
 #
@@ -65,7 +65,6 @@ def monitor():
             pubToken.publish(token)
             rospy.loginfo('Arm state: '+token)
         last_arm = this_arm
-
         #
         rate.sleep()
 
