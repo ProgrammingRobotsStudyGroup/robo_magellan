@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """Listens for waypoints and republishes waypoints in map coordinates."""
 

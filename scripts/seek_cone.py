@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Node using cone_finder/location messages and
 # Publishes /mavros_msgs/OverrideRCIn messages

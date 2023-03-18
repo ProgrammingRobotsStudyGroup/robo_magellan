@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2017 Robot Garden, Inc.
 #
@@ -225,7 +225,7 @@ class UAV_State:
             pass
         try:
             is_mode_changed = self.svc_set_mode(custom_mode=new_mode)
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo(
                 "Service set_mode call failed: %s. Mode %s could not be set. "
                 "Check that GPS is enabled.",
@@ -247,7 +247,7 @@ class UAV_State:
             self.arm = new_arm
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo("Service arm call failed: %s. "
                           "Attempted to set %s",
                           err, new_arm)
