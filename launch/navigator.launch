@@ -24,18 +24,18 @@
   <group if="$(eval is_mavros != '')">
     <include file="$(find mavros)/launch/apm.launch">
       <!-- this must match the UP port-baud rate connected to Pixhawk -->
-      <arg name="fcu_url" value="/dev/ttyS1:115200" />
+      <arg name="fcu_url" value="/dev/pixhawk:115200" />
       <arg name="log_output" value="$(arg log_output)" />
     </include>
   </group>
 
-  <arg name="vid" default="false" />
+  <!-- arg name="vid" default="false" />
   <group if="$(arg vid)">
     <include file="$(find robo_magellan)/launch/cone_finder_video.launch" />
   </group>
   <group unless="$(arg vid)" >
     <include file="$(find robo_magellan)/launch/cone_finder.launch" />
-  </group>
+  </group -->
 
   <!-- Navigator and supporting nodes -->
   <node name="navigator" pkg="robo_magellan" type="navigator"
@@ -48,13 +48,14 @@
     <remap from="~exec_cmd" to="/exec_cmd_simple" />
   </node>
 
-  <node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" />
+  <!-- node name="kill_sw_mon" pkg="robo_magellan" type="kill_switch.py" / -->
 
-  <node name="chatty" pkg="robo_magellan" type="chatty.py" />
+  <!-- node name="chatty" pkg="robo_magellan" type="chatty.py" / -->
 
-  <node name="monitor" pkg="robo_magellan" type="monitor.py" />
+  <!-- node name="monitor" pkg="robo_magellan" type="monitor.py" / -->
   
   <node name="arduino_receiver" pkg="robo_magellan" type="arduino_receiver">
+    <rosparam param="serial_device">/dev/esp32</rosparam>
     <remap from="/robo_magellan/touch" to="/touch" />
   </node>
 

@@ -125,3 +125,6 @@ horz_pixels: 640
 # video frames, if the cone detector is sending one message
 # per frame.)
 cone_lost_limit: 15
+
+# MavROS port
+fcu_url: /dev/pixhawk:115200
