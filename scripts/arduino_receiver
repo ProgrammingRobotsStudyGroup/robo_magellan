@@ -99,23 +99,28 @@ class Receiver():
                     # rospy.loginfo("%s: line=%s" % (self.node_name, l))
 
                     if self.publish_touch:
-                        # Backward compatibility
-                        # /robo_magellan/touch gets same msgs as /robo_magellan/touch0
-                        m = re_touch_orig.match(l)
-                        if m:
-                            value = int(m.group(1))
-                            # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
-                            self.touch_pub.publish(value != 0)
+                        # # Backward compatibility
+                        # # /robo_magellan/touch gets same msgs as /robo_magellan/touch0
+                        # m = re_touch_orig.match(l)
+                        # if m:
+                        #     value = int(m.group(1))
+                        #     # rospy.loginfo("%s: Receiver got %d" % (self.node_name, value))
+                        #     self.touch_pub.publish(value != 0)
 
                         # Check for touch switch message w/ 'n' touch sensors 
                         m = re_touch.match(l)
                         if m:
                             touch_values = re_digits.findall(l)
+                            any_touch = 0
                             # If we have a sensor count >0, publish the sensor's value
                             if self.touch_sensor_count > 0:
                                 for index in range(self.touch_sensor_count):
                                     value = int(touch_values[index])
                                     self.touch_sensors_pub[index].publish(value != 0)
+                                    if (value>0): 
+                                        any_touch = 1
+                            # If any sensor detects touch, publish /robo_magellan/touch=true
+                            self.touch_pub.publish(any_touch)
 
                     m = re_encoder.match(l)
                     # Groups are:
