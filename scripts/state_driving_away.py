@@ -112,10 +112,10 @@ def state_start():
 #
 def drive_away_strategy():
     """The pattern """
-    print "steering_limits"
-    print steering_limits
-    print "throttle_limits"
-    print throttle_limits
+    print ("steering_limits")
+    print (steering_limits)
+    print ("throttle_limits")
+    print (throttle_limits)
     pct_servo = rospy.get_param("/AWAY_PCT_SERVO") / 100.0
     if pct_servo > 0:
         steering = steering_limits[1] + (steering_limits[2]-steering_limits[1]) * pct_servo

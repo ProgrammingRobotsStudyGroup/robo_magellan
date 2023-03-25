@@ -199,7 +199,7 @@ class UAV_Control:
             resp = self.svc_push_waypoints(waypoints)
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo(
                 "Service push_waypoints call failed: %s.",
                 err)
@@ -216,7 +216,7 @@ class UAV_Control:
             resp = self.svc_pull_waypoints()
             rospy.loginfo('success: '+str(resp.success)+' wp_received: '+str(resp.wp_received))
             return resp
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo(
                 "Service pull_waypoints call failed: %s.",
                 err)
@@ -233,7 +233,7 @@ class UAV_Control:
             resp = self.svc_clear_waypoints()
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo(
                 "Service clear_waypoints call failed: %s.",
                 err)
@@ -250,7 +250,7 @@ class UAV_Control:
             resp = self.svc_set_current_waypoint(idx)
             rospy.loginfo(resp)
             return resp
-        except rospy.ServiceException, err:
+        except rospy.ServiceException as err:
             rospy.loginfo(
                 "Service set_current_waypoint call failed: %s. Index %d could not be set. "
                 "Check that GPS is enabled.",

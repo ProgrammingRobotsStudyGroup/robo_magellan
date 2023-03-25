@@ -53,7 +53,7 @@ do_once = False
 def iscurrent():
     """Prints list of WPs"""
     this_node.uav_control.pull_waypoints()
-    print this_node.uav_control.waypoint_list
+    print (this_node.uav_control.waypoint_list)
 #    iscur = -1
 #    for seq, waypoint in enumerate( this_node.uav_control.waypoint_list):
 #        if waypoint.is_current:
@@ -190,7 +190,7 @@ def state_start():
                     break
 
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
-        if timeout_secs <> old_timeout_secs:
+        if (timeout_secs != old_timeout_secs):
             rospy.loginfo(
                 'In %s state node. Timeout in: %d',
                 this_node.state_name,

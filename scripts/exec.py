@@ -78,7 +78,7 @@ def wait_on_state_node(state_name):
 
     while not rospy.is_shutdown():
         timeout_secs = int(timeout.__sub__(rospy.Time.now()).to_sec())
-        if timeout_secs <> old_timeout_secs:
+        if (timeout_secs != old_timeout_secs):
             rospy.loginfo(
                 'In %s state. Timeout in: %d',
                 state_name,
